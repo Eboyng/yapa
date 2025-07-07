@@ -35,4 +35,50 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Paystack Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for Paystack payment gateway integration.
+    |
+    */
+    'paystack' => [
+        'public_key' => env('PAYSTACK_PUBLIC_KEY'),
+        'secret_key' => env('PAYSTACK_SECRET_KEY'),
+        'base_url' => env('PAYSTACK_BASE_URL', 'https://api.paystack.co'),
+        'webhook_secret' => env('PAYSTACK_WEBHOOK_SECRET'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Kudisms Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for Kudisms WhatsApp/SMS API integration.
+    |
+    */
+    'kudisms' => [
+        'api_key' => env('KUDISMS_API_KEY'),
+        'sender_id' => env('KUDISMS_SENDER_ID', 'Yapa'),
+        'base_url' => env('KUDISMS_BASE_URL', 'https://api.kudisms.net'),
+        'whatsapp_enabled' => env('KUDISMS_WHATSAPP_ENABLED', true),
+        'sms_enabled' => env('KUDISMS_SMS_ENABLED', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Google Services Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for Google APIs (People API for contact filtering).
+    |
+    */
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
+        'people_api_enabled' => env('GOOGLE_PEOPLE_API_ENABLED', false),
+    ],
+
 ];

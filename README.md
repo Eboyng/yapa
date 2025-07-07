@@ -1,61 +1,273 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Yapa - WhatsApp Bulk Messaging Platform
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Yapa is a comprehensive WhatsApp bulk messaging platform built with Laravel and Livewire, featuring a robust credit system, payment integration, and user management.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### 🎯 Core Features
+- **WhatsApp Bulk Messaging**: Send messages to multiple contacts efficiently
+- **Credit System**: Purchase and manage credits for messaging
+- **Payment Integration**: Seamless Paystack integration for credit purchases
+- **User Management**: Complete user registration, verification, and profile management
+- **Transaction History**: Detailed tracking of all financial transactions
+- **Interest Management**: User interest categorization and targeting
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 💳 Credit System
+- **Multiple Wallet Types**: Credits, Naira, and Earnings wallets
+- **Secure Transactions**: Optimistic locking and transaction integrity
+- **Payment Methods**: Paystack integration with webhook support
+- **Transaction Tracking**: Complete audit trail for all transactions
+- **Retry Mechanism**: Automatic retry for failed transactions
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 🔐 Security Features
+- **OTP Verification**: WhatsApp and SMS verification via Kudisms
+- **BVN Encryption**: Secure storage of sensitive user data
+- **Webhook Verification**: Secure payment webhook handling
+- **Rate Limiting**: Protection against abuse
 
-## Learning Laravel
+## Installation
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Prerequisites
+- PHP 8.1 or higher
+- Composer
+- Node.js and NPM
+- MySQL 8.0 or higher
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### Setup Instructions
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd yapa
+   ```
 
-## Laravel Sponsors
+2. **Install dependencies**
+   ```bash
+   composer install
+   npm install
+   ```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+3. **Environment configuration**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-### Premium Partners
+4. **Configure environment variables**
+   Edit `.env` file with your configuration:
+   ```env
+   # Database
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=yapa
+   DB_USERNAME=root
+   DB_PASSWORD=your_password
+   
+   # Paystack
+   PAYSTACK_PUBLIC_KEY=pk_test_your_key
+   PAYSTACK_SECRET_KEY=sk_test_your_key
+   PAYSTACK_WEBHOOK_SECRET=your_webhook_secret
+   
+   # Kudisms (WhatsApp/SMS)
+   KUDISMS_API_KEY=your_api_key
+   KUDISMS_SENDER_ID=Yapa
+   
+   # Application Settings
+   YAPA_CREDIT_PRICE=3.00
+   YAPA_MINIMUM_CREDITS=100
+   YAPA_FREE_CREDITS_ON_REGISTRATION=100
+   ```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+5. **Database setup**
+   ```bash
+   php artisan migrate
+   php artisan db:seed
+   ```
 
-## Contributing
+6. **Build assets**
+   ```bash
+   npm run build
+   ```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+7. **Start the application**
+   ```bash
+   php artisan serve
+   ```
 
-## Code of Conduct
+## Configuration
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Paystack Setup
+1. Create a Paystack account at [paystack.com](https://paystack.com)
+2. Get your API keys from the dashboard
+3. Set up webhook URL: `https://yourdomain.com/paystack/webhook`
+4. Configure webhook secret in your environment
 
-## Security Vulnerabilities
+### Kudisms Setup
+1. Register at [kudisms.net](https://kudisms.net)
+2. Get your API key and sender ID
+3. Configure WhatsApp and SMS settings
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Usage
+
+### Credit System
+
+#### Purchasing Credits
+```php
+// Via Livewire component
+<livewire:credit-purchase />
+
+// Via API
+POST /api/paystack/initialize
+{
+    "amount": 1000,
+    "credits": 333
+}
+```
+
+#### Checking Balances
+```php
+$user = auth()->user();
+$creditWallet = $user->getCreditWallet();
+$nairaWallet = $user->getNairaWallet();
+$earningsWallet = $user->getEarningsWallet();
+
+echo $creditWallet->formatted_balance; // "1,000 credits"
+echo $nairaWallet->formatted_balance;  // "₦5,000.00"
+```
+
+#### Transaction Management
+```php
+use App\Services\TransactionService;
+
+$transactionService = app(TransactionService::class);
+
+// Credit user account
+$transaction = $transactionService->credit(
+    $user,
+    'credits',
+    100,
+    'Credit purchase',
+    ['payment_reference' => 'PAY_123']
+);
+
+// Debit user account
+$transaction = $transactionService->debit(
+    $user,
+    'credits',
+    10,
+    'WhatsApp message sent',
+    ['message_id' => 'MSG_456']
+);
+```
+
+## API Endpoints
+
+### Authentication
+- `POST /register` - User registration
+- `POST /login` - User login
+- `POST /logout` - User logout
+
+### Credit System
+- `GET /credits/purchase` - Credit purchase page
+- `POST /api/paystack/initialize` - Initialize payment
+- `GET /api/paystack/verify/{reference}` - Verify payment
+- `GET /api/paystack/public-key` - Get public key and pricing
+
+### Transactions
+- `GET /transactions` - Transaction history page
+- `POST /transactions/{id}/retry` - Retry failed transaction
+
+### Webhooks
+- `POST /paystack/webhook` - Paystack webhook handler
+- `GET /paystack/callback` - Payment callback
+
+## Database Schema
+
+### Key Tables
+
+#### Users
+- Enhanced with WhatsApp verification, balances, and BVN fields
+- Relationships with wallets, transactions, and interests
+
+#### Wallets
+- Multiple wallet types per user (credits, naira, earnings)
+- Optimistic locking for concurrent updates
+- Soft deletes and audit trail
+
+#### Transactions
+- Complete transaction history with metadata
+- Support for refunds and retries
+- Payment method and gateway response tracking
+
+#### Interests
+- User interest categorization
+- Icon and color customization
+- Soft deletes and ordering
+
+## Security Considerations
+
+### Payment Security
+- Webhook signature verification
+- Idempotency checks for duplicate payments
+- Secure API key management
+
+### Data Protection
+- BVN encryption at rest
+- Secure OTP generation and verification
+- Rate limiting on sensitive endpoints
+
+### Transaction Integrity
+- Optimistic locking for wallet updates
+- Atomic transaction processing
+- Comprehensive error handling
+
+## Development
+
+### Running Tests
+```bash
+php artisan test
+```
+
+### Code Style
+```bash
+./vendor/bin/pint
+```
+
+### Database Seeding
+```bash
+php artisan db:seed --class=InterestSeeder
+```
+
+## Deployment
+
+### Production Checklist
+- [ ] Set `APP_ENV=production`
+- [ ] Configure production database
+- [ ] Set up SSL certificates
+- [ ] Configure webhook URLs
+- [ ] Set up monitoring and logging
+- [ ] Configure backup strategy
+- [ ] Set up queue workers
+- [ ] Configure caching (Redis recommended)
+
+### Queue Configuration
+For production, configure queue workers:
+```bash
+php artisan queue:work --daemon
+```
+
+## Support
+
+For support and questions:
+- Check the documentation
+- Review the code comments
+- Create an issue in the repository
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is proprietary software. All rights reserved.
+
+---
+
+**Built with ❤️ using Laravel, Livewire, and modern web technologies.**

@@ -26,6 +26,9 @@ Route::middleware('auth')->group(function () {
         ->middleware(['signed', 'throttle:6,1'])
         ->name('verification.verify');
 
+    Volt::route('verify-otp', 'pages.auth.verify-otp')
+        ->name('verify-otp');
+
     Volt::route('confirm-password', 'pages.auth.confirm-password')
         ->name('password.confirm');
 });

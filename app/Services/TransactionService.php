@@ -1,0 +1,495 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\User;
+use App\Models\Wallet;
+use App\Models\Transaction;
+use App\Models\AuditLog;
+use App\Exceptions\InsufficientBalanceException;
+use App\Exceptions\OptimisticLockException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
+use Carbon\Carbon;
+
+class TransactionService
+{
+    /**
+     * Credit a user's wallet balance.
+     */
+    public function credit(
+        int $userId,
+        float $amount,
+        string $type,
+        string $category,
+        string $description,
+        ?int $relatedId = null,
+        ?string $source = null,
+        ?array $metadata = null
+    ): Transaction {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Credit amount must be positive');
+        }
+
+        return DB::transaction(function () use (
+            $userId, $amount, $type, $category, $description, $relatedId, $source, $metadata
+        ) {
+            $user = User::findOrFail($userId);
+            $wallet = $user->getWallet($type);
+
+            // Create transaction record
+            $transaction = Transaction::create([
+                'user_id' => $userId,
+                'amount' => $amount,
+                'type' => $type,
+                'category' => $category,
+                'description' => $description,
+                'status' => Transaction::STATUS_PENDING,
+                'related_id' => $relatedId,
+                'source' => $source,
+                'metadata' => $metadata,
+            ]);
+
+            try {
+                // Credit the wallet with optimistic locking
+                $wallet->credit($amount);
+                
+                // Mark transaction as confirmed
+                $transaction->markAsConfirmed();
+
+                // Log the transaction
+                Log::info('Wallet credited', [
+                    'user_id' => $userId,
+                    'amount' => $amount,
+                    'type' => $type,
+                    'category' => $category,
+                    'transaction_id' => $transaction->id,
+                ]);
+
+                // Send notification if significant amount
+                if ($this->shouldNotifyUser($amount, $type)) {
+                    $this->notifyUser($user, 'credit', $transaction);
+                }
+
+                return $transaction;
+
+            } catch (OptimisticLockException $e) {
+                $transaction->markAsFailed('Optimistic lock conflict: ' . $e->getMessage());
+                throw $e;
+            } catch (\Exception $e) {
+                $transaction->markAsFailed('Credit failed: ' . $e->getMessage());
+                Log::error('Credit operation failed', [
+                    'user_id' => $userId,
+                    'amount' => $amount,
+                    'type' => $type,
+                    'error' => $e->getMessage(),
+                    'transaction_id' => $transaction->id,
+                ]);
+                throw $e;
+            }
+        });
+    }
+
+    /**
+     * Debit a user's wallet balance.
+     */
+    public function debit(
+        int $userId,
+        float $amount,
+        string $type,
+        string $category,
+        string $description,
+        ?int $relatedId = null,
+        ?string $source = null,
+        ?array $metadata = null
+    ): Transaction {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Debit amount must be positive');
+        }
+
+        return DB::transaction(function () use (
+            $userId, $amount, $type, $category, $description, $relatedId, $source, $metadata
+        ) {
+            $user = User::findOrFail($userId);
+            $wallet = $user->getWallet($type);
+
+            // Check balance before creating transaction
+            if (!$wallet->hasSufficientBalance($amount)) {
+                throw new InsufficientBalanceException(
+                    "Insufficient {$type} balance. Required: {$amount}, Available: {$wallet->balance}",
+                    $type,
+                    $amount,
+                    $wallet->balance
+                );
+            }
+
+            // Create transaction record
+            $transaction = Transaction::create([
+                'user_id' => $userId,
+                'amount' => $amount,
+                'type' => $type,
+                'category' => $category,
+                'description' => $description,
+                'status' => Transaction::STATUS_PENDING,
+                'related_id' => $relatedId,
+                'source' => $source,
+                'metadata' => $metadata,
+            ]);
+
+            try {
+                // Debit the wallet with optimistic locking
+                $wallet->debit($amount);
+                
+                // Mark transaction as confirmed
+                $transaction->markAsConfirmed();
+
+                // Log the transaction
+                Log::info('Wallet debited', [
+                    'user_id' => $userId,
+                    'amount' => $amount,
+                    'type' => $type,
+                    'category' => $category,
+                    'transaction_id' => $transaction->id,
+                ]);
+
+                // Send notification
+                $this->notifyUser($user, 'debit', $transaction);
+
+                return $transaction;
+
+            } catch (InsufficientBalanceException $e) {
+                $transaction->markAsFailed('Insufficient balance: ' . $e->getMessage());
+                throw $e;
+            } catch (OptimisticLockException $e) {
+                $transaction->markAsFailed('Optimistic lock conflict: ' . $e->getMessage());
+                throw $e;
+            } catch (\Exception $e) {
+                $transaction->markAsFailed('Debit failed: ' . $e->getMessage());
+                Log::error('Debit operation failed', [
+                    'user_id' => $userId,
+                    'amount' => $amount,
+                    'type' => $type,
+                    'error' => $e->getMessage(),
+                    'transaction_id' => $transaction->id,
+                ]);
+                throw $e;
+            }
+        });
+    }
+
+    /**
+     * Refund a transaction (full or partial).
+     */
+    public function refund(
+        int $transactionId,
+        ?float $amount = null,
+        ?string $reason = null,
+        ?int $adminUserId = null
+    ): Transaction {
+        return DB::transaction(function () use ($transactionId, $amount, $reason, $adminUserId) {
+            $originalTransaction = Transaction::findOrFail($transactionId);
+
+            if (!$originalTransaction->isConfirmed()) {
+                throw new \InvalidArgumentException('Can only refund confirmed transactions');
+            }
+
+            // Calculate refund amount
+            $refundAmount = $amount ?? $originalTransaction->amount;
+            
+            // Validate refund amount
+            $totalRefunded = $originalTransaction->childTransactions()
+                ->where('category', Transaction::CATEGORY_REFUND)
+                ->where('status', Transaction::STATUS_CONFIRMED)
+                ->sum('amount');
+
+            if (($totalRefunded + $refundAmount) > $originalTransaction->amount) {
+                throw new \InvalidArgumentException('Refund amount exceeds original transaction amount');
+            }
+
+            // Create refund transaction
+            $refundTransaction = $this->credit(
+                $originalTransaction->user_id,
+                $refundAmount,
+                $originalTransaction->type,
+                Transaction::CATEGORY_REFUND,
+                $reason ?? "Refund for transaction {$originalTransaction->reference}",
+                $originalTransaction->related_id,
+                'refund',
+                [
+                    'original_transaction_id' => $originalTransaction->id,
+                    'original_reference' => $originalTransaction->reference,
+                    'refund_reason' => $reason,
+                    'admin_user_id' => $adminUserId,
+                ]
+            );
+
+            // Link to original transaction
+            $refundTransaction->update(['parent_transaction_id' => $originalTransaction->id]);
+
+            // Log audit if admin initiated
+            if ($adminUserId) {
+                AuditLog::log(
+                    $adminUserId,
+                    'transaction_refund',
+                    $originalTransaction->user_id,
+                    ['original_transaction_id' => $originalTransaction->id],
+                    ['refund_transaction_id' => $refundTransaction->id, 'amount' => $refundAmount],
+                    $reason
+                );
+            }
+
+            Log::info('Transaction refunded', [
+                'original_transaction_id' => $originalTransaction->id,
+                'refund_transaction_id' => $refundTransaction->id,
+                'refund_amount' => $refundAmount,
+                'admin_user_id' => $adminUserId,
+            ]);
+
+            return $refundTransaction;
+        });
+    }
+
+    /**
+     * Handle transaction failure and setup retry mechanism.
+     */
+    public function handleFailure(
+        int $transactionId,
+        string $reason,
+        bool $canRetry = true
+    ): bool {
+        return DB::transaction(function () use ($transactionId, $reason, $canRetry) {
+            $transaction = Transaction::findOrFail($transactionId);
+
+            if (!$transaction->isPending()) {
+                throw new \InvalidArgumentException('Can only handle failure for pending transactions');
+            }
+
+            // Mark as failed
+            $transaction->markAsFailed($reason);
+
+            // Setup retry if applicable
+            if ($canRetry && $transaction->retry_count < 3) {
+                $transaction->update([
+                    'retry_until' => Carbon::now()->addHours(24),
+                ]);
+
+                Log::info('Transaction marked for retry', [
+                    'transaction_id' => $transaction->id,
+                    'retry_count' => $transaction->retry_count,
+                    'retry_until' => $transaction->retry_until,
+                ]);
+            } else {
+                Log::warning('Transaction failed permanently', [
+                    'transaction_id' => $transaction->id,
+                    'reason' => $reason,
+                ]);
+
+                // Notify admins if retries exhausted
+                if ($transaction->retry_count >= 3) {
+                    $this->notifyAdminsOfFailure($transaction, $reason);
+                }
+            }
+
+            return true;
+        });
+    }
+
+    /**
+     * Retry a failed transaction.
+     */
+    public function retryTransaction(int $transactionId): Transaction
+    {
+        return DB::transaction(function () use ($transactionId) {
+            $transaction = Transaction::findOrFail($transactionId);
+
+            if (!$transaction->canRetry()) {
+                throw new \InvalidArgumentException('Transaction cannot be retried');
+            }
+
+            $transaction->incrementRetryCount();
+
+            // Reset status to pending
+            $transaction->update(['status' => Transaction::STATUS_PENDING]);
+
+            // Attempt the operation again based on category
+            try {
+                if (in_array($transaction->category, [
+                    Transaction::CATEGORY_CREDIT_PURCHASE,
+                    Transaction::CATEGORY_AD_EARNING
+                ])) {
+                    // Re-credit the wallet
+                    $wallet = $transaction->user->getWallet($transaction->type);
+                    $wallet->credit($transaction->amount);
+                    $transaction->markAsConfirmed();
+                } elseif (in_array($transaction->category, [
+                    Transaction::CATEGORY_BATCH_JOIN,
+                    Transaction::CATEGORY_WITHDRAWAL,
+                    Transaction::CATEGORY_WHATSAPP_CHANGE_FEE
+                ])) {
+                    // Re-debit the wallet
+                    $wallet = $transaction->user->getWallet($transaction->type);
+                    $wallet->debit($transaction->amount);
+                    $transaction->markAsConfirmed();
+                }
+
+                Log::info('Transaction retry successful', [
+                    'transaction_id' => $transaction->id,
+                    'retry_count' => $transaction->retry_count,
+                ]);
+
+            } catch (\Exception $e) {
+                $this->handleFailure($transaction->id, 'Retry failed: ' . $e->getMessage(), false);
+                throw $e;
+            }
+
+            return $transaction;
+        });
+    }
+
+    /**
+     * Get transaction history for a user with filters.
+     */
+    public function getUserTransactionHistory(
+        int $userId,
+        ?string $category = null,
+        ?string $type = null,
+        ?string $status = null,
+        int $perPage = 15
+    ) {
+        $query = Transaction::where('user_id', $userId)
+            ->with(['parentTransaction', 'childTransactions'])
+            ->orderBy('created_at', 'desc');
+
+        if ($category) {
+            $query->where('category', $category);
+        }
+
+        if ($type) {
+            $query->where('type', $type);
+        }
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * Check if user should be notified for this transaction.
+     */
+    private function shouldNotifyUser(float $amount, string $type): bool
+    {
+        // Notify for significant amounts
+        return match ($type) {
+            Wallet::TYPE_CREDITS => $amount >= 100,
+            Wallet::TYPE_NAIRA => $amount >= 1000,
+            Wallet::TYPE_EARNINGS => $amount >= 500,
+            default => false,
+        };
+    }
+
+    /**
+     * Send notification to user about transaction.
+     */
+    private function notifyUser(User $user, string $action, Transaction $transaction): void
+    {
+        // Implementation would depend on notification channels
+        // For now, just log
+        Log::info('User notification sent', [
+            'user_id' => $user->id,
+            'action' => $action,
+            'transaction_id' => $transaction->id,
+            'amount' => $transaction->amount,
+            'type' => $transaction->type,
+        ]);
+    }
+
+    /**
+     * Notify admins of transaction failure.
+     */
+    private function notifyAdminsOfFailure(Transaction $transaction, string $reason): void
+    {
+        Log::critical('Transaction failed permanently', [
+            'transaction_id' => $transaction->id,
+            'user_id' => $transaction->user_id,
+            'amount' => $transaction->amount,
+            'type' => $transaction->type,
+            'category' => $transaction->category,
+            'reason' => $reason,
+            'retry_count' => $transaction->retry_count,
+        ]);
+    }
+
+    /**
+     * Release escrow payment to user.
+     */
+    public function releaseEscrow(
+        int $escrowTransactionId,
+        User $user,
+        string $description
+    ): Transaction {
+        return DB::transaction(function () use ($escrowTransactionId, $user, $description) {
+            $escrowTransaction = Transaction::findOrFail($escrowTransactionId);
+            
+            if ($escrowTransaction->category !== Transaction::CATEGORY_CHANNEL_AD_ESCROW) {
+                throw new \InvalidArgumentException('Transaction is not an escrow transaction');
+            }
+            
+            if ($escrowTransaction->status !== Transaction::STATUS_CONFIRMED) {
+                throw new \InvalidArgumentException('Escrow transaction is not confirmed');
+            }
+            
+            // Create payment transaction to release escrow
+            $paymentTransaction = $this->credit(
+                $user->id,
+                $escrowTransaction->amount,
+                Transaction::TYPE_NAIRA,
+                Transaction::CATEGORY_CHANNEL_AD_PAYMENT,
+                $description,
+                $escrowTransaction->related_id,
+                'escrow_release',
+                [
+                    'escrow_transaction_id' => $escrowTransactionId,
+                    'escrow_reference' => $escrowTransaction->reference,
+                ]
+            );
+            
+            // Link the payment to the escrow transaction
+            $paymentTransaction->update(['parent_transaction_id' => $escrowTransactionId]);
+            
+            Log::info('Escrow payment released', [
+                'escrow_transaction_id' => $escrowTransactionId,
+                'payment_transaction_id' => $paymentTransaction->id,
+                'user_id' => $user->id,
+                'amount' => $escrowTransaction->amount,
+            ]);
+            
+            return $paymentTransaction;
+        });
+    }
+
+    /**
+     * Get wallet balance summary for a user.
+     */
+    public function getUserBalanceSummary(int $userId): array
+    {
+        $user = User::findOrFail($userId);
+
+        return [
+            'credits' => [
+                'balance' => $user->getCreditWallet()->balance,
+                'formatted' => $user->formatted_credits,
+            ],
+            'naira' => [
+                'balance' => $user->getNairaWallet()->balance,
+                'formatted' => $user->formatted_naira,
+            ],
+            'earnings' => [
+                'balance' => $user->getEarningsWallet()->balance,
+                'formatted' => $user->formatted_earnings,
+            ],
+        ];
+    }
+}

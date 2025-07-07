@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,11 +13,30 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // Seed interests first
+        $this->call([
+            InterestSeeder::class,
+            BatchSeeder::class,
+            ChannelSeeder::class,
         ]);
+
+        // Create test user with enhanced fields if not exists
+        if (!User::where('email', 'admin@yapa.ng')->exists()) {
+            User::factory()->create([
+                'name' => 'Admin User',
+                'email' => 'admin@yapa.ng',
+                'whatsapp_number' => '+2348012345678',
+                'credits_balance' => 100, // Free credits upon registration
+                'naira_balance' => 0,
+                'earnings_balance' => 0,
+                'location' => 'Lagos, Nigeria',
+                'email_verification_enabled' => true,
+                'whatsapp_verified_at' => now(),
+                'email_verified_at' => now(),
+            ]);
+        }
+
+        // Create additional test users if needed
+        // User::factory(10)->create();
     }
 }
