@@ -36,6 +36,19 @@ class SettingService
         'supported_image_formats' => 'jpg,jpeg,png',
         'vcf_export_enabled' => true,
         'google_oauth_enabled' => false,
+        // Kudisms API Settings
+        'kudisms_api_key' => '',
+        'kudisms_whatsapp_template_code' => '',
+        'kudisms_sender_id' => 'Yapa',
+        'kudisms_whatsapp_url' => 'https://my.kudisms.net/api/whatsapp',
+        // OTP Delivery Settings
+        'otp_delivery_method' => 'whatsapp',
+        'otp_sms_fallback_enabled' => true,
+        // Kudisms SMS API Settings
+        'kudisms_sms_template_code' => '',
+        'kudisms_app_name_code' => '',
+        'kudisms_sms_url' => 'https://my.kudisms.net/api/otp',
+        'kudisms_balance_url' => 'https://my.kudisms.net/api/balance',
     ];
 
     /**
@@ -337,6 +350,49 @@ class SettingService
         return $this->getMultiple([
             'whatsapp_notifications_enabled',
             'email_notifications_enabled',
+        ]);
+    }
+
+    /**
+     * Get Kudisms API settings.
+     */
+    public function getKudismsSettings(): array
+    {
+        return $this->getMultiple([
+            'kudisms_api_key',
+            'kudisms_whatsapp_template_code',
+            'kudisms_sender_id',
+            'kudisms_whatsapp_url',
+            'kudisms_sms_template_code',
+            'kudisms_app_name_code',
+            'kudisms_sms_url',
+            'kudisms_balance_url',
+        ]);
+    }
+
+    /**
+     * Get OTP delivery settings.
+     */
+    public function getOtpSettings(): array
+    {
+        return $this->getMultiple([
+            'otp_delivery_method',
+            'otp_sms_fallback_enabled',
+        ]);
+    }
+
+    /**
+     * Get SMS API settings.
+     */
+    public function getSmsSettings(): array
+    {
+        return $this->getMultiple([
+            'kudisms_api_key',
+            'kudisms_sender_id',
+            'kudisms_sms_template_code',
+            'kudisms_app_name_code',
+            'kudisms_sms_url',
+            'kudisms_balance_url',
         ]);
     }
 

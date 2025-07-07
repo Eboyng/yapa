@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
         // Seed interests first
         $this->call([
             InterestSeeder::class,
+            RolePermissionSeeder::class,
             BatchSeeder::class,
             ChannelSeeder::class,
         ]);

@@ -32,6 +32,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/credits/purchase', CreditPurchase::class)
         ->name('credits.purchase');
     
+    // Withdrawal
+    Route::get('/withdrawal', \App\Livewire\Withdrawal::class)
+        ->name('withdrawal.index');
+    
     // Transaction History
     Route::get('/transactions', TransactionHistory::class)
         ->name('transactions.index');

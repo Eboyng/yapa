@@ -11,11 +11,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -47,6 +48,8 @@ class User extends Authenticatable
         'whatsapp_notifications_enabled',
         'email_notifications_enabled',
         'is_admin',
+        'avatar',
+        'last_login_at',
     ];
 
     /**
@@ -86,6 +89,7 @@ class User extends Authenticatable
             'whatsapp_notifications_enabled' => 'boolean',
             'email_notifications_enabled' => 'boolean',
             'is_admin' => 'boolean',
+            'last_login_at' => 'datetime',
         ];
     }
 

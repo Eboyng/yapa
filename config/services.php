@@ -62,6 +62,8 @@ return [
         'api_key' => env('KUDISMS_API_KEY'),
         'sender_id' => env('KUDISMS_SENDER_ID', 'Yapa'),
         'base_url' => env('KUDISMS_BASE_URL', 'https://api.kudisms.net'),
+        'whatsapp_url' => env('KUDISMS_WHATSAPP_URL', 'https://my.kudisms.net/api/whatsapp'),
+        'whatsapp_template_code' => env('KUDISMS_WHATSAPP_TEMPLATE_CODE'),
         'whatsapp_enabled' => env('KUDISMS_WHATSAPP_ENABLED', true),
         'sms_enabled' => env('KUDISMS_SMS_ENABLED', true),
     ],

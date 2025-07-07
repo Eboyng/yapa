@@ -36,6 +36,8 @@ class Transaction extends Model
         'retry_count',
         'failed_at',
         'completed_at',
+        'processed_at',
+        'admin_notes',
         'related_id',
         'source',
         'parent_transaction_id',
@@ -56,6 +58,7 @@ class Transaction extends Model
         'retry_count' => 'integer',
         'failed_at' => 'datetime',
         'completed_at' => 'datetime',
+        'processed_at' => 'datetime',
         'retry_until' => 'datetime',
     ];
 

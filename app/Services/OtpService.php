@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\PendingUser;
+use App\Models\NotificationLog;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -15,16 +16,22 @@ class OtpService
     private string $kudismsApiKey;
     private string $kudismsBaseUrl;
     private string $kudismsSenderId;
+    private WhatsAppService $whatsAppService;
+    private SettingService $settingService;
 
-    public function __construct()
+    public function __construct(WhatsAppService $whatsAppService, SettingService $settingService)
     {
+        $this->whatsAppService = $whatsAppService;
+        $this->settingService = $settingService;
+        
+        // Keep SMS settings from config for fallback
         $this->kudismsApiKey = config('services.kudisms.api_key');
         $this->kudismsBaseUrl = config('services.kudisms.base_url', 'https://api.kudisms.net');
         $this->kudismsSenderId = config('services.kudisms.sender_id', 'YAPA');
     }
 
     /**
-     * Send OTP via WhatsApp with SMS fallback.
+     * Send OTP via preferred method (SMS or WhatsApp) with fallback.
      */
     public function sendOtp(
         string $whatsappNumber,
@@ -51,51 +58,122 @@ class OtpService
         ];
 
         try {
-            // Try WhatsApp first
-            $whatsappResult = $this->sendWhatsAppMessage($whatsappNumber, $formattedMessage);
-            
-            if ($whatsappResult['success']) {
-                $result['success'] = true;
-                $result['method'] = 'whatsapp';
-                $result['message'] = 'OTP sent via WhatsApp';
+            // Get admin preference for OTP delivery method
+            $otpSettings = $this->settingService->getOtpSettings();
+            $preferredMethod = $otpSettings['otp_delivery_method'] ?? 'whatsapp';
+            $fallbackEnabled = $otpSettings['otp_sms_fallback_enabled'] ?? true;
+
+            if ($preferredMethod === 'sms') {
+                // Try SMS first
+                $smsResult = $this->sendSmsMessage($whatsappNumber, $formattedMessage, $otp);
                 
-                Log::info('OTP sent via WhatsApp', [
-                    'whatsapp_number' => $whatsappNumber,
-                    'is_registration' => $isRegistration,
-                ]);
+                if ($smsResult['success']) {
+                    $result['success'] = true;
+                    $result['method'] = 'sms';
+                    $result['message'] = 'OTP sent via SMS';
+                    
+                    Log::info('OTP sent via SMS (preferred)', [
+                        'whatsapp_number' => $whatsappNumber,
+                        'is_registration' => $isRegistration,
+                    ]);
+                    
+                    return $result;
+                }
+
+                // Fallback to WhatsApp if enabled
+                if ($fallbackEnabled) {
+                    Log::warning('SMS OTP failed, falling back to WhatsApp', [
+                        'whatsapp_number' => $whatsappNumber,
+                        'sms_error' => $smsResult['message'],
+                    ]);
+
+                    $whatsappResult = $this->sendWhatsAppMessage($whatsappNumber, $formattedMessage);
+                    
+                    if ($whatsappResult['success']) {
+                        $result['success'] = true;
+                        $result['method'] = 'whatsapp';
+                        $result['message'] = 'OTP sent via WhatsApp (SMS unavailable)';
+                        
+                        Log::info('OTP sent via WhatsApp fallback', [
+                            'whatsapp_number' => $whatsappNumber,
+                            'is_registration' => $isRegistration,
+                        ]);
+                        
+                        return $result;
+                    }
+                    
+                    // Both methods failed
+                    $result['message'] = 'Failed to send OTP via SMS and WhatsApp';
+                    
+                    Log::error('Both SMS and WhatsApp OTP failed', [
+                        'whatsapp_number' => $whatsappNumber,
+                        'sms_error' => $smsResult['message'],
+                        'whatsapp_error' => $whatsappResult['message'],
+                    ]);
+                } else {
+                    $result['message'] = 'Failed to send OTP via SMS';
+                    
+                    Log::error('SMS OTP failed and fallback disabled', [
+                        'whatsapp_number' => $whatsappNumber,
+                        'sms_error' => $smsResult['message'],
+                    ]);
+                }
+            } else {
+                // Try WhatsApp first (default behavior)
+                $whatsappResult = $this->sendWhatsAppMessage($whatsappNumber, $formattedMessage);
                 
-                return $result;
+                if ($whatsappResult['success']) {
+                    $result['success'] = true;
+                    $result['method'] = 'whatsapp';
+                    $result['message'] = 'OTP sent via WhatsApp';
+                    
+                    Log::info('OTP sent via WhatsApp (preferred)', [
+                        'whatsapp_number' => $whatsappNumber,
+                        'is_registration' => $isRegistration,
+                    ]);
+                    
+                    return $result;
+                }
+
+                // Fallback to SMS if enabled
+                if ($fallbackEnabled) {
+                    Log::warning('WhatsApp OTP failed, falling back to SMS', [
+                        'whatsapp_number' => $whatsappNumber,
+                        'whatsapp_error' => $whatsappResult['message'],
+                    ]);
+
+                    $smsResult = $this->sendSmsMessage($whatsappNumber, $formattedMessage, $otp);
+                    
+                    if ($smsResult['success']) {
+                        $result['success'] = true;
+                        $result['method'] = 'sms';
+                        $result['message'] = 'OTP sent via SMS (WhatsApp unavailable)';
+                        
+                        Log::info('OTP sent via SMS fallback', [
+                            'whatsapp_number' => $whatsappNumber,
+                            'is_registration' => $isRegistration,
+                        ]);
+                        
+                        return $result;
+                    }
+                    
+                    // Both methods failed
+                    $result['message'] = 'Failed to send OTP via WhatsApp and SMS';
+                    
+                    Log::error('Both WhatsApp and SMS OTP failed', [
+                        'whatsapp_number' => $whatsappNumber,
+                        'whatsapp_error' => $whatsappResult['message'],
+                        'sms_error' => $smsResult['message'],
+                    ]);
+                } else {
+                    $result['message'] = 'Failed to send OTP via WhatsApp';
+                    
+                    Log::error('WhatsApp OTP failed and fallback disabled', [
+                        'whatsapp_number' => $whatsappNumber,
+                        'whatsapp_error' => $whatsappResult['message'],
+                    ]);
+                }
             }
-
-            // Fallback to SMS
-            Log::warning('WhatsApp OTP failed, falling back to SMS', [
-                'whatsapp_number' => $whatsappNumber,
-                'whatsapp_error' => $whatsappResult['message'],
-            ]);
-
-            $smsResult = $this->sendSmsMessage($whatsappNumber, $formattedMessage);
-            
-            if ($smsResult['success']) {
-                $result['success'] = true;
-                $result['method'] = 'sms';
-                $result['message'] = 'OTP sent via SMS (WhatsApp unavailable)';
-                
-                Log::info('OTP sent via SMS fallback', [
-                    'whatsapp_number' => $whatsappNumber,
-                    'is_registration' => $isRegistration,
-                ]);
-                
-                return $result;
-            }
-
-            // Both methods failed
-            $result['message'] = 'Failed to send OTP via WhatsApp and SMS';
-            
-            Log::error('Both WhatsApp and SMS OTP failed', [
-                'whatsapp_number' => $whatsappNumber,
-                'whatsapp_error' => $whatsappResult['message'],
-                'sms_error' => $smsResult['message'],
-            ]);
 
         } catch (\Exception $e) {
             $result['message'] = 'OTP service error: ' . $e->getMessage();
@@ -234,33 +312,42 @@ class OtpService
     public function sendWhatsAppMessage(string $whatsappNumber, string $message): array
     {
         try {
-            $response = Http::timeout(30)
-                ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->kudismsApiKey,
-                    'Content-Type' => 'application/json',
-                ])
-                ->post($this->kudismsBaseUrl . '/whatsapp/send', [
-                    'to' => $this->formatPhoneNumber($whatsappNumber),
-                    'message' => $message,
-                    'sender_id' => $this->kudismsSenderId,
-                ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
+            // Check if WhatsApp notifications are enabled
+            if (!$this->settingService->isFeatureEnabled('whatsapp_notifications')) {
                 return [
-                    'success' => true,
-                    'message' => 'WhatsApp message sent successfully',
-                    'response' => $data,
+                    'success' => false,
+                    'message' => 'WhatsApp notifications are disabled',
                 ];
             }
-
+            
+            // Create notification log for tracking
+            $notificationLog = NotificationLog::create([
+                'type' => 'otp_whatsapp',
+                'channel' => NotificationLog::CHANNEL_WHATSAPP,
+                'recipient' => $this->formatPhoneNumber($whatsappNumber),
+                'status' => 'pending',
+                'content' => $message,
+            ]);
+            
+            // Use WhatsAppService to send message
+            $this->whatsAppService->send(
+                $whatsappNumber,
+                $message,
+                $notificationLog
+            );
+            
             return [
-                'success' => false,
-                'message' => 'WhatsApp API error: ' . $response->body(),
-                'status_code' => $response->status(),
+                'success' => true,
+                'message' => 'WhatsApp message sent successfully',
+                'notification_id' => $notificationLog->id,
             ];
-
+            
         } catch (\Exception $e) {
+            Log::error('WhatsApp OTP send failed', [
+                'phone' => $whatsappNumber,
+                'error' => $e->getMessage(),
+            ]);
+            
             return [
                 'success' => false,
                 'message' => 'WhatsApp request failed: ' . $e->getMessage(),
@@ -269,30 +356,73 @@ class OtpService
     }
 
     /**
-     * Send SMS message via Kudisms.
+     * Send SMS message via Kudisms OTP API.
      */
-    private function sendSmsMessage(string $phoneNumber, string $message): array
+    private function sendSmsMessage(string $phoneNumber, string $message, string $otp): array
     {
         try {
+            // Get SMS settings from SettingService
+            $smsSettings = $this->settingService->getSmsSettings();
+            
+            // Create notification log for tracking
+            $notificationLog = NotificationLog::create([
+                'type' => 'otp_sms',
+                'channel' => NotificationLog::CHANNEL_SMS,
+                'recipient' => $this->formatPhoneNumberForSms($phoneNumber),
+                'status' => 'pending',
+                'content' => $message,
+            ]);
+            
             $response = Http::timeout(30)
                 ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->kudismsApiKey,
                     'Content-Type' => 'application/json',
                 ])
-                ->post($this->kudismsBaseUrl . '/sms/send', [
-                    'to' => $this->formatPhoneNumber($phoneNumber),
-                    'message' => $message,
-                    'sender_id' => $this->kudismsSenderId,
+                ->post($smsSettings['kudisms_sms_url'], [
+                    'token' => $smsSettings['kudisms_api_key'],
+                    'senderID' => $smsSettings['kudisms_sender_id'],
+                    'recipients' => $this->formatPhoneNumberForSms($phoneNumber),
+                    'otp' => $otp,
+                    'appnamecode' => $smsSettings['kudisms_app_name_code'],
+                    'templatecode' => $smsSettings['kudisms_sms_template_code'],
                 ]);
 
             if ($response->successful()) {
                 $data = $response->json();
+                
+                // Update notification log
+                $notificationLog->update([
+                    'status' => 'sent',
+                    'sent_at' => now(),
+                    'response_data' => $data,
+                ]);
+                
+                Log::info('SMS OTP sent successfully', [
+                    'phone' => $phoneNumber,
+                    'notification_id' => $notificationLog->id,
+                    'response' => $data,
+                ]);
+                
                 return [
                     'success' => true,
                     'message' => 'SMS sent successfully',
                     'response' => $data,
+                    'notification_id' => $notificationLog->id,
                 ];
             }
+
+            // Update notification log with failure
+            $notificationLog->update([
+                'status' => 'failed',
+                'error_message' => $response->body(),
+                'failed_at' => now(),
+            ]);
+            
+            Log::error('SMS OTP API error', [
+                'phone' => $phoneNumber,
+                'status_code' => $response->status(),
+                'response' => $response->body(),
+                'notification_id' => $notificationLog->id,
+            ]);
 
             return [
                 'success' => false,
@@ -301,6 +431,21 @@ class OtpService
             ];
 
         } catch (\Exception $e) {
+            // Update notification log with exception
+            if (isset($notificationLog)) {
+                $notificationLog->update([
+                    'status' => 'failed',
+                    'error_message' => $e->getMessage(),
+                    'failed_at' => now(),
+                ]);
+            }
+            
+            Log::error('SMS OTP request failed', [
+                'phone' => $phoneNumber,
+                'error' => $e->getMessage(),
+                'notification_id' => $notificationLog->id ?? null,
+            ]);
+            
             return [
                 'success' => false,
                 'message' => 'SMS request failed: ' . $e->getMessage(),
@@ -339,7 +484,66 @@ class OtpService
             $cleaned = '234' . $cleaned;
         }
         
-        return '+' . $cleaned;
+        return $cleaned; // Return without + prefix for WhatsApp service
+    }
+
+    /**
+     * Format phone number for SMS API (with + prefix).
+     */
+    private function formatPhoneNumberForSms(string $phoneNumber): string
+    {
+        return '+' . $this->formatPhoneNumber($phoneNumber);
+    }
+
+    /**
+     * Get Kudisms account balance.
+     */
+    public function getKudismsBalance(): array
+    {
+        try {
+            $smsSettings = $this->settingService->getSmsSettings();
+            
+            $response = Http::timeout(30)
+                ->asForm()
+                ->post($smsSettings['kudisms_balance_url'], [
+                    'token' => $smsSettings['kudisms_api_key'],
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                Log::info('Kudisms balance retrieved successfully', [
+                    'response' => $data,
+                ]);
+                
+                return [
+                    'success' => true,
+                    'balance' => $data,
+                    'message' => 'Balance retrieved successfully',
+                ];
+            }
+
+            Log::error('Kudisms balance API error', [
+                'status_code' => $response->status(),
+                'response' => $response->body(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Balance API error: ' . $response->body(),
+                'status_code' => $response->status(),
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Kudisms balance request failed', [
+                'error' => $e->getMessage(),
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => 'Balance request failed: ' . $e->getMessage(),
+            ];
+        }
     }
 
     /**

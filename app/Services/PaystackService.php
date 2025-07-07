@@ -456,4 +456,236 @@ class PaystackService
     {
         return $this->publicKey;
     }
+
+    /**
+     * Validate BVN with Paystack.
+     */
+    public function validateBvn(string $bvn): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->secretKey,
+                'Content-Type' => 'application/json',
+            ])->post($this->baseUrl . '/bvn/match', [
+                'bvn' => $bvn,
+                'account_number' => '', // Optional for basic validation
+                'bank_code' => '', // Optional for basic validation
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                Log::info('BVN validation successful', [
+                    'bvn' => substr($bvn, 0, 3) . '********', // Log only first 3 digits
+                    'status' => $data['status'] ?? 'unknown'
+                ]);
+
+                return [
+                    'success' => true,
+                    'data' => $data['data'] ?? [],
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $response->json()['message'] ?? 'BVN validation failed',
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('BVN validation error', [
+                'bvn' => substr($bvn, 0, 3) . '********',
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'BVN validation service error: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get list of banks from Paystack.
+     */
+    public function getBanks(): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->secretKey,
+            ])->get($this->baseUrl . '/bank');
+
+            if ($response->successful()) {
+                $data = $response->json()['data'] ?? [];
+                
+                // Format banks for easier use
+                $banks = [];
+                foreach ($data as $bank) {
+                    $banks[] = [
+                        'code' => $bank['code'],
+                        'name' => $bank['name'],
+                        'slug' => $bank['slug'] ?? null,
+                    ];
+                }
+
+                return $banks;
+            }
+
+            return [];
+
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch banks', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Resolve account number to get account name.
+     */
+    public function resolveAccountNumber(string $accountNumber, string $bankCode): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->secretKey,
+            ])->get($this->baseUrl . '/bank/resolve', [
+                'account_number' => $accountNumber,
+                'bank_code' => $bankCode,
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json()['data'];
+                
+                Log::info('Account resolution successful', [
+                    'account_number' => $accountNumber,
+                    'bank_code' => $bankCode,
+                    'account_name' => $data['account_name'] ?? 'Unknown'
+                ]);
+
+                return [
+                    'success' => true,
+                    'data' => $data,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $response->json()['message'] ?? 'Account resolution failed',
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Account resolution error', [
+                'account_number' => $accountNumber,
+                'bank_code' => $bankCode,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Account resolution service error: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Create transfer recipient for withdrawals.
+     */
+    public function createTransferRecipient(string $accountNumber, string $bankCode, string $name): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->secretKey,
+                'Content-Type' => 'application/json',
+            ])->post($this->baseUrl . '/transferrecipient', [
+                'type' => 'nuban',
+                'name' => $name,
+                'account_number' => $accountNumber,
+                'bank_code' => $bankCode,
+                'currency' => 'NGN',
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json()['data'];
+                
+                Log::info('Transfer recipient created', [
+                    'recipient_code' => $data['recipient_code'],
+                    'account_number' => $accountNumber,
+                    'bank_code' => $bankCode
+                ]);
+
+                return [
+                    'success' => true,
+                    'data' => $data,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $response->json()['message'] ?? 'Failed to create transfer recipient',
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Transfer recipient creation error', [
+                'account_number' => $accountNumber,
+                'bank_code' => $bankCode,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Transfer recipient service error: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Initiate transfer for withdrawals.
+     */
+    public function initiateTransfer(string $recipientCode, float $amount, string $reason = 'Withdrawal'): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->secretKey,
+                'Content-Type' => 'application/json',
+            ])->post($this->baseUrl . '/transfer', [
+                'source' => 'balance',
+                'amount' => $amount * 100, // Convert to kobo
+                'recipient' => $recipientCode,
+                'reason' => $reason,
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json()['data'];
+                
+                Log::info('Transfer initiated', [
+                    'transfer_code' => $data['transfer_code'],
+                    'amount' => $amount,
+                    'recipient' => $recipientCode
+                ]);
+
+                return [
+                    'success' => true,
+                    'data' => $data,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $response->json()['message'] ?? 'Failed to initiate transfer',
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Transfer initiation error', [
+                'recipient' => $recipientCode,
+                'amount' => $amount,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Transfer service error: ' . $e->getMessage(),
+            ];
+        }
+    }
 }
