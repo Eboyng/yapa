@@ -349,7 +349,7 @@ class AdTask extends Model
         // Create transaction for earnings
         $this->user->transactions()->create([
             'type' => Transaction::TYPE_CREDIT,
-            'category' => Transaction::CATEGORY_AD_EARNINGS,
+            'category' => Transaction::CATEGORY_AD_EARNING,
             'amount' => $this->earnings_amount,
             'description' => "Earnings from ad: {$this->ad->title}",
             'status' => Transaction::STATUS_COMPLETED,

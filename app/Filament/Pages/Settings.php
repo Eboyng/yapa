@@ -126,6 +126,15 @@ class Settings extends Page
                         
                         Forms\Components\Tabs\Tab::make('Ad Settings')
                             ->schema([
+                                Forms\Components\Section::make('Ad Feature Control')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('ads_feature_enabled')
+                                            ->label('Enable Ads Feature')
+                                            ->helperText('Enable or disable the entire ads (Share & Earn) feature')
+                                            ->default(true),
+                                    ])
+                                    ->columns(1),
+                                
                                 Forms\Components\Section::make('Ad Configuration')
                                     ->schema([
                                         Forms\Components\TextInput::make('ad_earnings_per_view')

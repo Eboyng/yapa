@@ -156,6 +156,14 @@ class Transaction extends Model
     }
 
     /**
+     * Get the ad task associated with this transaction.
+     */
+    public function adTask(): BelongsTo
+    {
+        return $this->belongsTo(AdTask::class, 'related_id');
+    }
+
+    /**
      * Generate unique transaction reference.
      */
     public static function generateReference(): string

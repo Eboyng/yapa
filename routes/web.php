@@ -9,6 +9,10 @@ use App\Livewire\ChannelList;
 use App\Livewire\ChannelCreate;
 use App\Livewire\ChannelAdList;
 use App\Livewire\MyChannelApplications;
+use App\Livewire\AdList;
+use App\Livewire\AdTask;
+use App\Livewire\AdTaskHistory;
+use App\Livewire\Profile;
 
 // Homepage - Batch List (protected by auth and verified.otp middleware)
 Route::get('/', BatchList::class)
@@ -22,8 +26,8 @@ Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
-Route::view('profile', 'profile')
-    ->middleware(['auth'])
+Route::get('/profile', Profile::class)
+    ->middleware(['auth', 'verified.otp'])
     ->name('profile');
 
 // Credit System Routes
@@ -67,6 +71,21 @@ Route::prefix('channel-ads')->name('channel-ads.')->group(function () {
     });
 });
 
+// Ad (Share & Earn) Routes
+Route::prefix('ads')->name('ads.')->middleware(['auth', 'verified.otp', 'ads.enabled'])->group(function () {
+    // Ad listing page
+    Route::get('/', AdList::class)
+        ->name('index');
+    
+    // Ad task page
+    Route::get('/task/{adTask}', AdTask::class)
+        ->name('task');
+    
+    // Ad task history
+    Route::get('/tasks', AdTaskHistory::class)
+        ->name('tasks');
+});
+
 // Batch Routes
 Route::middleware(['auth', 'verified.otp'])->group(function () {
     // Batch download route (handled by BatchList component)
@@ -75,6 +94,12 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
         // We just need it for route generation in emails/notifications
         return redirect()->route('home');
     })->name('batches.download');
+});
+
+// Google OAuth Routes
+Route::prefix('google')->name('google.')->group(function () {
+    Route::get('/callback', [\App\Http\Controllers\GoogleOAuthController::class, 'callback'])
+        ->name('callback');
 });
 
 // Paystack Routes

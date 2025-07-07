@@ -8,6 +8,7 @@ use App\Models\Batch;
 use App\Models\BatchMember;
 use App\Models\Interest;
 use App\Models\Transaction;
+use App\Models\Wallet;
 use App\Services\TransactionService;
 use App\Services\SettingService;
 use App\Services\OtpService;
@@ -90,8 +91,9 @@ class BatchList extends Component
                 if ($batch->type === Batch::TYPE_REGULAR && $batch->cost_in_credits > 0) {
                     $transactionService = app(TransactionService::class);
                     $transactionService->debit(
-                        $user,
+                        $user->id,
                         $batch->cost_in_credits,
+                        Wallet::TYPE_CREDITS,
                         Transaction::CATEGORY_BATCH_JOIN,
                         "Joined batch: {$batch->name}",
                         $batch->id

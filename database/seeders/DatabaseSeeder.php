@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             BatchSeeder::class,
             ChannelSeeder::class,
+            AdSeeder::class,
         ]);
 
         // Create test user with enhanced fields if not exists

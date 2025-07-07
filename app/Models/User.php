@@ -45,6 +45,8 @@ class User extends Authenticatable
         'appeal_submitted_at',
         'google_people_cache',
         'google_people_cached_at',
+        'google_access_token',
+        'google_refresh_token',
         'whatsapp_notifications_enabled',
         'email_notifications_enabled',
         'is_admin',

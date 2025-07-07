@@ -175,6 +175,14 @@ class Ad extends Model
     }
 
     /**
+     * Get participants count attribute.
+     */
+    public function getParticipantsCountAttribute(): int
+    {
+        return $this->getCurrentParticipantCount();
+    }
+
+    /**
      * Get remaining slots.
      */
     public function getRemainingSlots(): ?int

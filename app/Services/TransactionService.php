@@ -16,12 +16,26 @@ use Carbon\Carbon;
 class TransactionService
 {
     /**
+     * Map wallet type to transaction type.
+     */
+    private function mapWalletTypeToTransactionType(string $walletType, string $operation): string
+    {
+        $mapping = [
+            Wallet::TYPE_CREDITS => $operation === 'credit' ? Transaction::TYPE_CREDIT : Transaction::TYPE_DEBIT,
+            Wallet::TYPE_NAIRA => Transaction::TYPE_NAIRA,
+            Wallet::TYPE_EARNINGS => Transaction::TYPE_EARNINGS,
+        ];
+
+        return $mapping[$walletType] ?? $walletType;
+    }
+
+    /**
      * Credit a user's wallet balance.
      */
     public function credit(
         int $userId,
         float $amount,
-        string $type,
+        string $walletType,
         string $category,
         string $description,
         ?int $relatedId = null,
@@ -33,16 +47,17 @@ class TransactionService
         }
 
         return DB::transaction(function () use (
-            $userId, $amount, $type, $category, $description, $relatedId, $source, $metadata
+            $userId, $amount, $walletType, $category, $description, $relatedId, $source, $metadata
         ) {
             $user = User::findOrFail($userId);
-            $wallet = $user->getWallet($type);
+            $wallet = $user->getWallet($walletType);
+            $transactionType = $this->mapWalletTypeToTransactionType($walletType, 'credit');
 
             // Create transaction record
             $transaction = Transaction::create([
                 'user_id' => $userId,
                 'amount' => $amount,
-                'type' => $type,
+                'type' => $transactionType,
                 'category' => $category,
                 'description' => $description,
                 'status' => Transaction::STATUS_PENDING,
@@ -62,7 +77,8 @@ class TransactionService
                 Log::info('Wallet credited', [
                     'user_id' => $userId,
                     'amount' => $amount,
-                    'type' => $type,
+                    'wallet_type' => $walletType,
+                    'transaction_type' => $transactionType,
                     'category' => $category,
                     'transaction_id' => $transaction->id,
                 ]);
@@ -82,7 +98,7 @@ class TransactionService
                 Log::error('Credit operation failed', [
                     'user_id' => $userId,
                     'amount' => $amount,
-                    'type' => $type,
+                    'wallet_type' => $walletType,
                     'error' => $e->getMessage(),
                     'transaction_id' => $transaction->id,
                 ]);
@@ -97,7 +113,7 @@ class TransactionService
     public function debit(
         int $userId,
         float $amount,
-        string $type,
+        string $walletType,
         string $category,
         string $description,
         ?int $relatedId = null,
@@ -109,16 +125,17 @@ class TransactionService
         }
 
         return DB::transaction(function () use (
-            $userId, $amount, $type, $category, $description, $relatedId, $source, $metadata
+            $userId, $amount, $walletType, $category, $description, $relatedId, $source, $metadata
         ) {
             $user = User::findOrFail($userId);
-            $wallet = $user->getWallet($type);
+            $wallet = $user->getWallet($walletType);
+            $transactionType = $this->mapWalletTypeToTransactionType($walletType, 'debit');
 
             // Check balance before creating transaction
             if (!$wallet->hasSufficientBalance($amount)) {
                 throw new InsufficientBalanceException(
-                    "Insufficient {$type} balance. Required: {$amount}, Available: {$wallet->balance}",
-                    $type,
+                    "Insufficient {$walletType} balance. Required: {$amount}, Available: {$wallet->balance}",
+                    $walletType,
                     $amount,
                     $wallet->balance
                 );
@@ -128,7 +145,7 @@ class TransactionService
             $transaction = Transaction::create([
                 'user_id' => $userId,
                 'amount' => $amount,
-                'type' => $type,
+                'type' => $transactionType,
                 'category' => $category,
                 'description' => $description,
                 'status' => Transaction::STATUS_PENDING,
@@ -148,7 +165,8 @@ class TransactionService
                 Log::info('Wallet debited', [
                     'user_id' => $userId,
                     'amount' => $amount,
-                    'type' => $type,
+                    'wallet_type' => $walletType,
+                    'transaction_type' => $transactionType,
                     'category' => $category,
                     'transaction_id' => $transaction->id,
                 ]);
@@ -169,7 +187,7 @@ class TransactionService
                 Log::error('Debit operation failed', [
                     'user_id' => $userId,
                     'amount' => $amount,
-                    'type' => $type,
+                    'wallet_type' => $walletType,
                     'error' => $e->getMessage(),
                     'transaction_id' => $transaction->id,
                 ]);

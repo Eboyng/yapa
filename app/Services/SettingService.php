@@ -22,6 +22,7 @@ class SettingService
         'trial_batch_limit' => 30,
         'regular_batch_limit' => 100,
         'google_people_cache_hours' => 24,
+        'ads_feature_enabled' => true,
         'ad_earnings_per_view' => 0.3,
         'ad_screenshot_wait_hours' => 24,
         'max_ad_rejection_count' => 3,

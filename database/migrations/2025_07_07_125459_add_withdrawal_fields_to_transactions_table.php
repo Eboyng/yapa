@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            //
+            $table->timestamp('processed_at')->nullable()->after('completed_at');
+            $table->text('admin_notes')->nullable()->after('processed_at');
         });
     }
 
@@ -22,7 +23,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            //
+            $table->dropColumn(['processed_at', 'admin_notes']);
         });
     }
 };

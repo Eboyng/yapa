@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'verified.otp' => \App\Http\Middleware\VerifiedOtp::class,
+            'ads.enabled' => \App\Http\Middleware\AdsEnabledMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

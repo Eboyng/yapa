@@ -87,10 +87,10 @@ class Setting extends Model
     /**
      * Get all settings as key-value pairs.
      */
-    public static function all(): array
+    public static function getAllAsArray(): array
     {
         return Cache::remember('settings.all', 3600, function () {
-            $settings = static::all();
+            $settings = parent::all();
             $result = [];
             
             foreach ($settings as $setting) {
