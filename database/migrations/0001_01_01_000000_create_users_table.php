@@ -29,7 +29,6 @@ return new class extends Migration
             $table->timestamp('otp_expires_at')->nullable();
             $table->string('pending_whatsapp_number')->nullable();
             $table->string('otp_code')->nullable();
-            $table->boolean('is_admin')->default(false);
             $table->boolean('notification_enabled')->default(true);
             $table->string('google_id')->nullable();
             $table->string('google_token')->nullable();
