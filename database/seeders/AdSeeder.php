@@ -30,7 +30,6 @@ class AdSeeder extends Seeder
                 'location' => 'Lagos, Nigeria',
                 'email_verification_enabled' => true,
                 'whatsapp_verified_at' => now(),
-                'is_admin' => true,
             ]);
         }
 

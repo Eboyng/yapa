@@ -32,6 +32,8 @@ return new class extends Migration
             $table->boolean('notification_enabled')->default(true);
             $table->string('google_id')->nullable();
             $table->string('google_token')->nullable();
+             $table->boolean('whatsapp_notifications_enabled')->default(true);
+            $table->boolean('email_notifications_enabled')->default(true);
             $table->string('google_refresh_token')->nullable();
             $table->string('avatar')->nullable();
             $table->timestamp('last_login_at')->nullable();
