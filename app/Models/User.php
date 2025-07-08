@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Crypt;
@@ -36,6 +37,7 @@ class User extends Authenticatable
         'whatsapp_verified_at',
         'email_verification_enabled',
         'otp_attempts',
+        'otp_code',
         'otp_expires_at',
         'pending_whatsapp_number',
         'ad_rejection_count',
@@ -52,6 +54,9 @@ class User extends Authenticatable
         'is_admin',
         'avatar',
         'last_login_at',
+        'referral_code',
+        'referred_by',
+        'referred_at',
     ];
 
     /**
@@ -92,6 +97,7 @@ class User extends Authenticatable
             'email_notifications_enabled' => 'boolean',
             'is_admin' => 'boolean',
             'last_login_at' => 'datetime',
+            'referred_at' => 'datetime',
         ];
     }
 
@@ -120,21 +126,7 @@ class User extends Authenticatable
         return $this->hasMany(Transaction::class);
     }
 
-    /**
-     * Get the user's audit logs as admin.
-     */
-    public function adminAuditLogs(): HasMany
-    {
-        return $this->hasMany(AuditLog::class, 'admin_user_id');
-    }
-
-    /**
-     * Get the user's audit logs as target.
-     */
-    public function targetAuditLogs(): HasMany
-    {
-        return $this->hasMany(AuditLog::class, 'target_user_id');
-    }
+    // Audit log relationships removed - not needed
 
     /**
      * Get the user's batch memberships.
@@ -184,6 +176,30 @@ class User extends Authenticatable
     public function notificationLogs(): HasMany
     {
         return $this->hasMany(NotificationLog::class);
+    }
+
+    /**
+     * Get the user who referred this user.
+     */
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'referred_by');
+    }
+
+    /**
+     * Get users referred by this user.
+     */
+    public function referredUsers(): HasMany
+    {
+        return $this->hasMany(User::class, 'referred_by');
+    }
+
+    /**
+     * Get batch shares by this user.
+     */
+    public function batchShares(): HasMany
+    {
+        return $this->hasMany(BatchShare::class);
     }
 
     /**
@@ -305,6 +321,47 @@ class User extends Authenticatable
     {
         return $this->update([
             'otp_attempts' => 0,
+            'otp_code' => null,
+            'otp_expires_at' => null,
+        ]);
+    }
+
+    /**
+     * Set OTP code with expiration.
+     */
+    public function setOtpCode(string $otpCode, int $minutes = 5): bool
+    {
+        return $this->update([
+            'otp_code' => Hash::make($otpCode),
+            'otp_attempts' => 0,
+            'otp_expires_at' => Carbon::now()->addMinutes($minutes),
+        ]);
+    }
+
+    /**
+     * Check if OTP code is valid.
+     */
+    public function verifyOtpCode(string $otpCode): bool
+    {
+        if (!$this->otp_code || !$this->otp_expires_at) {
+            return false;
+        }
+
+        if ($this->otp_expires_at->isPast()) {
+            return false;
+        }
+
+        return Hash::check($otpCode, $this->otp_code);
+    }
+
+    /**
+     * Clear OTP data.
+     */
+    public function clearOtpData(): bool
+    {
+        return $this->update([
+            'otp_code' => null,
+            'otp_attempts' => 0,
             'otp_expires_at' => null,
         ]);
     }
@@ -335,6 +392,7 @@ class User extends Authenticatable
         return $this->update([
             'whatsapp_verified_at' => Carbon::now(),
             'otp_attempts' => 0,
+            'otp_code' => null,
             'otp_expires_at' => null,
         ]);
     }
@@ -668,5 +726,114 @@ class User extends Authenticatable
     public function scopeAdmins($query)
     {
         return $query->where('is_admin', true);
+    }
+
+    /**
+     * Generate a unique referral code.
+     */
+    public function generateReferralCode(): string
+    {
+        do {
+            $code = strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 8));
+        } while (self::where('referral_code', $code)->exists());
+        
+        return $code;
+    }
+
+    /**
+     * Get or generate referral code.
+     */
+    public function getReferralCode(): string
+    {
+        if (!$this->referral_code) {
+            $this->update(['referral_code' => $this->generateReferralCode()]);
+        }
+        
+        return $this->referral_code;
+    }
+
+    /**
+     * Get referral link.
+     */
+    public function getReferralLink(): string
+    {
+        return url('/register?ref=' . $this->getReferralCode());
+    }
+
+    /**
+     * Check if user was referred.
+     */
+    public function wasReferred(): bool
+    {
+        return !is_null($this->referred_by);
+    }
+
+    /**
+     * Get total referral rewards earned.
+     */
+    public function getTotalReferralRewards(): float
+    {
+        return $this->transactions()
+            ->where('category', Transaction::CATEGORY_REFERRAL_REWARD)
+            ->where('type', Transaction::TYPE_CREDIT)
+            ->where('status', Transaction::STATUS_COMPLETED)
+            ->sum('amount');
+    }
+
+    /**
+     * Get referred users with pagination.
+     */
+    public function getReferredUsersWithRewards(int $perPage = 10)
+    {
+        return $this->referredUsers()
+            ->select('id', 'name', 'email', 'created_at')
+            ->withCount(['transactions as total_deposits' => function ($query) {
+                $query->where('category', Transaction::CATEGORY_CREDIT_PURCHASE)
+                      ->where('status', Transaction::STATUS_COMPLETED);
+            }])
+            ->with(['transactions' => function ($query) {
+                $query->where('category', Transaction::CATEGORY_REFERRAL_REWARD)
+                      ->where('type', Transaction::TYPE_CREDIT)
+                      ->where('status', Transaction::STATUS_COMPLETED)
+                      ->select('user_id', 'amount');
+            }])
+            ->latest()
+            ->paginate($perPage);
+    }
+
+    /**
+     * Get open batches for sharing.
+     */
+    public function getOpenBatchesForSharing()
+    {
+        return Batch::where('status', 'open')
+            ->where('end_date', '>', now())
+            ->select('id', 'name', 'description', 'current_members', 'max_members', 'end_date')
+            ->latest()
+            ->get();
+    }
+
+    /**
+     * Get batch share progress.
+     */
+    public function getBatchShareProgress(int $batchId): array
+    {
+        $share = $this->batchShares()->where('batch_id', $batchId)->first();
+        $threshold = app(\App\Services\SettingService::class)->get('batch_share_threshold', 10);
+        
+        return [
+            'current' => $share ? $share->new_members_count : 0,
+            'threshold' => $threshold,
+            'reward_claimed' => $share ? $share->reward_claimed : false,
+            'can_claim' => $share ? $share->canClaimReward() : false,
+        ];
+    }
+
+    /**
+     * Scope for users with referral code.
+     */
+    public function scopeWithReferralCode($query, string $code)
+    {
+        return $query->where('referral_code', $code);
     }
 }

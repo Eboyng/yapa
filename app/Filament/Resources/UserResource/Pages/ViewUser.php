@@ -38,13 +38,19 @@ class ViewUser extends ViewRecord
                             ->dateTime(),
                     ])->columns(2),
 
-                Section::make('Balances')
+                Section::make('Wallet Balances')
                     ->schema([
-                        TextEntry::make('credits_balance')
+                        TextEntry::make('credits_wallet_balance')
+                            ->label('Credits Balance')
+                            ->getStateUsing(fn (User $record): float => $record->getCreditWallet()->balance)
                             ->suffix(' credits'),
-                        TextEntry::make('naira_balance')
+                        TextEntry::make('naira_wallet_balance')
+                            ->label('Naira Balance')
+                            ->getStateUsing(fn (User $record): float => $record->getNairaWallet()->balance)
                             ->money('NGN'),
-                        TextEntry::make('earnings_balance')
+                        TextEntry::make('earnings_wallet_balance')
+                            ->label('Earnings Balance')
+                            ->getStateUsing(fn (User $record): float => $record->getEarningsWallet()->balance)
                             ->money('NGN'),
                     ])->columns(3),
 

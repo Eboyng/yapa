@@ -36,8 +36,8 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="text-lg font-medium opacity-90">Current Balance</h3>
-                    <p class="text-3xl sm:text-4xl font-bold mt-2">{{ number_format($user->credits_balance) }} Credits</p>
-                    <p class="text-white/80 mt-1 text-sm sm:text-base">≈ ₦{{ number_format($user->credits_balance * $pricingConfig['credit_price'], 2) }}</p>
+                    <p class="text-3xl sm:text-4xl font-bold mt-2">{{ number_format($user->getCreditWallet()->balance) }} Credits</p>
+                    <p class="text-white/80 mt-1 text-sm sm:text-base">≈ ₦{{ number_format($user->getCreditWallet()->balance * $pricingConfig['credit_price'], 2) }}</p>
                 </div>
                 <div class="hidden sm:block">
                     <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">

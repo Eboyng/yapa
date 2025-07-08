@@ -99,7 +99,7 @@
                                     <p class="text-xs text-gray-500">For messaging & features</p>
                                 </div>
                             </div>
-                            <span class="text-sm font-bold text-blue-600">{{ number_format(auth()->user()->credits_balance) }}</span>
+                            <span class="text-sm font-bold text-blue-600">{{ number_format(auth()->user()->getCreditWallet()->balance) }}</span>
                         </div>
 
                         <!-- Naira Balance -->
@@ -116,7 +116,7 @@
                                     <p class="text-xs text-gray-500">Available balance</p>
                                 </div>
                             </div>
-                            <span class="text-sm font-bold text-green-600">₦{{ number_format(auth()->user()->naira_balance, 2) }}</span>
+                            <span class="text-sm font-bold text-green-600">₦{{ number_format(auth()->user()->getNairaWallet()->balance, 2) }}</span>
                         </div>
 
                         <!-- Earnings Balance -->
@@ -132,7 +132,7 @@
                                     <p class="text-xs text-gray-500">From ad tasks</p>
                                 </div>
                             </div>
-                            <span class="text-sm font-bold text-purple-600">₦{{ number_format(auth()->user()->earnings_balance, 2) }}</span>
+                            <span class="text-sm font-bold text-purple-600">₦{{ number_format(auth()->user()->getEarningsWallet()->balance, 2) }}</span>
                         </div>
                     </div>
                 </div>

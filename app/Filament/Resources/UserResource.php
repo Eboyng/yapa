@@ -52,20 +52,17 @@ class UserResource extends Resource
                             ->revealable(),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Balances')
+                Forms\Components\Section::make('Wallet Management')
                     ->schema([
-                        Forms\Components\TextInput::make('credits_balance')
-                            ->numeric()
-                            ->default(0)
-                            ->suffix('credits'),
-                        Forms\Components\TextInput::make('naira_balance')
-                            ->numeric()
-                            ->default(0)
-                            ->prefix('₦'),
-                        Forms\Components\TextInput::make('earnings_balance')
-                            ->numeric()
-                            ->default(0)
-                            ->prefix('₦'),
+                        Forms\Components\Placeholder::make('credits_wallet_balance')
+                            ->label('Credits Balance')
+                            ->content(fn (User $record): string => number_format($record->getCreditWallet()->balance) . ' credits'),
+                        Forms\Components\Placeholder::make('naira_wallet_balance')
+                            ->label('Naira Balance')
+                            ->content(fn (User $record): string => '₦' . number_format($record->getNairaWallet()->balance, 2)),
+                        Forms\Components\Placeholder::make('earnings_wallet_balance')
+                            ->label('Earnings Balance')
+                            ->content(fn (User $record): string => '₦' . number_format($record->getEarningsWallet()->balance, 2)),
                     ])->columns(3),
 
                 Forms\Components\Section::make('Status & Flags')
@@ -133,16 +130,19 @@ class UserResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('location')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('credits_balance')
+                Tables\Columns\TextColumn::make('credits_wallet_balance')
+                    ->label('Credits')
+                    ->getStateUsing(fn (User $record): float => $record->getCreditWallet()->balance)
                     ->numeric()
-                    ->sortable()
                     ->suffix(' credits'),
-                Tables\Columns\TextColumn::make('naira_balance')
-                    ->money('NGN')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('earnings_balance')
-                    ->money('NGN')
-                    ->sortable(),
+                Tables\Columns\TextColumn::make('naira_wallet_balance')
+                    ->label('Naira')
+                    ->getStateUsing(fn (User $record): float => $record->getNairaWallet()->balance)
+                    ->money('NGN'),
+                Tables\Columns\TextColumn::make('earnings_wallet_balance')
+                    ->label('Earnings')
+                    ->getStateUsing(fn (User $record): float => $record->getEarningsWallet()->balance)
+                    ->money('NGN'),
                 Tables\Columns\IconColumn::make('is_admin')
                     ->boolean(),
                 Tables\Columns\IconColumn::make('is_flagged_for_ads')

@@ -188,6 +188,41 @@ class NotificationService
     }
 
     /**
+     * Send referral reward notification.
+     */
+    public function sendReferralReward(User $user, float $amount, string $description): NotificationLog
+    {
+        $subject = 'Referral Reward Earned!';
+        $message = "You've earned ₦{$amount} as a referral reward! {$description}";
+        
+        return $this->send(
+            user: $user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: $subject,
+            message: $message,
+            metadata: ['amount' => $amount, 'description' => $description]
+        );
+    }
+
+    /**
+     * Send batch share reward notification.
+     */
+    public function sendBatchShareReward(User $user, $batch, float $amount): NotificationLog
+    {
+        $subject = 'Batch Sharing Reward!';
+        $message = "Congratulations! You've earned {$amount} credits for sharing '{$batch->name}' and getting 10 new members to join!";
+        
+        return $this->send(
+            user: $user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: $subject,
+            message: $message,
+            relatedModel: $batch,
+            metadata: ['amount' => $amount, 'reward_type' => 'batch_share']
+        );
+    }
+
+    /**
      * Core send method.
      */
     protected function send(

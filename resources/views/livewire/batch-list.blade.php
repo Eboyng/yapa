@@ -173,66 +173,239 @@
                         </div>
 
                         <!-- Batch Actions -->
-                        <div class="px-4 sm:px-5 py-3 bg-gray-50 border-t border-gray-100">
+                        <div class="px-4 sm:px-5 py-3 bg-gray-50 border-t border-gray-100" x-data="{ showShareMenu: false }">
                             @php
                                 $user = Auth::user();
                                 $isMember = $batch->members()->where('user_id', $user->id)->exists();
                                 $canJoin = $batch->canUserJoin($user);
                                 $isFull = $batch->isFull();
+                                $canShare = $batch->isOpen() && !$batch->isFull();
                             @endphp
 
                             @if($isMember)
                                 @if($isFull)
-                                    <button wire:click="downloadVcf({{ $batch->id }})" 
-                                            class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium rounded-xl text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105">
-                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                        </svg>
-                                        Download VCF
-                                    </button>
+                                    <div class="space-y-2">
+                                        <button wire:click="downloadVcf({{ $batch->id }})" 
+                                                class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium rounded-xl text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105">
+                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                            Download VCF
+                                        </button>
+                                        @if($canShare)
+                                            <!-- Share Button for Full Batches -->
+                                            <div class="relative">
+                                                <button @click="showShareMenu = !showShareMenu" 
+                                                        class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium rounded-xl text-orange-600 bg-orange-50 border border-orange-200 hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200">
+                                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+                                                    </svg>
+                                                    Share Batch
+                                                </button>
+                                                <!-- Share Menu -->
+                                                <div x-show="showShareMenu" 
+                                                     x-transition:enter="transition ease-out duration-200"
+                                                     x-transition:enter-start="opacity-0 scale-95"
+                                                     x-transition:enter-end="opacity-100 scale-100"
+                                                     x-transition:leave="transition ease-in duration-75"
+                                                     x-transition:leave-start="opacity-100 scale-100"
+                                                     x-transition:leave-end="opacity-0 scale-95"
+                                                     @click.away="showShareMenu = false"
+                                                     class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 p-2 z-10">
+                                                    <div class="grid grid-cols-2 gap-2">
+                                                        <button @click="shareOnWhatsApp({{ $batch->id }}, '{{ $batch->name }}')" 
+                                                                class="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg text-green-600 bg-green-50 hover:bg-green-100 transition-colors">
+                                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.785"/>
+                                                            </svg>
+                                                            WhatsApp
+                                                        </button>
+                                                        <button @click="shareOnFacebook({{ $batch->id }}, '{{ $batch->name }}')" 
+                                                                class="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
+                                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                                            </svg>
+                                                            Facebook
+                                                        </button>
+                                                        <button @click="shareOnTwitter({{ $batch->id }}, '{{ $batch->name }}')" 
+                                                                class="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg text-gray-800 bg-gray-100 hover:bg-gray-200 transition-colors">
+                                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                                                            </svg>
+                                                            X (Twitter)
+                                                        </button>
+                                                        <button @click="copyShareLink({{ $batch->id }}, '{{ $batch->name }}')" 
+                                                                class="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors">
+                                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                                            </svg>
+                                                            Copy Link
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
                                 @else
-                                    <div class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium rounded-xl text-gray-600 bg-gray-100 cursor-default">
-                                        <div class="w-4 h-4 mr-2 rounded-full bg-orange-500 animate-pulse"></div>
-                                        Waiting for batch to fill
+                                    <div class="space-y-2">
+                                        <div class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium rounded-xl text-gray-600 bg-gray-100 cursor-default">
+                                            <div class="w-4 h-4 mr-2 rounded-full bg-orange-500 animate-pulse"></div>
+                                            Waiting for batch to fill
+                                        </div>
+                                        @if($canShare)
+                                            <!-- Share Button for Waiting Batches -->
+                                            <div class="relative">
+                                                <button @click="showShareMenu = !showShareMenu" 
+                                                        class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium rounded-xl text-orange-600 bg-orange-50 border border-orange-200 hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200">
+                                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+                                                    </svg>
+                                                    Share & Earn
+                                                </button>
+                                                <!-- Share Menu -->
+                                                <div x-show="showShareMenu" 
+                                                     x-transition:enter="transition ease-out duration-200"
+                                                     x-transition:enter-start="opacity-0 scale-95"
+                                                     x-transition:enter-end="opacity-100 scale-100"
+                                                     x-transition:leave="transition ease-in duration-75"
+                                                     x-transition:leave-start="opacity-100 scale-100"
+                                                     x-transition:leave-end="opacity-0 scale-95"
+                                                     @click.away="showShareMenu = false"
+                                                     class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 p-2 z-10">
+                                                    <div class="text-xs text-gray-600 text-center mb-2 px-2">
+                                                        Earn 100 credits when 10 people join!
+                                                    </div>
+                                                    <div class="grid grid-cols-2 gap-2">
+                                                        <button @click="shareOnWhatsApp({{ $batch->id }}, '{{ $batch->name }}')" 
+                                                                class="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg text-green-600 bg-green-50 hover:bg-green-100 transition-colors">
+                                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.785"/>
+                                                            </svg>
+                                                            WhatsApp
+                                                        </button>
+                                                        <button @click="shareOnFacebook({{ $batch->id }}, '{{ $batch->name }}')" 
+                                                                class="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
+                                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                                            </svg>
+                                                            Facebook
+                                                        </button>
+                                                        <button @click="shareOnTwitter({{ $batch->id }}, '{{ $batch->name }}')" 
+                                                                class="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg text-gray-800 bg-gray-100 hover:bg-gray-200 transition-colors">
+                                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                                                            </svg>
+                                                            X (Twitter)
+                                                        </button>
+                                                        <button @click="copyShareLink({{ $batch->id }}, '{{ $batch->name }}')" 
+                                                                class="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors">
+                                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                                            </svg>
+                                                            Copy Link
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
                                     </div>
                                 @endif
                             @else
-                                @if($canJoin)
-                                    <button wire:click="joinBatch({{ $batch->id }})" 
-                                            @if($isProcessing) disabled @endif
-                                            class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium rounded-xl text-white bg-gradient-to-r from-orange-500 to-purple-500 hover:from-orange-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105">
-                                        @if($isProcessing)
-                                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            Joining...
-                                        @else
-                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                            </svg>
-                                            Join Batch
-                                        @endif
-                                    </button>
-                                @else
-                                    <div class="w-full relative">
-                                        <button disabled 
-                                                class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium rounded-xl text-gray-500 bg-gray-100 cursor-not-allowed">
-                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"></path>
-                                            </svg>
-                                            @if($isFull)
-                                                Batch Full
-                                            @elseif($batch->type === 'trial' && $user->hasTrialBatchMembership())
-                                                Trial Used
-                                            @elseif($batch->type === 'regular' && !$user->hasSufficientCredits($batch->cost_in_credits))
-                                                Need Credits
+                                <div class="space-y-2">
+                                    @if($canJoin)
+                                        <button wire:click="joinBatch({{ $batch->id }})" 
+                                                @if($isProcessing) disabled @endif
+                                                class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium rounded-xl text-white bg-gradient-to-r from-orange-500 to-purple-500 hover:from-orange-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105">
+                                            @if($isProcessing)
+                                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Joining...
                                             @else
-                                                Cannot Join
+                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                                </svg>
+                                                Join Batch
                                             @endif
                                         </button>
-                                    </div>
-                                @endif
+                                    @else
+                                        <div class="w-full relative">
+                                            <button disabled 
+                                                    class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium rounded-xl text-gray-500 bg-gray-100 cursor-not-allowed">
+                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"></path>
+                                                </svg>
+                                                @if($isFull)
+                                                    Batch Full
+                                                @elseif($batch->type === 'trial' && $user->hasTrialBatchMembership())
+                                                    Trial Used
+                                                @elseif($batch->type === 'regular' && !$user->hasSufficientCredits($batch->cost_in_credits))
+                                                    Need Credits
+                                                @else
+                                                    Cannot Join
+                                                @endif
+                                            </button>
+                                        </div>
+                                    @endif
+                                    
+                                    @if($canShare)
+                                        <!-- Share Button for Non-Members -->
+                                        <div class="relative">
+                                            <button @click="showShareMenu = !showShareMenu" 
+                                                    class="w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium rounded-xl text-orange-600 bg-orange-50 border border-orange-200 hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200">
+                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+                                                </svg>
+                                                Share & Earn
+                                            </button>
+                                            <!-- Share Menu -->
+                                            <div x-show="showShareMenu" 
+                                                 x-transition:enter="transition ease-out duration-200"
+                                                 x-transition:enter-start="opacity-0 scale-95"
+                                                 x-transition:enter-end="opacity-100 scale-100"
+                                                 x-transition:leave="transition ease-in duration-75"
+                                                 x-transition:leave-start="opacity-100 scale-100"
+                                                 x-transition:leave-end="opacity-0 scale-95"
+                                                 @click.away="showShareMenu = false"
+                                                 class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 p-2 z-10">
+                                                <div class="text-xs text-gray-600 text-center mb-2 px-2">
+                                                    Earn 100 credits when 10 people join!
+                                                </div>
+                                                <div class="grid grid-cols-2 gap-2">
+                                                    <button @click="shareOnWhatsApp({{ $batch->id }}, '{{ $batch->name }}')" 
+                                                            class="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg text-green-600 bg-green-50 hover:bg-green-100 transition-colors">
+                                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.785"/>
+                                                        </svg>
+                                                        WhatsApp
+                                                    </button>
+                                                    <button @click="shareOnFacebook({{ $batch->id }}, '{{ $batch->name }}')" 
+                                                            class="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
+                                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                                        </svg>
+                                                        Facebook
+                                                    </button>
+                                                    <button @click="shareOnTwitter({{ $batch->id }}, '{{ $batch->name }}')" 
+                                                            class="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg text-gray-800 bg-gray-100 hover:bg-gray-200 transition-colors">
+                                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                                                        </svg>
+                                                        X (Twitter)
+                                                    </button>
+                                                    <button @click="copyShareLink({{ $batch->id }}, '{{ $batch->name }}')" 
+                                                            class="flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors">
+                                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                                        </svg>
+                                                        Copy Link
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
                             @endif
                         </div>
                     </div>

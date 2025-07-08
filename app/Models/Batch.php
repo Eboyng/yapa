@@ -111,6 +111,14 @@ class Batch extends Model
     }
 
     /**
+     * Get the batch shares.
+     */
+    public function batchShares(): HasMany
+    {
+        return $this->hasMany(BatchShare::class);
+    }
+
+    /**
      * Check if batch is open.
      */
     public function isOpen(): bool
@@ -376,5 +384,13 @@ class Batch extends Model
             self::STATUS_EXPIRED => 'red',
             default => 'gray',
         };
+    }
+
+    /**
+     * Get share link for this batch.
+     */
+    public function getShareLink(string $referralCode): string
+    {
+        return url('/batch/' . $this->id . '?ref=' . $referralCode);
     }
 }

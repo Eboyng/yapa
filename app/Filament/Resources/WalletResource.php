@@ -198,14 +198,6 @@ class WalletResource extends Resource
                                 'completed_at' => now(),
                             ]);
                             
-                            // Log the action
-                            AuditLog::create([
-                                'user_id' => auth()->id(),
-                                'action' => 'wallet_balance_adjusted',
-                                'details' => "Adjusted {$record->type} wallet for user {$record->user->name} (ID: {$record->user_id}): {$type} {$amount} - Reason: {$reason}",
-                                'timestamp' => now(),
-                            ]);
-                            
                             Notification::make()
                                 ->title('Balance adjusted successfully')
                                 ->success()

@@ -1,7 +1,7 @@
 <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-50">
     <div class="container mx-auto px-4 py-6 max-w-2xl">
         @if ($adTask)
-            <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
                 <!-- Header -->
                 <div class="bg-gradient-to-r from-orange-500 to-purple-600 px-6 py-6">
                     <div class="flex items-center justify-between">
@@ -301,7 +301,7 @@
                             </div>
                         @else
                             <div
-                                class="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-2xl p-6">
+                                class="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-2xl my-3 p-6">
                                 <div class="flex items-start">
                                     <div
                                         class="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">

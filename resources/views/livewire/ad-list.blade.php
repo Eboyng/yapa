@@ -1,7 +1,7 @@
 <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-50">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <!-- Header -->
-        <div class="bg-white shadow-lg border-b border-orange-100 rounded-2xl p-4 sm:p-6 mb-8">
+        <div class="bg-white shadow-sm border-b border-orange-100 rounded-2xl p-4 sm:p-6 mb-8">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex items-center space-x-3 mb-4 sm:mb-0">
                     <div
@@ -23,14 +23,25 @@
                     </div>
                 </div>
 
-                <button onclick="openGuideModal()"
-                    class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-500 text-white text-sm font-medium rounded-xl hover:from-orange-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    How it Works
-                </button>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <a href="{{ route('ads.tasks') }}"
+                        class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-xl hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                        </svg>
+                        My Tasks
+                    </a>
+                    
+                    <button onclick="openGuideModal()"
+                        class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-500 text-white text-sm font-medium rounded-xl hover:from-orange-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        How it Works
+                    </button>
+                </div>
             </div>
         </div>
 

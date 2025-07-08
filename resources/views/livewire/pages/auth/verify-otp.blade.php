@@ -40,6 +40,12 @@ new #[Layout('layouts.guest')] class extends Component
             $user = Auth::user();
             $otpService = app(OtpService::class);
             
+            // Check if user has a WhatsApp number
+            if (!$user->whatsapp_number) {
+                Session::flash('error', 'WhatsApp number not set. Please update your profile.');
+                return;
+            }
+            
             // Check if can resend
             $canResend = $otpService->canResendOtp($user->whatsapp_number, 'login');
             
@@ -84,6 +90,12 @@ new #[Layout('layouts.guest')] class extends Component
             $user = Auth::user();
             $otpService = app(OtpService::class);
             
+            // Check if user has a WhatsApp number
+            if (!$user->whatsapp_number) {
+                $this->addError('otp', 'WhatsApp number not set. Please update your profile.');
+                return;
+            }
+            
             $result = $otpService->verifyOtp(
                 $user->whatsapp_number,
                 $this->otp,
@@ -124,6 +136,13 @@ new #[Layout('layouts.guest')] class extends Component
         $user = Auth::user();
         $otpService = app(OtpService::class);
         
+        // Check if user has a WhatsApp number
+        if (!$user->whatsapp_number) {
+            $this->canResend = false;
+            $this->resendMessage = 'WhatsApp number not set';
+            return;
+        }
+        
         $canResend = $otpService->canResendOtp($user->whatsapp_number, 'login');
         $this->canResend = $canResend['can_resend'];
         $this->resendMessage = $canResend['message'];
@@ -145,7 +164,12 @@ new #[Layout('layouts.guest')] class extends Component
     </div>
 
     <div class="mb-4 text-sm text-gray-500">
-        <strong>WhatsApp Number:</strong> {{ Auth::user()->whatsapp_number }}
+        <strong>WhatsApp Number:</strong> 
+        @if(Auth::user()->whatsapp_number)
+            {{ Auth::user()->whatsapp_number }}
+        @else
+            <span class="text-red-500">Not set - Please update your profile</span>
+        @endif
     </div>
 
     @if (session('status') == 'otp-sent')

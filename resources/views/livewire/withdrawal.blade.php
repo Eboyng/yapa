@@ -41,7 +41,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <h3 class="text-lg font-medium">Available Earnings</h3>
-                <p class="text-3xl font-bold mt-2">₦{{ number_format($user->earnings_balance, 2) }}</p>
+                <p class="text-3xl font-bold mt-2">₦{{ number_format($user->getEarningsWallet()->balance, 2) }}</p>
                 <p class="text-green-100 mt-1">Ready for withdrawal</p>
             </div>
             <div class="text-right">
@@ -88,7 +88,7 @@
                    id="amount" 
                    min="{{ \App\Livewire\Withdrawal::MINIMUM_WITHDRAWAL }}" 
                    step="1"
-                   max="{{ $user->earnings_balance }}"
+                   max="{{ $user->getEarningsWallet()->balance }}"
                    class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500" 
                    placeholder="Enter amount to withdraw">
             @error('amount')

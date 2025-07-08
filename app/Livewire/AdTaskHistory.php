@@ -174,39 +174,29 @@ class AdTaskHistory extends Component
     public function render()
     {
         $user = Auth::user();
-        $query = AdTask::with(['ad', 'reviewedByAdmin'])
+        
+        // Get separate collections for each tab
+        $activeTasks = AdTask::with(['ad', 'reviewedByAdmin'])
             ->where('user_id', $user->id)
-            ->orderBy('created_at', 'desc');
-
-        // Filter by tab
-        switch ($this->activeTab) {
-            case 'active':
-                $query->where('status', AdTask::STATUS_ACTIVE);
-                break;
-            case 'pending':
-                $query->whereIn('status', [
-                    AdTask::STATUS_SCREENSHOT_UPLOADED,
-                    AdTask::STATUS_PENDING_REVIEW
-                ]);
-                break;
-            case 'history':
-                $query->whereIn('status', [
-                    AdTask::STATUS_APPROVED,
-                    AdTask::STATUS_REJECTED,
-                    AdTask::STATUS_COMPLETED,
-                    AdTask::STATUS_EXPIRED
-                ]);
-                break;
-        }
-
-        $adTasks = $query->paginate(10);
-
-        // Get related transactions for earnings display
-        $transactionIds = $adTasks->pluck('id')->toArray();
-        $transactions = Transaction::where('category', Transaction::CATEGORY_AD_EARNING)
-            ->whereIn('related_id', $transactionIds)
-            ->get()
-            ->keyBy('related_id');
+            ->where('status', AdTask::STATUS_ACTIVE)
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+        $pendingTasks = AdTask::with(['ad', 'reviewedByAdmin'])
+            ->where('user_id', $user->id)
+            ->whereIn('status', [
+                AdTask::STATUS_SCREENSHOT_UPLOADED,
+                AdTask::STATUS_PENDING_REVIEW
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+        // Get transactions for history tab
+        $transactions = Transaction::with(['adTask.ad'])
+            ->where('user_id', $user->id)
+            ->where('category', Transaction::CATEGORY_AD_EARNING)
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
 
         // Get user stats
         $stats = [
@@ -220,7 +210,8 @@ class AdTaskHistory extends Component
         ];
 
         return view('livewire.ad-task-history', [
-            'adTasks' => $adTasks,
+            'activeTasks' => $activeTasks,
+            'pendingTasks' => $pendingTasks,
             'transactions' => $transactions,
             'stats' => $stats,
             'isFlagged' => $user->isFlaggedForAds(),

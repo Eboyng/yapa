@@ -364,8 +364,8 @@ class AdTask extends Model
             ],
         ]);
         
-        // Update user's earnings balance
-        $this->user->increment('earnings_balance', $this->earnings_amount);
+        // Update user's earnings balance using wallet system
+        $this->user->getEarningsWallet()->deposit($this->earnings_amount);
     }
 
     /**

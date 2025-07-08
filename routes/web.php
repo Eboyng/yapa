@@ -72,7 +72,7 @@ Route::prefix('channel-ads')->name('channel-ads.')->group(function () {
 });
 
 // Ad (Share & Earn) Routes
-Route::prefix('ads')->name('ads.')->middleware(['auth', 'verified.otp', 'ads.enabled'])->group(function () {
+Route::prefix('ads')->name('ads.')->middleware(['auth',  'ads.enabled'])->group(function () {
     // Ad listing page
     Route::get('/', AdList::class)
         ->name('index');

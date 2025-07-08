@@ -17,13 +17,15 @@ class PaystackService
     private string $publicKey;
     private string $baseUrl;
     private TransactionService $transactionService;
+    private ReferralService $referralService;
 
-    public function __construct(TransactionService $transactionService)
+    public function __construct(TransactionService $transactionService, ReferralService $referralService)
     {
         $this->secretKey = config('services.paystack.secret_key');
         $this->publicKey = config('services.paystack.public_key');
         $this->baseUrl = config('services.paystack.base_url', 'https://api.paystack.co');
         $this->transactionService = $transactionService;
+        $this->referralService = $referralService;
     }
 
     /**
@@ -301,6 +303,16 @@ class PaystackService
                     'confirmed_at' => now(),
                 ])
             );
+
+            // Process referral reward for credit purchases
+            if ($transaction->category === Transaction::CATEGORY_CREDIT_PURCHASE) {
+                $user = User::find($transaction->user_id);
+                $nairaAmount = $transaction->metadata['naira_amount'] ?? 0;
+                
+                if ($user && $nairaAmount > 0) {
+                    $this->referralService->processDepositReferral($user, $nairaAmount);
+                }
+            }
 
             Log::info('Paystack charge success processed', [
                 'transaction_id' => $transaction->id,

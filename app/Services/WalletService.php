@@ -29,13 +29,13 @@ class WalletService
                 throw new Exception('Amount must be greater than zero');
             }
             
-            // Get current balance
-            $balanceField = $walletType === 'credits' ? 'credits_balance' : ($walletType === 'naira' ? 'naira_balance' : 'earnings_balance');
-            $balanceBefore = $user->{$balanceField};
+            // Get current balance using wallet system
+            $wallet = $user->getWallet($walletType);
+            $balanceBefore = $wallet->balance;
             $balanceAfter = $balanceBefore + $amount;
             
-            // Update user balance
-            $user->update([$balanceField => $balanceAfter]);
+            // Update user balance using wallet system
+            $wallet->deposit($amount);
             
             // Create wallet transaction
             $transaction = WalletTransaction::create([
@@ -93,9 +93,9 @@ class WalletService
                 throw new Exception('Amount must be greater than zero');
             }
             
-            // Get current balance
-            $balanceField = $walletType === 'credits' ? 'credits_balance' : ($walletType === 'naira' ? 'naira_balance' : 'earnings_balance');
-            $balanceBefore = $user->{$balanceField};
+            // Get current balance using wallet system
+            $wallet = $user->getWallet($walletType);
+            $balanceBefore = $wallet->balance;
             
             // Check if sufficient balance
             if ($balanceBefore < $amount) {
@@ -104,8 +104,8 @@ class WalletService
             
             $balanceAfter = $balanceBefore - $amount;
             
-            // Update user balance
-            $user->update([$balanceField => $balanceAfter]);
+            // Update user balance using wallet system
+            $wallet->withdraw($amount);
             
             // Create wallet transaction
             $transaction = WalletTransaction::create([
@@ -150,8 +150,7 @@ class WalletService
      */
     public function getWalletBalance(User $user, string $walletType): float
     {
-        $balanceField = $walletType === 'credits' ? 'credits_balance' : ($walletType === 'naira' ? 'naira_balance' : 'earnings_balance');
-        return $user->{$balanceField};
+        return $user->getWallet($walletType)->balance;
     }
     
     /**

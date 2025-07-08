@@ -146,8 +146,10 @@ class PendingUser extends Model
             'whatsapp_number' => $this->whatsapp_number,
             'password' => $this->password,
             'whatsapp_verified_at' => Carbon::now(),
-            'credits_balance' => 100, // Free credits on registration
         ]);
+        
+        // Give free credits on registration using wallet system
+        $user->getCreditWallet()->deposit(100);
 
         // Delete the pending user record
         $this->delete();

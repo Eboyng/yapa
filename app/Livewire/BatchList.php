@@ -6,6 +6,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\Batch;
 use App\Models\BatchMember;
+use App\Models\BatchShare;
 use App\Models\Interest;
 use App\Models\Transaction;
 use App\Models\Wallet;
@@ -41,11 +42,12 @@ class BatchList extends Component
 
     protected $listeners = [
         'refreshBatches' => '$refresh',
+        'batchShared' => 'handleBatchShared',
     ];
 
     public function mount()
     {
-        $this->creditsBalance = Auth::user()->credits_balance ?? 0;
+        $this->creditsBalance = Auth::user()->getCreditWallet()->balance ?? 0;
     }
 
     public function updatedFilters()
@@ -108,7 +110,7 @@ class BatchList extends Component
                 ]);
 
                 // Refresh user's credits balance
-                $this->creditsBalance = $user->fresh()->credits_balance;
+                $this->creditsBalance = $user->fresh()->getCreditWallet()->balance;
             });
 
             // Send notification
@@ -126,6 +128,111 @@ class BatchList extends Component
             $this->addError('batch_join', 'Failed to join batch. Please try again.');
         } finally {
             $this->isProcessing = false;
+        }
+    }
+
+    public function shareBatch($batchId, $platform)
+    {
+        try {
+            $user = Auth::user();
+            $batch = Batch::findOrFail($batchId);
+
+            // Validate batch is available for sharing
+            if (!$batch->isOpen() || $batch->isFull()) {
+                $this->addError('batch_share', 'This batch is no longer available for sharing.');
+                return;
+            }
+
+            // Create or update batch share record
+            $batchShare = BatchShare::firstOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'batch_id' => $batch->id,
+                    'platform' => $platform,
+                ],
+                [
+                    'new_members_count' => 0,
+                    'reward_claimed' => false,
+                ]
+            );
+
+            // Generate sharing URL
+            $shareUrl = url("/batch/{$batch->id}?ref={$user->referral_code}");
+
+            // Dispatch event with sharing data
+            $this->dispatch('batchShared', [
+                'platform' => $platform,
+                'url' => $shareUrl,
+                'batchName' => $batch->name,
+                'batchId' => $batch->id,
+            ]);
+
+            session()->flash('success', "Batch shared successfully via {$platform}!");
+
+        } catch (\Exception $e) {
+            Log::error('Failed to share batch', [
+                'user_id' => Auth::id(),
+                'batch_id' => $batchId,
+                'platform' => $platform,
+                'error' => $e->getMessage()
+            ]);
+            $this->addError('batch_share', 'Failed to share batch. Please try again.');
+        }
+    }
+
+    public function handleBatchShared($data)
+    {
+        // This method handles the client-side sharing completion
+        // Additional tracking or analytics can be added here
+    }
+
+    public function checkAndRewardShares()
+    {
+        try {
+            $user = Auth::user();
+            $eligibleShares = BatchShare::where('user_id', $user->id)
+                ->eligibleForReward()
+                ->with('batch')
+                ->get();
+
+            foreach ($eligibleShares as $share) {
+                // Calculate reward amount
+                $rewardAmount = app(SettingService::class)->get('batch_share_reward_amount', 100);
+
+                // Credit the reward
+                $transactionService = app(TransactionService::class);
+                $transactionService->credit(
+                    $user->id,
+                    $rewardAmount,
+                    Wallet::TYPE_CREDITS,
+                    'batch_share_reward',
+                    "Batch sharing reward for '{$share->batch->name}' - {$share->new_members_count} new members",
+                    $share->batch_id
+                );
+
+                // Mark reward as claimed
+                $share->markRewardClaimed();
+
+                Log::info('Batch share reward credited', [
+                    'user_id' => $user->id,
+                    'batch_id' => $share->batch_id,
+                    'platform' => $share->platform,
+                    'new_members' => $share->new_members_count,
+                    'reward_amount' => $rewardAmount,
+                ]);
+            }
+
+            if ($eligibleShares->count() > 0) {
+                // Refresh user's credits balance
+                $this->creditsBalance = $user->fresh()->getCreditWallet()->balance;
+                session()->flash('success', "Congratulations! You've earned rewards for your successful batch shares!");
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Failed to process batch share rewards', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage()
+            ]);
         }
     }
 
@@ -157,8 +264,8 @@ class BatchList extends Component
                 'type' => Transaction::TYPE_CREDIT,
                 'category' => 'contact_download',
                 'amount' => 0,
-                'balance_before' => $user->credits_balance,
-                'balance_after' => $user->credits_balance,
+                'balance_before' => $user->getCreditWallet()->balance,
+                'balance_after' => $user->getCreditWallet()->balance,
                 'description' => "Downloaded contacts for batch: {$batch->name}",
                 'status' => Transaction::STATUS_COMPLETED,
                 'related_id' => $batch->id,
@@ -302,7 +409,7 @@ class BatchList extends Component
         }
 
         if ($batch->type === Batch::TYPE_REGULAR && !$user->hasSufficientCredits($batch->cost_in_credits)) {
-            return "Insufficient credits. You need {$batch->cost_in_credits} credits but only have {$user->credits_balance}.";
+            return "Insufficient credits. You need {$batch->cost_in_credits} credits but only have {$user->getCreditWallet()->balance}.";
         }
 
         if ($batch->type === Batch::TYPE_TRIAL && $user->hasTrialBatchMembership()) {
@@ -315,6 +422,15 @@ class BatchList extends Component
     protected function sendJoinNotification(Batch $batch, $user)
     {
         try {
+            // Skip notification if user doesn't have WhatsApp number
+            if (!$user->whatsapp_number) {
+                Log::info('Skipping WhatsApp notification - no WhatsApp number set', [
+                    'user_id' => $user->id,
+                    'batch_id' => $batch->id
+                ]);
+                return;
+            }
+            
             $otpService = app(OtpService::class);
             $message = "Welcome to '{$batch->name}'! You'll be notified when the batch is full and ready for download. Happy networking! 🎉";
             
