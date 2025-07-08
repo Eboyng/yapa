@@ -24,9 +24,10 @@ class DatabaseSeeder extends Seeder
 
         // Create test user with enhanced fields if not exists
         if (!User::where('email', 'admin@yapa.ng')->exists()) {
-            User::factory()->create([
+            User::create([
                 'name' => 'Admin User',
                 'email' => 'admin@yapa.ng',
+                'password' => bcrypt('password'),
                 'whatsapp_number' => '+2348012345678',
                 'credits_balance' => 100, // Free credits upon registration
                 'naira_balance' => 0,
@@ -39,6 +40,6 @@ class DatabaseSeeder extends Seeder
         }
 
         // Create additional test users if needed
-        // User::factory(10)->create();
+        // Additional users can be created manually without faker
     }
 }

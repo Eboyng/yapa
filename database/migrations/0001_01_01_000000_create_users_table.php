@@ -15,10 +15,40 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            $table->string('whatsapp_number')->unique()->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->integer('credits_balance')->default(100);
+            $table->decimal('naira_balance', 10, 2)->default(0);
+            $table->decimal('earnings_balance', 10, 2)->default(0);
+            $table->string('location')->nullable();
+            $table->text('bvn')->nullable(); // Will be encrypted
+            $table->timestamp('whatsapp_verified_at')->nullable();
+            $table->boolean('email_verification_enabled')->default(false);
+            $table->integer('otp_attempts')->default(0);
+            $table->timestamp('otp_expires_at')->nullable();
+            $table->string('pending_whatsapp_number')->nullable();
+            $table->string('otp_code')->nullable();
+            $table->boolean('is_admin')->default(false);
+            $table->boolean('notification_enabled')->default(true);
+            $table->string('google_id')->nullable();
+            $table->string('google_token')->nullable();
+            $table->string('google_refresh_token')->nullable();
+            $table->string('avatar')->nullable();
+            $table->timestamp('last_login_at')->nullable();
+            $table->string('referral_code', 8)->unique()->nullable();
+            $table->unsignedBigInteger('referred_by')->nullable();
+            $table->timestamp('referred_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
+            
+            // Foreign keys
+            $table->foreign('referred_by')->references('id')->on('users')->onDelete('set null');
+            
+            // Indexes
+            $table->index(['referral_code']);
+            $table->index(['referred_by']);
+            $table->index('last_login_at');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

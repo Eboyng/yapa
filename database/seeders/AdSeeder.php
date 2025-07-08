@@ -18,9 +18,18 @@ class AdSeeder extends Seeder
         // Get or create an admin user
         $admin = User::where('email', 'admin@yapa.ng')->first();
         if (!$admin) {
-            $admin = User::factory()->create([
+            $admin = User::create([
                 'name' => 'Admin User',
                 'email' => 'admin@yapa.ng',
+                'password' => bcrypt('password'),
+                'email_verified_at' => now(),
+                'whatsapp_number' => '+2348012345678',
+                'credits_balance' => 100,
+                'naira_balance' => 0,
+                'earnings_balance' => 0,
+                'location' => 'Lagos, Nigeria',
+                'email_verification_enabled' => true,
+                'whatsapp_verified_at' => now(),
                 'is_admin' => true,
             ]);
         }

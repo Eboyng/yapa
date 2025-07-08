@@ -55,9 +55,11 @@ class Profile extends Component
     
     // Batch sharing
     public $openBatches = [];
+    public $sharedBatches = [];
     public $selectedBatch;
     public $shareUrl;
     public $showBatchShareSection = false;
+    public $showSharedBatchesList = false;
     
     // Loading states
     public $isUpdatingProfile = false;
@@ -427,6 +429,15 @@ class Profile extends Component
         }
     }
 
+    public function toggleSharedBatchesList()
+    {
+        $this->showSharedBatchesList = !$this->showSharedBatchesList;
+        
+        if ($this->showSharedBatchesList && empty($this->sharedBatches)) {
+            $this->loadSharedBatches();
+        }
+    }
+
     public function loadOpenBatches()
     {
         $this->isLoadingBatches = true;
@@ -439,6 +450,54 @@ class Profile extends Component
                 'error' => $e->getMessage()
             ]);
             session()->flash('error', 'Failed to load batch data.');
+        } finally {
+            $this->isLoadingBatches = false;
+        }
+    }
+
+    public function loadSharedBatches()
+    {
+        $this->isLoadingBatches = true;
+        
+        try {
+            $this->sharedBatches = BatchShare::with(['batch', 'batch.interests'])
+                ->where('user_id', $this->user->id)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->groupBy('batch_id')
+                ->map(function ($shares) {
+                    $batch = $shares->first()->batch;
+                    $totalShares = $shares->count();
+                    $newMembersCount = $shares->sum('new_members_count');
+                    $rewardClaimed = $shares->where('reward_claimed', true)->count() > 0;
+                    $canClaimReward = $shares->where('reward_claimed', false)->where('new_members_count', '>=', 10)->count() > 0;
+                    
+                    $platformStats = [
+                        'whatsapp' => $shares->where('platform', BatchShare::PLATFORM_WHATSAPP)->count(),
+                        'facebook' => $shares->where('platform', BatchShare::PLATFORM_FACEBOOK)->count(),
+                        'twitter' => $shares->where('platform', BatchShare::PLATFORM_TWITTER)->count(),
+                        'copy_link' => $shares->where('platform', BatchShare::PLATFORM_COPY_LINK)->count(),
+                    ];
+                    
+                    return [
+                        'batch' => $batch,
+                        'total_shares' => $totalShares,
+                        'new_members_count' => $newMembersCount,
+                        'reward_claimed' => $rewardClaimed,
+                        'can_claim_reward' => $canClaimReward,
+                        'platform_stats' => $platformStats,
+                        'progress_percentage' => min(($newMembersCount / 10) * 100, 100),
+                        'shares_data' => $shares->toArray()
+                    ];
+                })
+                ->values()
+                ->toArray();
+        } catch (\Exception $e) {
+            Log::error('Failed to load shared batches', [
+                'user_id' => $this->user->id,
+                'error' => $e->getMessage()
+            ]);
+            session()->flash('error', 'Failed to load shared batches data.');
         } finally {
             $this->isLoadingBatches = false;
         }

@@ -656,6 +656,131 @@
             observer.observe(card);
         });
     });
+    
+    // Livewire event listeners
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('batch-joined', (event) => {
+            showNotification(event.message || 'Successfully joined the batch!', 'success');
+        });
+        
+        Livewire.on('batch-join-error', (event) => {
+            showNotification(event.message || 'Failed to join the batch!', 'error');
+        });
+        
+        Livewire.on('batchShared', (event) => {
+            showNotification(event.message || 'Batch shared successfully!', 'success');
+        });
+    });
+    
+    // Alpine.js sharing functions
+    function shareOnWhatsApp(batchId, batchName) {
+        const shareUrl = generateShareUrl(batchId);
+        const message = `Check out this amazing batch: ${batchName}\n\nJoin now: ${shareUrl}`;
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+        
+        // Track the share
+        @this.call('shareBatch', batchId, 'whatsapp');
+        
+        // Open WhatsApp
+        window.open(whatsappUrl, '_blank');
+    }
+    
+    function shareOnFacebook(batchId, batchName) {
+        const shareUrl = generateShareUrl(batchId);
+        const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(`Join this amazing batch: ${batchName}`)}`;
+        
+        // Track the share
+        @this.call('shareBatch', batchId, 'facebook');
+        
+        // Open Facebook
+        window.open(facebookUrl, '_blank', 'width=600,height=400');
+    }
+    
+    function shareOnTwitter(batchId, batchName) {
+        const shareUrl = generateShareUrl(batchId);
+        const tweetText = `Check out this amazing batch: ${batchName}`;
+        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}`;
+        
+        // Track the share
+        @this.call('shareBatch', batchId, 'twitter');
+        
+        // Open Twitter
+        window.open(twitterUrl, '_blank', 'width=600,height=400');
+    }
+    
+    function copyShareLink(batchId, batchName) {
+        const shareUrl = generateShareUrl(batchId);
+        
+        // Copy to clipboard
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                showNotification('Link copied to clipboard!', 'success');
+            }).catch(() => {
+                fallbackCopyTextToClipboard(shareUrl);
+            });
+        } else {
+            fallbackCopyTextToClipboard(shareUrl);
+        }
+        
+        // Track the share
+        @this.call('shareBatch', batchId, 'copy_link');
+    }
+    
+    function generateShareUrl(batchId) {
+        const baseUrl = window.location.origin;
+        const referralCode = '{{ auth()->user()->referral_code ?? "" }}';
+        return `${baseUrl}/batch/${batchId}?ref=${referralCode}`;
+    }
+    
+    function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.position = 'fixed';
+        
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showNotification('Link copied to clipboard!', 'success');
+            } else {
+                showNotification('Failed to copy link', 'error');
+            }
+        } catch (err) {
+            showNotification('Failed to copy link', 'error');
+        }
+        
+        document.body.removeChild(textArea);
+    }
+    
+    function showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+        notification.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+            notification.style.opacity = '1';
+        }, 10);
+        
+        // Animate out and remove
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
 </script>
 </div>
 
