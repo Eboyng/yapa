@@ -12,6 +12,11 @@ use App\Filament\Widgets\TopPerformingBatchesWidget;
 use App\Filament\Widgets\KudismsBalanceWidget;
 use App\Filament\Widgets\SystemHealthWidget;
 use App\Filament\Widgets\NotificationStatsWidget;
+use App\Filament\Widgets\ChannelAdStatsWidget;
+use App\Filament\Widgets\WithdrawalStatsWidget;
+use App\Filament\Widgets\CreditUsageStatsWidget;
+use App\Filament\Widgets\WalletOverviewWidget;
+use App\Filament\Widgets\BatchCompletionStatsWidget;
 
 class Dashboard extends BaseDashboard
 {
@@ -19,17 +24,16 @@ class Dashboard extends BaseDashboard
     
     protected static string $view = 'filament.pages.dashboard';
     
-    protected function getHeaderWidgets(): array
+    public function getWidgets(): array
     {
         return [
             StatsOverviewWidget::class,
             KudismsBalanceWidget::class,
-        ];
-    }
-    
-    public function getWidgets(): array
-    {
-        return [
+            ChannelAdStatsWidget::class,
+            WithdrawalStatsWidget::class,
+            CreditUsageStatsWidget::class,
+            WalletOverviewWidget::class,
+            BatchCompletionStatsWidget::class,
             UserRegistrationChart::class,
             RevenueChart::class,
             BatchStatusChart::class,

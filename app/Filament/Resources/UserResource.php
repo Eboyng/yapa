@@ -11,7 +11,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Actions\Action;
 use Filament\Notifications\Notification;
 use App\Models\AuditLog;
@@ -67,10 +66,10 @@ class UserResource extends Resource
 
                 Forms\Components\Section::make('Status & Flags')
                     ->schema([
-                        Forms\Components\Toggle::make('is_admin')
-                            ->label('Admin User'),
                         Forms\Components\Toggle::make('is_flagged_for_ads')
                             ->label('Flagged for Ads'),
+                        Forms\Components\Toggle::make('is_banned_from_batches')
+                            ->label('Banned from Batches'),
                         Forms\Components\Toggle::make('whatsapp_notifications_enabled')
                             ->label('WhatsApp Notifications')
                             ->default(true),
@@ -81,6 +80,16 @@ class UserResource extends Resource
                             ->label('Email Verification Enabled')
                             ->default(true),
                     ])->columns(2),
+                    
+                Forms\Components\Section::make('Ban Information')
+                    ->schema([
+                        Forms\Components\Textarea::make('ban_reason')
+                            ->label('Ban Reason')
+                            ->maxLength(1000)
+                            ->rows(3)
+                            ->visible(fn ($get) => $get('is_banned_from_batches')),
+                    ])->columns(1)
+                    ->visible(fn ($get) => $get('is_banned_from_batches')),
                     
                 Forms\Components\Section::make('Roles & Permissions')
                     ->schema([
@@ -143,10 +152,11 @@ class UserResource extends Resource
                     ->label('Earnings')
                     ->getStateUsing(fn (User $record): float => $record->getEarningsWallet()->balance)
                     ->money('NGN'),
-                Tables\Columns\IconColumn::make('is_admin')
-                    ->boolean(),
                 Tables\Columns\IconColumn::make('is_flagged_for_ads')
                     ->boolean(),
+                Tables\Columns\IconColumn::make('is_banned_from_batches')
+                    ->boolean()
+                    ->label('Banned from Batches'),
                 Tables\Columns\IconColumn::make('whatsapp_notifications_enabled')
                     ->boolean(),
                 Tables\Columns\TextColumn::make('roles.name')
@@ -175,10 +185,10 @@ class UserResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_admin')
-                    ->label('Admin Users'),
                 Tables\Filters\TernaryFilter::make('is_flagged_for_ads')
                     ->label('Flagged for Ads'),
+                Tables\Filters\TernaryFilter::make('is_banned_from_batches')
+                    ->label('Banned from Batches'),
                 Tables\Filters\TernaryFilter::make('whatsapp_notifications_enabled')
                     ->label('WhatsApp Notifications'),
                 Tables\Filters\Filter::make('email_verified')
@@ -244,6 +254,96 @@ class UserResource extends Resource
                             ->send();
                     })
                     ->visible(fn (User $record): bool => $record->is_flagged_for_ads),
+                    
+                Action::make('ban_from_batches')
+                    ->icon('heroicon-o-no-symbol')
+                    ->color('danger')
+                    ->form([
+                        Forms\Components\Textarea::make('ban_reason')
+                            ->label('Ban Reason')
+                            ->required()
+                            ->maxLength(1000)
+                            ->rows(3)
+                            ->helperText('Provide a reason for banning this user from joining batches'),
+                    ])
+                    ->requiresConfirmation()
+                    ->modalHeading('Ban User from Batches')
+                    ->modalDescription('Are you sure you want to ban this user from joining batches?')
+                    ->action(function (User $record, array $data) {
+                        $record->banFromBatches($data['ban_reason']);
+                        
+                        AuditLog::log(
+                            Auth::id(),
+                            'user_banned_from_batches',
+                            $record->id,
+                            ['is_banned_from_batches' => false],
+                            ['is_banned_from_batches' => true, 'ban_reason' => $data['ban_reason']],
+                            'User banned from batches via admin panel'
+                        );
+                        
+                        Notification::make()
+                            ->title('User banned from batches successfully')
+                            ->success()
+                            ->send();
+                    })
+                    ->visible(fn (User $record): bool => !$record->is_banned_from_batches),
+                    
+                Action::make('unban_from_batches')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Unban User from Batches')
+                    ->modalDescription('Are you sure you want to remove the batch ban from this user?')
+                    ->action(function (User $record) {
+                        $record->unbanFromBatches();
+                        
+                        AuditLog::log(
+                            Auth::id(),
+                            'user_unbanned_from_batches',
+                            $record->id,
+                            ['is_banned_from_batches' => true],
+                            ['is_banned_from_batches' => false],
+                            'User unbanned from batches via admin panel'
+                        );
+                        
+                        Notification::make()
+                            ->title('User unbanned from batches successfully')
+                            ->success()
+                            ->send();
+                    })
+                    ->visible(fn (User $record): bool => $record->is_banned_from_batches),
+                    
+                Action::make('impersonate')
+                    ->icon('heroicon-o-user-circle')
+                    ->color('info')
+                    ->requiresConfirmation()
+                    ->modalHeading('Impersonate User')
+                    ->modalDescription('Are you sure you want to impersonate this user? You will be logged in as them.')
+                    ->action(function (User $record) {
+                        AuditLog::log(
+                            Auth::id(),
+                            'user_impersonated',
+                            $record->id,
+                            [],
+                            [],
+                            'Admin impersonated user via admin panel'
+                        );
+                        
+                        // Store original admin user ID in session
+                        session(['impersonating_admin_id' => Auth::id()]);
+                        
+                        // Login as the target user
+                        Auth::login($record);
+                        
+                        Notification::make()
+                            ->title('Now impersonating user')
+                            ->body("You are now logged in as {$record->name}")
+                            ->success()
+                            ->send();
+                        
+                        // Redirect to main app
+                        redirect()->to('/dashboard');
+                    }),
                     
                 Action::make('fund_wallet')
                     ->icon('heroicon-o-plus-circle')

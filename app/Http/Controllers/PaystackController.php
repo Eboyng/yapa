@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\PaystackService;
+use App\Services\SettingService;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -11,10 +12,12 @@ use Illuminate\Support\Facades\Auth;
 class PaystackController extends Controller
 {
     private PaystackService $paystackService;
+    private SettingService $settingService;
 
-    public function __construct(PaystackService $paystackService)
+    public function __construct(PaystackService $paystackService, SettingService $settingService)
     {
         $this->paystackService = $paystackService;
+        $this->settingService = $settingService;
     }
 
     /**
@@ -175,6 +178,12 @@ class PaystackController extends Controller
      */
     public function getPublicKey()
     {
+        if (!$this->paystackService->isEnabled()) {
+            return response()->json([
+                'error' => 'Paystack payment service is currently disabled.',
+            ], 503);
+        }
+
         return response()->json([
             'public_key' => $this->paystackService->getPublicKey(),
             'pricing' => $this->paystackService->getPricingConfig(),
@@ -186,9 +195,19 @@ class PaystackController extends Controller
      */
     public function initializePayment(Request $request)
     {
+        if (!$this->paystackService->isEnabled()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Paystack payment service is currently disabled.',
+            ], 503);
+        }
+
+        $minimumAmount = $this->settingService->get('minimum_amount_naira', 300.0);
+        $minimumCredits = $this->settingService->get('minimum_credits_purchase', 100);
+        
         $request->validate([
-            'amount' => 'required|numeric|min:300',
-            'credits' => 'required|integer|min:100',
+            'amount' => "required|numeric|min:{$minimumAmount}",
+            'credits' => "required|integer|min:{$minimumCredits}",
         ]);
 
         try {

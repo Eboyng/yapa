@@ -8,6 +8,7 @@ use App\Models\ChannelAdApplication;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ChannelAdList extends Component
 {
@@ -102,16 +103,45 @@ class ChannelAdList extends Component
                 return;
             }
 
-            // Create application
-            ChannelAdApplication::create([
-                'channel_id' => $channel->id,
-                'channel_ad_id' => $channelAd->id,
-                'status' => ChannelAdApplication::STATUS_PENDING,
-                'applied_at' => now(),
-                'escrow_amount' => $channelAd->payment_per_channel,
-            ]);
+            // Check if advertiser has sufficient balance
+            $advertiser = $channelAd->adminUser;
+            if (!$advertiser->hasSufficientNaira($channelAd->payment_per_channel)) {
+                session()->flash('error', 'Advertiser has insufficient balance for this ad.');
+                return;
+            }
 
-            session()->flash('success', 'Application submitted successfully! You will be notified once it\'s reviewed.');
+            \DB::transaction(function () use ($channel, $channelAd, $advertiser) {
+                // Create application
+                $application = ChannelAdApplication::create([
+                    'channel_id' => $channel->id,
+                    'channel_ad_id' => $channelAd->id,
+                    'status' => ChannelAdApplication::STATUS_PENDING,
+                    'applied_at' => now(),
+                    'escrow_amount' => $channelAd->payment_per_channel,
+                    'escrow_status' => ChannelAdApplication::ESCROW_STATUS_PENDING,
+                ]);
+
+                // Create escrow transaction immediately
+                $transactionService = app(\App\Services\TransactionService::class);
+                $escrowTransaction = $transactionService->createEscrow(
+                    $advertiser,
+                    $channelAd->payment_per_channel,
+                    $application->id,
+                    "Escrow for channel ad application #{$application->id}"
+                );
+
+                // Update application with escrow transaction ID
+                $application->update([
+                    'escrow_transaction_id' => $escrowTransaction->id
+                ]);
+
+                // Update escrow status to held
+                $application->update([
+                    'escrow_status' => ChannelAdApplication::ESCROW_STATUS_HELD
+                ]);
+            });
+
+            session()->flash('success', 'Application submitted successfully! Payment has been held in escrow. You will be notified once it\'s reviewed.');
             
         } catch (\Exception $e) {
             session()->flash('error', 'Failed to apply: ' . $e->getMessage());

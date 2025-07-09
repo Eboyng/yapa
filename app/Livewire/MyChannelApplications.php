@@ -51,6 +51,13 @@ class MyChannelApplications extends Component
         $this->resetPage();
     }
 
+    public function clearFilters()
+    {
+        $this->statusFilter = '';
+        $this->search = '';
+        $this->resetPage();
+    }
+
     public function openProofModal($applicationId)
     {
         $this->selectedApplication = ChannelAdApplication::findOrFail($applicationId);
@@ -82,12 +89,8 @@ class MyChannelApplications extends Component
             // Upload proof screenshot
             $screenshotPath = $this->proofScreenshot->store('proof-screenshots', 'public');
 
-            // Update application with proof
-            $this->selectedApplication->update([
-                'proof_screenshot' => $screenshotPath,
-                'proof_submitted_at' => now(),
-                'admin_notes' => $this->proofDescription,
-            ]);
+            // Submit proof using the model method
+            $this->selectedApplication->submitProof($screenshotPath, $this->proofDescription);
 
             session()->flash('success', 'Proof submitted successfully! It will be reviewed by our team.');
             
@@ -181,7 +184,7 @@ class MyChannelApplications extends Component
             'total_earnings' => ChannelAdApplication::where('channel_id', $userChannel->id)
                 ->where('status', ChannelAdApplication::STATUS_COMPLETED)
                 ->where('escrow_status', ChannelAdApplication::ESCROW_STATUS_RELEASED)
-                ->sum('escrow_amount'),
+                ->sum('escrow_amount') * 0.9, // Channel owner gets 90% after admin fee
         ];
 
         return view('livewire.my-channel-applications', [

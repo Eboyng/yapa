@@ -153,7 +153,7 @@ class TransactionHistory extends Component
             Transaction::CATEGORY_AD_EARNING => 'Ad Earning',
             Transaction::CATEGORY_WITHDRAWAL => 'Withdrawal',
             Transaction::CATEGORY_REFUND => 'Refund',
-            Transaction::CATEGORY_WHATSAPP_CHANGE => 'WhatsApp Change',
+            Transaction::CATEGORY_WHATSAPP_CHANGE_FEE => 'WhatsApp Change',
             Transaction::CATEGORY_MANUAL_ADJUSTMENT => 'Manual Adjustment',
         ];
     }

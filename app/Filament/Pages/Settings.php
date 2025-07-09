@@ -9,6 +9,8 @@ use Filament\Pages\Page;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Support\Exceptions\Halt;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Mail;
 
 class Settings extends Page
 {
@@ -50,9 +52,6 @@ class Settings extends Page
                                             ->label('Application Version')
                                             ->required()
                                             ->maxLength(50),
-                                        Forms\Components\Toggle::make('maintenance_mode')
-                                            ->label('Maintenance Mode')
-                                            ->helperText('Enable to put the application in maintenance mode'),
                                         Forms\Components\Toggle::make('registration_enabled')
                                             ->label('Registration Enabled')
                                             ->helperText('Allow new user registrations'),
@@ -72,6 +71,139 @@ class Settings extends Page
                                             ->maxLength(20),
                                     ])
                                     ->columns(2),
+                            ]),
+                        
+                        Forms\Components\Tabs\Tab::make('Site Branding')
+                            ->schema([
+                                Forms\Components\Section::make('Site Identity')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('site_name')
+                                            ->label('Site Name')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->helperText('The name displayed in the browser title and throughout the site'),
+                                        Forms\Components\TextInput::make('site_logo_name')
+                                            ->label('Logo Text')
+                                            ->maxLength(255)
+                                            ->helperText('Text to display alongside or instead of the logo'),
+                                        Forms\Components\FileUpload::make('site_logo')
+                                            ->label('Site Logo')
+                                            ->image()
+                                            ->directory('branding')
+                                            ->visibility('public')
+                                            ->acceptedFileTypes(['image/png', 'image/jpg', 'image/jpeg', 'image/svg+xml'])
+                                            ->maxSize(2048)
+                                            ->helperText('Upload your site logo (PNG, JPG, SVG - Max 2MB)'),
+                                        Forms\Components\FileUpload::make('site_favicon')
+                                            ->label('Favicon')
+                                            ->image()
+                                            ->directory('branding')
+                                            ->visibility('public')
+                                            ->acceptedFileTypes(['image/png', 'image/x-icon', 'image/vnd.microsoft.icon'])
+                                            ->maxSize(512)
+                                            ->helperText('Upload your favicon (ICO, PNG - Max 512KB)'),
+                                    ])
+                                    ->columns(2),
+                            ]),
+                        
+                        Forms\Components\Tabs\Tab::make('Maintenance Mode')
+                            ->schema([
+                                Forms\Components\Section::make('Maintenance Settings')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('maintenance_mode')
+                                            ->label('Enable Maintenance Mode')
+                                            ->helperText('Put the site in maintenance mode for all users except allowed IPs')
+                                            ->live(),
+                                        Forms\Components\Textarea::make('maintenance_message')
+                                            ->label('Maintenance Message')
+                                            ->rows(3)
+                                            ->maxLength(500)
+                                            ->helperText('Message to display on the maintenance page')
+                                            ->visible(fn (callable $get) => $get('maintenance_mode')),
+                                        Forms\Components\DateTimePicker::make('maintenance_end_time')
+                                            ->label('Estimated End Time')
+                                            ->helperText('Optional: Set when maintenance is expected to end (enables countdown)')
+                                            ->visible(fn (callable $get) => $get('maintenance_mode')),
+                                        Forms\Components\Textarea::make('maintenance_allowed_ips')
+                                            ->label('Allowed IP Addresses')
+                                            ->rows(3)
+                                            ->helperText('Comma-separated list of IP addresses that can access the site during maintenance')
+                                            ->placeholder('192.168.1.1, 203.0.113.1')
+                                            ->visible(fn (callable $get) => $get('maintenance_mode')),
+                                    ])
+                                    ->columns(1),
+                            ]),
+                        
+                        Forms\Components\Tabs\Tab::make('SEO & Social')
+                            ->schema([
+                                Forms\Components\Section::make('SEO Settings')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('seo_title')
+                                            ->label('SEO Title')
+                                            ->maxLength(60)
+                                            ->helperText('Title tag for search engines (max 60 characters)'),
+                                        Forms\Components\Textarea::make('seo_description')
+                                            ->label('SEO Description')
+                                            ->rows(3)
+                                            ->maxLength(160)
+                                            ->helperText('Meta description for search engines (max 160 characters)'),
+                                        Forms\Components\TextInput::make('seo_keywords')
+                                            ->label('SEO Keywords')
+                                            ->helperText('Comma-separated keywords for search engines'),
+                                    ])
+                                    ->columns(1),
+                                
+                                Forms\Components\Section::make('OpenGraph Settings')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('og_title')
+                                            ->label('OpenGraph Title')
+                                            ->maxLength(95)
+                                            ->helperText('Title for social media sharing (max 95 characters)'),
+                                        Forms\Components\Textarea::make('og_description')
+                                            ->label('OpenGraph Description')
+                                            ->rows(3)
+                                            ->maxLength(200)
+                                            ->helperText('Description for social media sharing (max 200 characters)'),
+                                        Forms\Components\FileUpload::make('og_image')
+                                            ->label('OpenGraph Image')
+                                            ->image()
+                                            ->directory('seo')
+                                            ->visibility('public')
+                                            ->acceptedFileTypes(['image/png', 'image/jpg', 'image/jpeg'])
+                                            ->maxSize(2048)
+                                            ->helperText('Image for social media sharing (1200x630px recommended, max 2MB)'),
+                                        Forms\Components\Select::make('og_type')
+                                            ->label('OpenGraph Type')
+                                            ->options([
+                                                'website' => 'Website',
+                                                'article' => 'Article',
+                                                'product' => 'Product',
+                                            ])
+                                            ->default('website'),
+                                    ])
+                                    ->columns(2),
+                                
+                                Forms\Components\Section::make('Twitter Card Settings')
+                                    ->schema([
+                                        Forms\Components\Select::make('twitter_card')
+                                            ->label('Twitter Card Type')
+                                            ->options([
+                                                'summary' => 'Summary',
+                                                'summary_large_image' => 'Summary Large Image',
+                                                'app' => 'App',
+                                                'player' => 'Player',
+                                            ])
+                                            ->default('summary_large_image'),
+                                        Forms\Components\TextInput::make('twitter_site')
+                                            ->label('Twitter Site Handle')
+                                            ->prefix('@')
+                                            ->helperText('Your site\'s Twitter handle'),
+                                        Forms\Components\TextInput::make('twitter_creator')
+                                            ->label('Twitter Creator Handle')
+                                            ->prefix('@')
+                                            ->helperText('Content creator\'s Twitter handle'),
+                                    ])
+                                    ->columns(3),
                             ]),
                         
                         Forms\Components\Tabs\Tab::make('Batch Settings')
@@ -253,6 +385,75 @@ class Settings extends Page
                                     ->columns(2),
                             ]),
                         
+                        Forms\Components\Tabs\Tab::make('Payment Settings')
+                            ->schema([
+                                Forms\Components\Section::make('Paystack Configuration')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('paystack_public_key')
+                                            ->label('Paystack Public Key')
+                                            ->helperText('Your Paystack public key for frontend integration')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->placeholder('pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'),
+                                        Forms\Components\TextInput::make('paystack_secret_key')
+                                            ->label('Paystack Secret Key')
+                                            ->helperText('Your Paystack secret key for backend API calls')
+                                            ->required()
+                                            ->password()
+                                            ->revealable()
+                                            ->maxLength(255)
+                                            ->placeholder('sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'),
+                                        Forms\Components\TextInput::make('paystack_webhook_secret')
+                                            ->label('Paystack Webhook Secret')
+                                            ->helperText('Secret key for verifying webhook signatures')
+                                            ->password()
+                                            ->revealable()
+                                            ->maxLength(255),
+                                        Forms\Components\Select::make('paystack_environment')
+                                            ->label('Environment')
+                                            ->options([
+                                                'test' => 'Test/Sandbox',
+                                                'live' => 'Live/Production',
+                                            ])
+                                            ->default('test')
+                                            ->required(),
+                                    ])
+                                    ->columns(2),
+                                
+                                Forms\Components\Section::make('Payment Configuration')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('credit_price_naira')
+                                            ->label('Credit Price (NGN)')
+                                            ->helperText('Price per credit in Nigerian Naira')
+                                            ->required()
+                                            ->numeric()
+                                            ->minValue(0.01)
+                                            ->step(0.01)
+                                            ->default(3.00)
+                                            ->prefix('₦'),
+                                        Forms\Components\TextInput::make('minimum_credits_purchase')
+                                            ->label('Minimum Credits Purchase')
+                                            ->helperText('Minimum number of credits that can be purchased')
+                                            ->required()
+                                            ->numeric()
+                                            ->minValue(1)
+                                            ->default(100),
+                                        Forms\Components\TextInput::make('minimum_amount_naira')
+                                            ->label('Minimum Amount (NGN)')
+                                            ->helperText('Minimum payment amount in Nigerian Naira')
+                                            ->required()
+                                            ->numeric()
+                                            ->minValue(1)
+                                            ->default(300)
+                                            ->prefix('₦'),
+                                        Forms\Components\Toggle::make('paystack_enabled')
+                                            ->label('Enable Paystack Payments')
+                                            ->helperText('Enable or disable Paystack payment processing')
+                                            ->default(true),
+                                    ])
+                                    ->columns(2),
+                            ]),
+                        
                         Forms\Components\Tabs\Tab::make('File Upload')
                             ->schema([
                                 Forms\Components\Section::make('Upload Configuration')
@@ -277,6 +478,259 @@ class Settings extends Page
                                             ->helperText('Enable Google OAuth integration'),
                                     ])
                                     ->columns(2),
+                            ]),
+                        
+                        Forms\Components\Tabs\Tab::make('System Management')
+                            ->schema([
+                                Forms\Components\Section::make('Cache Management')
+                                    ->schema([
+                                        Forms\Components\Actions::make([
+                                            Forms\Components\Actions\Action::make('clear_cache')
+                                                ->label('Clear Application Cache')
+                                                ->icon('heroicon-o-trash')
+                                                ->color('warning')
+                                                ->requiresConfirmation()
+                                                ->modalHeading('Clear Application Cache')
+                                                ->modalDescription('This will clear all cached data including views, routes, and configuration.')
+                                                ->action(function () {
+                                                    $this->clearCache();
+                                                }),
+                                            Forms\Components\Actions\Action::make('clear_view_cache')
+                                                ->label('Clear View Cache')
+                                                ->icon('heroicon-o-eye-slash')
+                                                ->color('info')
+                                                ->action(function () {
+                                                    $this->clearViewCache();
+                                                }),
+                                            Forms\Components\Actions\Action::make('clear_route_cache')
+                                                ->label('Clear Route Cache')
+                                                ->icon('heroicon-o-map')
+                                                ->color('info')
+                                                ->action(function () {
+                                                    $this->clearRouteCache();
+                                                }),
+                                            Forms\Components\Actions\Action::make('clear_config_cache')
+                                                ->label('Clear Config Cache')
+                                                ->icon('heroicon-o-cog-6-tooth')
+                                                ->color('info')
+                                                ->action(function () {
+                                                    $this->clearConfigCache();
+                                                }),
+                                        ])
+                                    ])
+                                    ->columns(1),
+                            ]),
+                        
+                        Forms\Components\Tabs\Tab::make('Email Configuration')
+                            ->schema([
+                                Forms\Components\Section::make('Email Settings')
+                                    ->schema([
+                                        Forms\Components\Select::make('mail_mailer')
+                                            ->label('Mail Driver')
+                                            ->options([
+                                                'smtp' => 'SMTP',
+                                                'sendmail' => 'Sendmail',
+                                                'mailgun' => 'Mailgun',
+                                                'ses' => 'Amazon SES',
+                                                'postmark' => 'Postmark',
+                                                'log' => 'Log (Development)',
+                                                'array' => 'Array (Testing)',
+                                            ])
+                                            ->default('log')
+                                            ->live()
+                                            ->required(),
+                                        Forms\Components\TextInput::make('mail_host')
+                                            ->label('SMTP Host')
+                                            ->placeholder('smtp.gmail.com')
+                                            ->visible(fn (callable $get) => $get('mail_mailer') === 'smtp'),
+                                        Forms\Components\TextInput::make('mail_port')
+                                            ->label('SMTP Port')
+                                            ->numeric()
+                                            ->placeholder('587')
+                                            ->visible(fn (callable $get) => $get('mail_mailer') === 'smtp'),
+                                        Forms\Components\TextInput::make('mail_username')
+                                            ->label('SMTP Username')
+                                            ->placeholder('your-email@gmail.com')
+                                            ->visible(fn (callable $get) => $get('mail_mailer') === 'smtp'),
+                                        Forms\Components\TextInput::make('mail_password')
+                                            ->label('SMTP Password')
+                                            ->password()
+                                            ->revealable()
+                                            ->visible(fn (callable $get) => $get('mail_mailer') === 'smtp'),
+                                        Forms\Components\Select::make('mail_encryption')
+                                            ->label('Encryption')
+                                            ->options([
+                                                'tls' => 'TLS',
+                                                'ssl' => 'SSL',
+                                                null => 'None',
+                                            ])
+                                            ->default('tls')
+                                            ->visible(fn (callable $get) => $get('mail_mailer') === 'smtp'),
+                                        Forms\Components\TextInput::make('mail_from_address')
+                                            ->label('From Email Address')
+                                            ->email()
+                                            ->required()
+                                            ->placeholder('noreply@yoursite.com'),
+                                        Forms\Components\TextInput::make('mail_from_name')
+                                            ->label('From Name')
+                                            ->required()
+                                            ->placeholder('Your Site Name'),
+                                    ])
+                                    ->columns(2),
+                                
+                                Forms\Components\Section::make('Email Testing')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('test_email')
+                                            ->label('Test Email Address')
+                                            ->email()
+                                            ->placeholder('test@example.com')
+                                            ->helperText('Enter an email address to send a test email'),
+                                        Forms\Components\Actions::make([
+                                            Forms\Components\Actions\Action::make('send_test_email')
+                                                ->label('Send Test Email')
+                                                ->icon('heroicon-o-envelope')
+                                                ->color('success')
+                                                ->requiresConfirmation()
+                                                ->modalHeading('Send Test Email')
+                                                ->modalDescription('This will send a test email to verify your email configuration.')
+                                                ->action(function (array $data) {
+                                                    $this->sendTestEmail($data['test_email'] ?? null);
+                                                }),
+                                        ])
+                                    ])
+                                    ->columns(1),
+                            ]),
+                        
+                        Forms\Components\Tabs\Tab::make('API Settings')
+                            ->schema([
+                                Forms\Components\Section::make('Airtime API Configuration')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('airtime_api_token')
+                                            ->label('Airtime API Token')
+                                            ->password()
+                                            ->revealable()
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->helperText('API token for Wazobianet airtime service'),
+                                        Forms\Components\TextInput::make('airtime_api_url')
+                                            ->label('Airtime API Base URL')
+                                            ->url()
+                                            ->default('https://wazobianet.com/api')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->helperText('Base URL for the airtime API service'),
+                                        Forms\Components\Toggle::make('airtime_api_enabled')
+                                            ->label('Enable Airtime API')
+                                            ->default(true)
+                                            ->helperText('Enable or disable airtime withdrawal functionality'),
+                                        Forms\Components\TextInput::make('airtime_minimum_amount')
+                                            ->label('Minimum Airtime Amount')
+                                            ->numeric()
+                                            ->default(100)
+                                            ->minValue(50)
+                                            ->maxValue(5000)
+                                            ->suffix('NGN')
+                                            ->helperText('Minimum amount for airtime withdrawal'),
+                                        Forms\Components\TextInput::make('airtime_maximum_amount')
+                                            ->label('Maximum Airtime Amount')
+                                            ->numeric()
+                                            ->default(10000)
+                                            ->minValue(1000)
+                                            ->maxValue(50000)
+                                            ->suffix('NGN')
+                                            ->helperText('Maximum amount for airtime withdrawal'),
+                                    ])
+                                    ->columns(2),
+                                    
+                                Forms\Components\Section::make('Network Configuration')
+                                    ->schema([
+                                        Forms\Components\Repeater::make('airtime_networks')
+                                            ->label('Supported Networks')
+                                            ->schema([
+                                                Forms\Components\TextInput::make('name')
+                                                    ->label('Network Name')
+                                                    ->required()
+                                                    ->maxLength(50),
+                                                Forms\Components\TextInput::make('network_id')
+                                                    ->label('Network ID')
+                                                    ->numeric()
+                                                    ->required()
+                                                    ->helperText('API network ID'),
+                                                Forms\Components\TextInput::make('prefix')
+                                                    ->label('Phone Prefix')
+                                                    ->required()
+                                                    ->maxLength(10)
+                                                    ->helperText('Phone number prefix for auto-detection'),
+                                                Forms\Components\Toggle::make('enabled')
+                                                    ->label('Enabled')
+                                                    ->default(true),
+                                            ])
+                                            ->columns(2)
+                                            ->collapsible()
+                                            ->itemLabel(fn (array $state): ?string => $state['name'] ?? null),
+                                    ])
+                                    ->columns(1),
+                            ]),
+                        
+                        Forms\Components\Tabs\Tab::make('Scheduled Tasks')
+                            ->schema([
+                                Forms\Components\Section::make('Task Management')
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('cron_info')
+                                            ->label('Cron Job Setup')
+                                            ->content('To enable scheduled tasks, add this cron job to your server:\n\n* * * * * cd /path/to/your/project && php artisan schedule:run >> /dev/null 2>&1')
+                                            ->helperText('Replace "/path/to/your/project" with the actual path to your Laravel application'),
+                                        Forms\Components\Actions::make([
+                                            Forms\Components\Actions\Action::make('run_scheduler')
+                                                ->label('Run Scheduler Now')
+                                                ->icon('heroicon-o-play')
+                                                ->color('success')
+                                                ->requiresConfirmation()
+                                                ->modalHeading('Run Scheduled Tasks')
+                                                ->modalDescription('This will manually run all scheduled tasks that are due.')
+                                                ->action(function () {
+                                                    $this->runScheduler();
+                                                }),
+                                            Forms\Components\Actions\Action::make('list_scheduled_tasks')
+                                                ->label('View Scheduled Tasks')
+                                                ->icon('heroicon-o-list-bullet')
+                                                ->color('info')
+                                                ->action(function () {
+                                                    $this->listScheduledTasks();
+                                                }),
+                                        ])
+                                    ])
+                                    ->columns(1),
+                                
+                                Forms\Components\Section::make('Available Commands')
+                                    ->schema([
+                                        Forms\Components\Actions::make([
+                                            Forms\Components\Actions\Action::make('expire_ad_campaigns')
+                                                ->label('Expire Ad Campaigns')
+                                                ->icon('heroicon-o-clock')
+                                                ->color('warning')
+                                                ->requiresConfirmation()
+                                                ->action(function () {
+                                                    $this->runCommand('ads:expire-campaigns');
+                                                }),
+                                            Forms\Components\Actions\Action::make('cleanup_trial_batches')
+                                                ->label('Cleanup Trial Batches')
+                                                ->icon('heroicon-o-trash')
+                                                ->color('warning')
+                                                ->requiresConfirmation()
+                                                ->action(function () {
+                                                    $this->runCommand('batches:cleanup-trials');
+                                                }),
+                                            Forms\Components\Actions\Action::make('generate_avatars')
+                                                ->label('Generate User Avatars')
+                                                ->icon('heroicon-o-user-circle')
+                                                ->color('info')
+                                                ->action(function () {
+                                                    $this->runCommand('avatars:generate');
+                                                }),
+                                        ])
+                                    ])
+                                    ->columns(1),
                             ]),
                     ])
                     ->columnSpanFull(),
@@ -373,5 +827,219 @@ class Settings extends Page
         }
         
         return 'string';
+    }
+    
+    // Cache Management Methods
+    public function clearCache(): void
+    {
+        try {
+            Artisan::call('cache:clear');
+            Artisan::call('view:clear');
+            Artisan::call('route:clear');
+            Artisan::call('config:clear');
+            
+            Notification::make()
+                ->title('Cache Cleared')
+                ->body('All application cache has been cleared successfully.')
+                ->success()
+                ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Error')
+                ->body('Failed to clear cache: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+    
+    public function clearViewCache(): void
+    {
+        try {
+            Artisan::call('view:clear');
+            
+            Notification::make()
+                ->title('View Cache Cleared')
+                ->body('View cache has been cleared successfully.')
+                ->success()
+                ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Error')
+                ->body('Failed to clear view cache: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+    
+    public function clearRouteCache(): void
+    {
+        try {
+            Artisan::call('route:clear');
+            
+            Notification::make()
+                ->title('Route Cache Cleared')
+                ->body('Route cache has been cleared successfully.')
+                ->success()
+                ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Error')
+                ->body('Failed to clear route cache: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+    
+    public function clearConfigCache(): void
+    {
+        try {
+            Artisan::call('config:clear');
+            
+            Notification::make()
+                ->title('Config Cache Cleared')
+                ->body('Configuration cache has been cleared successfully.')
+                ->success()
+                ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Error')
+                ->body('Failed to clear config cache: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+    
+    // Email Management Methods
+    public function sendTestEmail(?string $email = null): void
+    {
+        $formData = $this->form->getState();
+        $testEmail = $email ?? $formData['test_email'] ?? null;
+        
+        if (!$testEmail) {
+            Notification::make()
+                ->title('Error')
+                ->body('Please enter a valid email address.')
+                ->danger()
+                ->send();
+            return;
+        }
+        
+        try {
+            // Temporarily update mail configuration with form data
+            $this->updateMailConfig($formData);
+            
+            Mail::raw('This is a test email from your application. If you received this, your email configuration is working correctly!', function ($message) use ($testEmail) {
+                $message->to($testEmail)
+                    ->subject('Test Email - Configuration Verification');
+            });
+            
+            Notification::make()
+                ->title('Test Email Sent')
+                ->body('Test email has been sent to ' . $testEmail)
+                ->success()
+                ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Email Error')
+                ->body('Failed to send test email: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+    
+    private function updateMailConfig(array $data): void
+    {
+        if (isset($data['mail_mailer'])) {
+            config(['mail.default' => $data['mail_mailer']]);
+        }
+        
+        if (isset($data['mail_host'])) {
+            config(['mail.mailers.smtp.host' => $data['mail_host']]);
+        }
+        
+        if (isset($data['mail_port'])) {
+            config(['mail.mailers.smtp.port' => $data['mail_port']]);
+        }
+        
+        if (isset($data['mail_username'])) {
+            config(['mail.mailers.smtp.username' => $data['mail_username']]);
+        }
+        
+        if (isset($data['mail_password'])) {
+            config(['mail.mailers.smtp.password' => $data['mail_password']]);
+        }
+        
+        if (isset($data['mail_encryption'])) {
+            config(['mail.mailers.smtp.encryption' => $data['mail_encryption']]);
+        }
+        
+        if (isset($data['mail_from_address'])) {
+            config(['mail.from.address' => $data['mail_from_address']]);
+        }
+        
+        if (isset($data['mail_from_name'])) {
+            config(['mail.from.name' => $data['mail_from_name']]);
+        }
+    }
+    
+    // Scheduled Tasks Methods
+    public function runScheduler(): void
+    {
+        try {
+            Artisan::call('schedule:run');
+            $output = Artisan::output();
+            
+            Notification::make()
+                ->title('Scheduler Executed')
+                ->body('Scheduled tasks have been executed. Check logs for details.')
+                ->success()
+                ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Scheduler Error')
+                ->body('Failed to run scheduler: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+    
+    public function listScheduledTasks(): void
+    {
+        try {
+            Artisan::call('schedule:list');
+            $output = Artisan::output();
+            
+            Notification::make()
+                ->title('Scheduled Tasks')
+                ->body('Check the console output for the list of scheduled tasks.')
+                ->info()
+                ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Error')
+                ->body('Failed to list scheduled tasks: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+    
+    public function runCommand(string $command): void
+    {
+        try {
+            Artisan::call($command);
+            $output = Artisan::output();
+            
+            Notification::make()
+                ->title('Command Executed')
+                ->body('Command "' . $command . '" has been executed successfully.')
+                ->success()
+                ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Command Error')
+                ->body('Failed to execute command "' . $command . '": ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 }

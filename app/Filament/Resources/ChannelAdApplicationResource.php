@@ -80,6 +80,22 @@ class ChannelAdApplicationResource extends Resource
                             ->maxLength(500)
                             ->rows(2)
                             ->label('Proof Description'),
+                        Forms\Components\TextInput::make('escrow_transaction_id')
+                             ->label('Escrow Transaction ID')
+                             ->disabled()
+                             ->dehydrated(false)
+                             ->visible(fn ($record) => $record && $record->escrow_transaction_id),
+                         Forms\Components\Placeholder::make('payment_breakdown')
+                             ->label('Payment Breakdown')
+                             ->content(function ($record) {
+                                 if (!$record || !$record->escrow_amount) {
+                                     return 'N/A';
+                                 }
+                                 $channelOwnerAmount = $record->escrow_amount * 0.9;
+                                 $adminFee = $record->escrow_amount * 0.1;
+                                 return "Channel Owner: ₦{$channelOwnerAmount} | Admin Fee (10%): ₦{$adminFee}";
+                             })
+                             ->visible(fn ($record) => $record && $record->escrow_amount),
                     ])->columns(1),
                 
                 Forms\Components\Section::make('Admin Notes')
@@ -125,6 +141,13 @@ class ChannelAdApplicationResource extends Resource
                     ->money('NGN')
                     ->sortable()
                     ->label('Payment'),
+                Tables\Columns\TextColumn::make('escrow_amount')
+                    ->label('Escrow')
+                    ->money('NGN')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('escrow_transaction_id')
+                    ->label('Escrow TX ID')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -216,28 +239,23 @@ class ChannelAdApplicationResource extends Resource
                     }),
                 
                 Action::make('complete')
+                    ->label('Complete & Release Payment')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn (ChannelAdApplication $record): bool => $record->status === ChannelAdApplication::STATUS_PROOF_SUBMITTED)
                     ->requiresConfirmation()
                     ->modalHeading('Complete Application & Release Payment')
-                    ->modalDescription('This will release the escrow payment to the channel. Are you sure?')
+                    ->modalDescription('This will release the escrow payment to the channel owner (90%) and admin fee (10%). Are you sure the proof is satisfactory?')
                     ->action(function (ChannelAdApplication $record): void {
                         try {
-                            $transactionService = app(TransactionService::class);
+                            $record->approveProofAndReleaseEscrow();
                             
-                            // Release escrow payment
-                            $transaction = $transactionService->releaseEscrow(
-                                $record->escrow_transaction_id,
-                                $record->channel->user,
-                                "Payment for channel ad: {$record->channelAd->title}"
-                            );
-                            
-                            $record->complete();
+                            $channelOwnerAmount = $record->escrow_amount * 0.9;
+                            $adminFee = $record->escrow_amount * 0.1;
                             
                             Notification::make()
                                 ->title('Application Completed')
-                                ->body("Payment of ₦{$record->channelAd->payment_per_channel} has been released to the channel.")
+                                ->body("Payment released: ₦{$channelOwnerAmount} to channel owner, ₦{$adminFee} admin fee.")
                                 ->success()
                                 ->send();
                         } catch (\Exception $e) {
@@ -362,10 +380,7 @@ class ChannelAdApplicationResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
+        return parent::getEloquentQuery();
     }
 
     public static function getNavigationBadge(): ?string

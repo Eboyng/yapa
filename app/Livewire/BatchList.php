@@ -109,6 +109,12 @@ class BatchList extends Component
                     'whatsapp_number' => $user->whatsapp_number,
                 ]);
 
+                // If this is a trial batch and it becomes full, auto-create a new one
+                if ($batch->type === Batch::TYPE_TRIAL && $batch->isFull()) {
+                    $batch->markAsFull();
+                    app(\App\Services\BatchService::class)->autoCreateTrialBatch();
+                }
+
                 // Refresh user's credits balance
                 $this->creditsBalance = $user->fresh()->getCreditWallet()->balance;
             });
@@ -309,7 +315,7 @@ class BatchList extends Component
 
     protected function getBatches()
     {
-        $cacheKey = 'batch_list_' . md5(serialize($this->filters) . $this->getPage());
+        $cacheKey = 'batch_list_' . md5(serialize($this->filters) . $this->getPage() . Auth::id());
         
         return Cache::remember($cacheKey, 300, function () {
             $user = Auth::user();
@@ -330,6 +336,26 @@ class BatchList extends Component
 
             if ($this->filters['type'] !== 'all') {
                 $query->where('type', $this->filters['type']);
+            }
+
+            // Special handling for trial batches - users can only see one trial batch
+            if ($this->filters['type'] === 'all' || $this->filters['type'] === Batch::TYPE_TRIAL) {
+                $hasTrialMembership = $user->hasTrialBatchMembership();
+                
+                if ($hasTrialMembership) {
+                    // If user already has trial membership, hide all trial batches
+                    $query->where('type', '!=', Batch::TYPE_TRIAL);
+                } else {
+                    // If user doesn't have trial membership, show only one trial batch
+                    $query->where(function ($q) {
+                        $q->where('type', '!=', Batch::TYPE_TRIAL)
+                          ->orWhere(function ($subQ) {
+                              $subQ->where('type', Batch::TYPE_TRIAL)
+                                   ->orderBy('created_at', 'desc')
+                                   ->limit(1);
+                          });
+                    });
+                }
             }
 
             return $query->paginate(12);

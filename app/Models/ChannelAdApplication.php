@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Services\TransactionService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ChannelAdApplication extends Model
@@ -31,6 +33,7 @@ class ChannelAdApplication extends Model
         'proof_approved_at',
         'escrow_amount',
         'escrow_status',
+        'escrow_transaction_id',
         'escrow_released_at',
         'dispute_reason',
         'dispute_status',
@@ -129,6 +132,14 @@ class ChannelAdApplication extends Model
     }
 
     /**
+     * Get the escrow transaction.
+     */
+    public function escrowTransaction(): BelongsTo
+    {
+        return $this->belongsTo(Transaction::class, 'escrow_transaction_id');
+    }
+
+    /**
      * Check if application is pending.
      */
     public function isPending(): bool
@@ -205,6 +216,11 @@ class ChannelAdApplication extends Model
      */
     public function approve(?string $notes = null): void
     {
+        // Escrow should already be created when application was submitted
+        if ($this->escrow_status !== self::ESCROW_STATUS_HELD) {
+            throw new \InvalidArgumentException('Escrow must be held before approving application');
+        }
+        
         $this->update([
             'status' => self::STATUS_APPROVED,
             'approved_at' => now(),
@@ -215,17 +231,33 @@ class ChannelAdApplication extends Model
     }
 
     /**
-     * Reject the application.
+     * Reject the application and refund escrow.
      */
     public function reject(string $reason, ?string $notes = null): void
     {
-        $this->update([
-            'status' => self::STATUS_REJECTED,
-            'rejected_at' => now(),
-            'rejection_reason' => $reason,
-            'admin_notes' => $notes,
-            'approved_at' => null,
-        ]);
+        DB::transaction(function () use ($reason, $notes) {
+            // Refund escrow if it was held
+            if ($this->escrow_status === self::ESCROW_STATUS_HELD && $this->escrow_transaction_id) {
+                $transactionService = app(TransactionService::class);
+                $transactionService->refundEscrow(
+                    $this->escrow_transaction_id,
+                    "Application rejected - Refund for channel ad: {$this->channelAd->title}"
+                );
+                
+                $escrowStatus = self::ESCROW_STATUS_REFUNDED;
+            } else {
+                $escrowStatus = $this->escrow_status;
+            }
+            
+            $this->update([
+                'status' => self::STATUS_REJECTED,
+                'rejected_at' => now(),
+                'rejection_reason' => $reason,
+                'admin_notes' => $notes,
+                'approved_at' => null,
+                'escrow_status' => $escrowStatus,
+            ]);
+        });
     }
 
     /**
@@ -254,12 +286,25 @@ class ChannelAdApplication extends Model
      */
     public function approveProofAndReleaseEscrow(): void
     {
-        $this->update([
-            'status' => self::STATUS_COMPLETED,
-            'proof_approved_at' => now(),
-            'escrow_status' => self::ESCROW_STATUS_RELEASED,
-            'escrow_released_at' => now(),
-        ]);
+        DB::transaction(function () {
+            if (!$this->escrow_transaction_id) {
+                throw new \InvalidArgumentException('No escrow transaction found');
+            }
+            
+            $transactionService = app(TransactionService::class);
+            $result = $transactionService->releaseEscrow(
+                $this->escrow_transaction_id,
+                $this->channel->user,
+                "Payment for channel ad: {$this->channelAd->title}"
+            );
+            
+            $this->update([
+                'status' => self::STATUS_COMPLETED,
+                'proof_approved_at' => now(),
+                'escrow_status' => self::ESCROW_STATUS_RELEASED,
+                'escrow_released_at' => now(),
+            ]);
+        });
     }
 
     /**
@@ -279,12 +324,25 @@ class ChannelAdApplication extends Model
      */
     public function complete(): void
     {
-        $this->update([
-            'status' => self::STATUS_COMPLETED,
-            'completed_at' => now(),
-            'escrow_status' => self::ESCROW_STATUS_RELEASED,
-            'escrow_released_at' => now(),
-        ]);
+        DB::transaction(function () {
+            if (!$this->escrow_transaction_id) {
+                throw new \InvalidArgumentException('No escrow transaction found');
+            }
+            
+            $transactionService = app(TransactionService::class);
+            $result = $transactionService->releaseEscrow(
+                $this->escrow_transaction_id,
+                $this->channel->user,
+                "Payment for channel ad: {$this->channelAd->title}"
+            );
+            
+            $this->update([
+                'status' => self::STATUS_COMPLETED,
+                'completed_at' => now(),
+                'escrow_status' => self::ESCROW_STATUS_RELEASED,
+                'escrow_released_at' => now(),
+            ]);
+        });
     }
 
     /**
@@ -305,13 +363,36 @@ class ChannelAdApplication extends Model
      */
     public function resolveDispute(string $resolution, bool $releaseEscrow = true): void
     {
-        $this->update([
-            'dispute_status' => self::DISPUTE_STATUS_RESOLVED,
-            'dispute_resolved_at' => now(),
-            'dispute_resolution' => $resolution,
-            'status' => $releaseEscrow ? self::STATUS_COMPLETED : self::STATUS_REJECTED,
-            'escrow_status' => $releaseEscrow ? self::ESCROW_STATUS_RELEASED : self::ESCROW_STATUS_REFUNDED,
-            'escrow_released_at' => $releaseEscrow ? now() : null,
-        ]);
+        DB::transaction(function () use ($resolution, $releaseEscrow) {
+            if (!$this->escrow_transaction_id) {
+                throw new \InvalidArgumentException('No escrow transaction found');
+            }
+            
+            $transactionService = app(TransactionService::class);
+            
+            if ($releaseEscrow) {
+                // Release escrow to channel owner
+                $result = $transactionService->releaseEscrow(
+                    $this->escrow_transaction_id,
+                    $this->channel->user,
+                    "Dispute resolved - Payment for channel ad: {$this->channelAd->title}"
+                );
+            } else {
+                // Refund escrow to advertiser
+                $transactionService->refundEscrow(
+                    $this->escrow_transaction_id,
+                    "Dispute resolved - Refund for channel ad: {$this->channelAd->title}"
+                );
+            }
+            
+            $this->update([
+                'dispute_status' => self::DISPUTE_STATUS_RESOLVED,
+                'dispute_resolved_at' => now(),
+                'dispute_resolution' => $resolution,
+                'status' => $releaseEscrow ? self::STATUS_COMPLETED : self::STATUS_REJECTED,
+                'escrow_status' => $releaseEscrow ? self::ESCROW_STATUS_RELEASED : self::ESCROW_STATUS_REFUNDED,
+                'escrow_released_at' => $releaseEscrow ? now() : null,
+            ]);
+        });
     }
 }

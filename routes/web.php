@@ -13,6 +13,7 @@ use App\Livewire\AdList;
 use App\Livewire\AdTask;
 use App\Livewire\AdTaskHistory;
 use App\Livewire\Profile;
+use App\Livewire\MyBatches;
 
 // Homepage - Batch List (protected by auth and verified.otp middleware)
 Route::get('/', BatchList::class)
@@ -29,6 +30,10 @@ Route::view('dashboard', 'dashboard')
 Route::get('/profile', Profile::class)
     ->middleware(['auth', 'verified.otp'])
     ->name('profile');
+
+Route::get('/my-batches', MyBatches::class)
+    ->middleware(['auth', 'verified.otp'])
+    ->name('my-batches');
 
 // Credit System Routes
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -84,6 +89,62 @@ Route::prefix('ads')->name('ads.')->middleware(['auth',  'ads.enabled'])->group(
     // Ad task history
     Route::get('/tasks', AdTaskHistory::class)
         ->name('tasks');
+});
+
+// Notification Routes
+Route::middleware(['auth', 'verified.otp'])->group(function () {
+    Route::get('/notifications', function() {
+        // For now, redirect to profile where notifications can be managed
+        // In the future, this could be a dedicated notifications page
+        return redirect()->route('profile');
+    })->name('notifications.index');
+});
+
+// Impersonation Routes
+Route::middleware(['auth', 'verified.otp'])->group(function () {
+    Route::post('/impersonate/{user}', function(\App\Models\User $user) {
+        // Store the original admin ID in session
+        session(['original_admin_id' => auth()->id()]);
+        
+        // Log the impersonation
+        \Illuminate\Support\Facades\Log::info('Admin impersonation started', [
+            'admin_id' => auth()->id(),
+            'target_user_id' => $user->id,
+            'admin_email' => auth()->user()->email,
+            'target_user_email' => $user->email,
+        ]);
+        
+        // Login as the target user
+        auth()->login($user);
+        
+        return redirect()->route('home')->with('success', 'You are now impersonating ' . $user->name);
+    })->name('impersonate.start');
+    
+    Route::post('/stop-impersonation', function() {
+        $originalAdminId = session('original_admin_id');
+        
+        if ($originalAdminId) {
+            $originalAdmin = \App\Models\User::find($originalAdminId);
+            
+            if ($originalAdmin) {
+                // Log the end of impersonation
+                \Illuminate\Support\Facades\Log::info('Admin impersonation ended', [
+                    'admin_id' => $originalAdminId,
+                    'impersonated_user_id' => auth()->id(),
+                    'admin_email' => $originalAdmin->email,
+                    'impersonated_user_email' => auth()->user()->email,
+                ]);
+                
+                // Login back as the original admin
+                auth()->login($originalAdmin);
+                session()->forget('original_admin_id');
+                
+                return redirect()->route('home')->with('success', 'Impersonation ended. You are now logged in as ' . $originalAdmin->name);
+            }
+        }
+        
+        return redirect()->route('home')->with('error', 'Unable to end impersonation.');
+    })->name('impersonate.stop');
 });
 
 // Batch Routes

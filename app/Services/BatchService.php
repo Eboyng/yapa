@@ -52,14 +52,36 @@ class BatchService
             return $openTrialBatch;
         }
 
-        // Create new trial batch
+        // Create new trial batch only when current one is full
         return $this->createBatch([
-            'name' => 'Trial Batch - ' . now()->format('M d, Y'),
+            'name' => 'Trial Batch - ' . now()->format('M d, Y H:i'),
             'type' => Batch::TYPE_TRIAL,
             'limit' => Batch::TRIAL_LIMIT,
             'cost_in_credits' => 0,
             'description' => 'Auto-generated trial batch for new users',
         ]);
+    }
+
+    /**
+     * Get or create available trial batch for new users.
+     */
+    public function getAvailableTrialBatch(): ?Batch
+    {
+        // Check if there's an open trial batch with space
+        $openTrialBatch = Batch::trial()->open()->first();
+        
+        if ($openTrialBatch && !$openTrialBatch->isFull()) {
+            return $openTrialBatch;
+        }
+        
+        // If current trial batch is full, create a new one
+        if ($openTrialBatch && $openTrialBatch->isFull()) {
+            $openTrialBatch->markAsFull();
+            return $this->autoCreateTrialBatch();
+        }
+        
+        // No trial batch exists, create the first one
+        return $this->autoCreateTrialBatch();
     }
 
     /**

@@ -36,6 +36,9 @@ return new class extends Migration
             $table->boolean('email_notifications_enabled')->default(true);
             $table->string('google_refresh_token')->nullable();
             $table->string('avatar')->nullable();
+            $table->boolean('is_banned_from_batches')->default(false);
+            $table->timestamp('banned_from_batches_at')->nullable();
+            $table->text('ban_reason')->nullable();
             $table->timestamp('last_login_at')->nullable();
             $table->string('referral_code', 8)->unique()->nullable();
             $table->unsignedBigInteger('referred_by')->nullable();

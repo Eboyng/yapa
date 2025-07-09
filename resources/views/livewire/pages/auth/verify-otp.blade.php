@@ -2,8 +2,14 @@
 
 use App\Livewire\Actions\Logout;
 use App\Services\OtpService;
+use App\Services\ReferralService;
+use App\Services\TransactionService;
+use App\Models\PendingUser;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 use Livewire\Attributes\Validate;
@@ -17,13 +23,48 @@ new #[Layout('layouts.guest')] class extends Component
     public string $resendMessage = '';
     public bool $isVerifying = false;
     public bool $isSending = false;
+    public ?PendingUser $pendingUser = null;
+    public string $whatsappNumber = '';
+    public string $userType = 'existing'; // 'existing' or 'pending'
 
     public function mount(): void
     {
-        // Redirect if already verified
-        if (Auth::user()->whatsapp_verified_at) {
-            $this->redirect(route('home'), navigate: true);
-            return;
+        // Check if this is for a pending user registration
+        $registrationData = Session::get('registration_data');
+        
+        if ($registrationData && isset($registrationData['whatsapp_number'])) {
+            // This is a pending user registration
+            $this->pendingUser = PendingUser::where('whatsapp_number', $registrationData['whatsapp_number'])
+                ->where('expires_at', '>', now())
+                ->first();
+                
+            if ($this->pendingUser) {
+                $this->userType = 'pending';
+                $this->whatsappNumber = $this->pendingUser->whatsapp_number;
+            } else {
+                // Pending user not found or expired, redirect to register
+                Session::forget('registration_data');
+                Session::flash('error', 'Registration session expired. Please register again.');
+                $this->redirect(route('register'), navigate: true);
+                return;
+            }
+        } else {
+            // This is for an existing authenticated user
+            if (!Auth::check()) {
+                $this->redirect(route('login'), navigate: true);
+                return;
+            }
+            
+            $user = Auth::user();
+            
+            // Redirect if already verified
+            if ($user->whatsapp_verified_at) {
+                $this->redirect(route('home'), navigate: true);
+                return;
+            }
+            
+            $this->userType = 'existing';
+            $this->whatsappNumber = $user->whatsapp_number ?? '';
         }
         
         $this->checkResendStatus();
@@ -37,17 +78,19 @@ new #[Layout('layouts.guest')] class extends Component
         $this->isSending = true;
         
         try {
-            $user = Auth::user();
             $otpService = app(OtpService::class);
             
-            // Check if user has a WhatsApp number
-            if (!$user->whatsapp_number) {
-                Session::flash('error', 'WhatsApp number not set. Please update your profile.');
+            // Check if WhatsApp number is available
+            if (!$this->whatsappNumber) {
+                Session::flash('error', 'WhatsApp number not available. Please try again.');
                 return;
             }
             
+            // Determine the context based on user type
+            $context = $this->userType === 'pending' ? 'registration' : 'login';
+            
             // Check if can resend
-            $canResend = $otpService->canResendOtp($user->whatsapp_number, 'login');
+            $canResend = $otpService->canResendOtp($this->whatsappNumber, $context);
             
             if (!$canResend['can_resend']) {
                 Session::flash('error', $canResend['message']);
@@ -57,13 +100,19 @@ new #[Layout('layouts.guest')] class extends Component
             
             // Send OTP
             $templates = OtpService::getMessageTemplates();
-            $result = $otpService->sendOtp(
-                $user->whatsapp_number,
-                $templates['login']
-            );
+            $template = $this->userType === 'pending' ? $templates['registration'] : $templates['login'];
+            
+            $result = $otpService->sendOtp($this->whatsappNumber, $template);
             
             if ($result['success']) {
-                $otpService->trackResend($user->whatsapp_number, 'login');
+                $otpService->trackResend($this->whatsappNumber, $context);
+                
+                // Update pending user if applicable
+                if ($this->pendingUser) {
+                    $this->pendingUser->increment('resend_attempts');
+                    $this->pendingUser->update(['last_resend_at' => now()]);
+                }
+                
                 Session::flash('status', 'otp-sent');
                 Session::flash('method', $result['method']);
             } else {
@@ -87,34 +136,48 @@ new #[Layout('layouts.guest')] class extends Component
         $this->isVerifying = true;
         
         try {
-            $user = Auth::user();
             $otpService = app(OtpService::class);
             
-            // Check if user has a WhatsApp number
-            if (!$user->whatsapp_number) {
-                $this->addError('otp', 'WhatsApp number not set. Please update your profile.');
+            // Check if WhatsApp number is available
+            if (!$this->whatsappNumber) {
+                $this->addError('otp', 'WhatsApp number not available. Please try again.');
                 return;
             }
             
+            // Determine the context based on user type
+            $context = $this->userType === 'pending' ? 'registration' : 'login';
+            
             $result = $otpService->verifyOtp(
-                $user->whatsapp_number,
+                $this->whatsappNumber,
                 $this->otp,
-                'login'
+                $context
             );
             
             if ($result['success']) {
-                // Mark WhatsApp as verified
-                $user->update([
-                    'whatsapp_verified_at' => now(),
-                ]);
-                
-                Session::flash('status', 'otp-verified');
-                $this->redirect(route('home'), navigate: true);
+                if ($this->userType === 'pending') {
+                    // Complete pending user registration
+                    $this->completePendingRegistration();
+                } else {
+                    // Mark existing user's WhatsApp as verified
+                    $user = Auth::user();
+                    $user->update([
+                        'whatsapp_verified_at' => now(),
+                    ]);
+                    
+                    Session::flash('status', 'otp-verified');
+                    $this->redirect(route('home'), navigate: true);
+                }
                 return;
             }
             
             // Handle verification failure
             if (!$result['can_retry']) {
+                if ($this->userType === 'pending' && $this->pendingUser) {
+                    // Mark pending user as failed if max attempts reached
+                    $this->pendingUser->update([
+                        'failure_reason' => $result['message']
+                    ]);
+                }
                 Session::flash('error', $result['message']);
                 $this->otp = '';
             } else {
@@ -127,23 +190,91 @@ new #[Layout('layouts.guest')] class extends Component
             $this->isVerifying = false;
         }
     }
+    
+    /**
+     * Complete pending user registration after successful OTP verification.
+     */
+    private function completePendingRegistration(): void
+    {
+        if (!$this->pendingUser) {
+            Session::flash('error', 'Registration data not found.');
+            $this->redirect(route('register'), navigate: true);
+            return;
+        }
+        
+        DB::transaction(function () {
+            $emailVerificationEnabled = Session::get('registration_data.email_verification_enabled', false);
+            
+            // Create the actual user
+            $user = User::create([
+                'name' => $this->pendingUser->name,
+                'email' => $this->pendingUser->email,
+                'whatsapp_number' => $this->pendingUser->whatsapp_number,
+                'password' => $this->pendingUser->password, // Already hashed
+                'whatsapp_verified_at' => now(),
+                'referral_code' => $this->pendingUser->referral_code,
+                'referred_by' => $this->pendingUser->referred_by,
+                'referred_at' => $this->pendingUser->referred_by ? now() : null,
+                'email_verification_enabled' => $emailVerificationEnabled,
+            ]);
+            
+            // Credit 100 free credits
+            $transactionService = app(TransactionService::class);
+            $transactionService->credit(
+                $user->id,
+                100,
+                'registration_bonus',
+                'Welcome bonus - 100 free credits'
+            );
+            
+            // Process referral if applicable
+            if ($this->pendingUser->referred_by) {
+                $referralService = app(ReferralService::class);
+                $referralService->processReferral($user, 'registration');
+            }
+            
+            // Send email verification if enabled
+            if ($emailVerificationEnabled) {
+                $user->sendEmailVerificationNotification();
+            }
+            
+            // Clean up
+            $this->pendingUser->delete();
+            Session::forget('registration_data');
+            
+            // Log the user in
+            Auth::login($user);
+            
+            $message = 'Registration completed successfully! You have been credited with 100 free credits.';
+            if ($emailVerificationEnabled) {
+                $message .= ' Please check your email to verify your email address.';
+            }
+            
+            Session::flash('status', 'registration-completed');
+            Session::flash('message', $message);
+        });
+        
+        $this->redirect(route('home'), navigate: true);
+    }
 
     /**
      * Check resend status.
      */
     private function checkResendStatus(): void
     {
-        $user = Auth::user();
         $otpService = app(OtpService::class);
         
-        // Check if user has a WhatsApp number
-        if (!$user->whatsapp_number) {
+        // Check if WhatsApp number is available
+        if (!$this->whatsappNumber) {
             $this->canResend = false;
-            $this->resendMessage = 'WhatsApp number not set';
+            $this->resendMessage = 'WhatsApp number not available';
             return;
         }
         
-        $canResend = $otpService->canResendOtp($user->whatsapp_number, 'login');
+        // Determine the context based on user type
+        $context = $this->userType === 'pending' ? 'registration' : 'login';
+        
+        $canResend = $otpService->canResendOtp($this->whatsappNumber, $context);
         $this->canResend = $canResend['can_resend'];
         $this->resendMessage = $canResend['message'];
     }
@@ -165,12 +296,25 @@ new #[Layout('layouts.guest')] class extends Component
 
     <div class="mb-4 text-sm text-gray-500">
         <strong>WhatsApp Number:</strong> 
-        @if(Auth::user()->whatsapp_number)
-            {{ Auth::user()->whatsapp_number }}
+        @if($whatsappNumber)
+            {{ $whatsappNumber }}
         @else
-            <span class="text-red-500">Not set - Please update your profile</span>
+            <span class="text-red-500">Not available</span>
         @endif
     </div>
+    
+    @if($userType === 'pending')
+        <div class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="text-sm text-blue-800">
+                    <strong>Complete Your Registration:</strong> Please verify your WhatsApp number to finish creating your account and receive your 100 free credits.
+                </p>
+            </div>
+        </div>
+    @endif
 
     @if (session('status') == 'otp-sent')
         <div class="mb-4 font-medium text-sm text-green-600">
@@ -181,6 +325,12 @@ new #[Layout('layouts.guest')] class extends Component
     @if (session('status') == 'otp-verified')
         <div class="mb-4 font-medium text-sm text-green-600">
             {{ __('WhatsApp number verified successfully! Redirecting...') }}
+        </div>
+    @endif
+    
+    @if (session('status') == 'registration-completed')
+        <div class="mb-4 font-medium text-sm text-green-600">
+            {{ session('message') }}
         </div>
     @endif
 
@@ -236,12 +386,20 @@ new #[Layout('layouts.guest')] class extends Component
                     <span class="text-xs text-gray-500">{{ $resendMessage }}</span>
                 @endif
                 
-                <button 
-                    wire:click="logout" 
-                    type="button" 
-                    class="mt-2 underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    {{ __('Log Out') }}
-                </button>
+                @if($userType === 'existing')
+                    <button 
+                        wire:click="logout" 
+                        type="button" 
+                        class="mt-2 underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        {{ __('Log Out') }}
+                    </button>
+                @else
+                    <a href="{{ route('register') }}" 
+                       wire:navigate
+                       class="mt-2 underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        {{ __('Back to Registration') }}
+                    </a>
+                @endif
             </div>
         </div>
     </form>

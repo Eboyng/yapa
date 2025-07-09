@@ -441,14 +441,51 @@ class TransactionService
     }
 
     /**
-     * Release escrow payment to user.
+     * Create escrow transaction for channel ad.
+     */
+    public function createEscrow(
+        User $advertiser,
+        float $amount,
+        int $channelAdApplicationId,
+        string $description
+    ): Transaction {
+        return DB::transaction(function () use ($advertiser, $amount, $channelAdApplicationId, $description) {
+            // Debit advertiser's wallet
+            $escrowTransaction = $this->debit(
+                $advertiser->id,
+                $amount,
+                Transaction::TYPE_NAIRA,
+                Transaction::CATEGORY_CHANNEL_AD_ESCROW,
+                $description,
+                $channelAdApplicationId,
+                'wallet',
+                [
+                    'channel_ad_application_id' => $channelAdApplicationId,
+                    'escrow_status' => 'held',
+                ]
+            );
+            
+            Log::info('Escrow created for channel ad', [
+                'escrow_transaction_id' => $escrowTransaction->id,
+                'advertiser_id' => $advertiser->id,
+                'amount' => $amount,
+                'application_id' => $channelAdApplicationId,
+            ]);
+            
+            return $escrowTransaction;
+        });
+    }
+
+    /**
+     * Release escrow payment to channel owner with admin fee deduction.
      */
     public function releaseEscrow(
         int $escrowTransactionId,
-        User $user,
-        string $description
-    ): Transaction {
-        return DB::transaction(function () use ($escrowTransactionId, $user, $description) {
+        User $channelOwner,
+        string $description,
+        float $adminFeePercentage = 10.0
+    ): array {
+        return DB::transaction(function () use ($escrowTransactionId, $channelOwner, $description, $adminFeePercentage) {
             $escrowTransaction = Transaction::findOrFail($escrowTransactionId);
             
             if ($escrowTransaction->category !== Transaction::CATEGORY_CHANNEL_AD_ESCROW) {
@@ -459,10 +496,14 @@ class TransactionService
                 throw new \InvalidArgumentException('Escrow transaction is not confirmed');
             }
             
-            // Create payment transaction to release escrow
-            $paymentTransaction = $this->credit(
-                $user->id,
-                $escrowTransaction->amount,
+            $totalAmount = $escrowTransaction->amount;
+            $adminFee = round($totalAmount * ($adminFeePercentage / 100), 2);
+            $channelOwnerAmount = $totalAmount - $adminFee;
+            
+            // Create payment transaction for channel owner
+            $channelPaymentTransaction = $this->credit(
+                $channelOwner->id,
+                $channelOwnerAmount,
                 Transaction::TYPE_NAIRA,
                 Transaction::CATEGORY_CHANNEL_AD_PAYMENT,
                 $description,
@@ -471,20 +512,106 @@ class TransactionService
                 [
                     'escrow_transaction_id' => $escrowTransactionId,
                     'escrow_reference' => $escrowTransaction->reference,
+                    'admin_fee_deducted' => $adminFee,
+                    'admin_fee_percentage' => $adminFeePercentage,
                 ]
             );
             
-            // Link the payment to the escrow transaction
-            $paymentTransaction->update(['parent_transaction_id' => $escrowTransactionId]);
+            // Create admin fee transaction
+            $adminFeeTransaction = null;
+            if ($adminFee > 0) {
+                // Find admin user (you may need to adjust this logic)
+                $adminUser = User::where('role', 'admin')->first() ?? User::find(1);
+                
+                $adminFeeTransaction = $this->credit(
+                    $adminUser->id,
+                    $adminFee,
+                    Transaction::TYPE_NAIRA,
+                    Transaction::CATEGORY_MANUAL_ADJUSTMENT,
+                    "Admin fee (${adminFeePercentage}%) from channel ad payment",
+                    $escrowTransaction->related_id,
+                    'admin_fee',
+                    [
+                        'escrow_transaction_id' => $escrowTransactionId,
+                        'channel_payment_transaction_id' => $channelPaymentTransaction->id,
+                        'fee_percentage' => $adminFeePercentage,
+                        'original_amount' => $totalAmount,
+                    ]
+                );
+            }
             
-            Log::info('Escrow payment released', [
+            // Link transactions to the escrow transaction
+            $channelPaymentTransaction->update(['parent_transaction_id' => $escrowTransactionId]);
+            if ($adminFeeTransaction) {
+                $adminFeeTransaction->update(['parent_transaction_id' => $escrowTransactionId]);
+            }
+            
+            Log::info('Escrow payment released with admin fee', [
                 'escrow_transaction_id' => $escrowTransactionId,
-                'payment_transaction_id' => $paymentTransaction->id,
-                'user_id' => $user->id,
-                'amount' => $escrowTransaction->amount,
+                'channel_payment_transaction_id' => $channelPaymentTransaction->id,
+                'admin_fee_transaction_id' => $adminFeeTransaction?->id,
+                'channel_owner_id' => $channelOwner->id,
+                'total_amount' => $totalAmount,
+                'channel_owner_amount' => $channelOwnerAmount,
+                'admin_fee' => $adminFee,
             ]);
             
-            return $paymentTransaction;
+            return [
+                'channel_payment' => $channelPaymentTransaction,
+                'admin_fee_payment' => $adminFeeTransaction,
+                'total_amount' => $totalAmount,
+                'channel_owner_amount' => $channelOwnerAmount,
+                'admin_fee' => $adminFee,
+            ];
+        });
+    }
+
+    /**
+     * Refund escrow payment to advertiser.
+     */
+    public function refundEscrow(
+        int $escrowTransactionId,
+        string $reason
+    ): Transaction {
+        return DB::transaction(function () use ($escrowTransactionId, $reason) {
+            $escrowTransaction = Transaction::findOrFail($escrowTransactionId);
+            
+            if ($escrowTransaction->category !== Transaction::CATEGORY_CHANNEL_AD_ESCROW) {
+                throw new \InvalidArgumentException('Transaction is not an escrow transaction');
+            }
+            
+            if ($escrowTransaction->status !== Transaction::STATUS_CONFIRMED) {
+                throw new \InvalidArgumentException('Escrow transaction is not confirmed');
+            }
+            
+            // Create refund transaction
+            $refundTransaction = $this->credit(
+                $escrowTransaction->user_id,
+                $escrowTransaction->amount,
+                $escrowTransaction->type,
+                Transaction::CATEGORY_REFUND,
+                "Escrow refund: {$reason}",
+                $escrowTransaction->related_id,
+                'escrow_refund',
+                [
+                    'escrow_transaction_id' => $escrowTransactionId,
+                    'escrow_reference' => $escrowTransaction->reference,
+                    'refund_reason' => $reason,
+                ]
+            );
+            
+            // Link to original transaction
+            $refundTransaction->update(['parent_transaction_id' => $escrowTransactionId]);
+            
+            Log::info('Escrow refunded', [
+                'escrow_transaction_id' => $escrowTransactionId,
+                'refund_transaction_id' => $refundTransaction->id,
+                'user_id' => $escrowTransaction->user_id,
+                'amount' => $escrowTransaction->amount,
+                'reason' => $reason,
+            ]);
+            
+            return $refundTransaction;
         });
     }
 

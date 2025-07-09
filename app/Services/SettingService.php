@@ -37,6 +37,26 @@ class SettingService
         'supported_image_formats' => 'jpg,jpeg,png',
         'vcf_export_enabled' => true,
         'google_oauth_enabled' => false,
+        // Site Branding Settings
+        'site_name' => 'Yapa',
+        'site_logo' => '',
+        'site_favicon' => '',
+        'site_logo_name' => 'Yapa',
+        // Maintenance Mode Settings
+        'maintenance_message' => 'We are currently performing scheduled maintenance. We will be back shortly.',
+        'maintenance_end_time' => null,
+        'maintenance_allowed_ips' => '',
+        // SEO & OpenGraph Settings
+        'seo_title' => 'Yapa - Connect & Share Contacts',
+        'seo_description' => 'Join Yapa to connect with like-minded people, share contacts, and build meaningful networks.',
+        'seo_keywords' => 'contacts, networking, social, sharing, community',
+        'og_title' => 'Yapa - Connect & Share Contacts',
+        'og_description' => 'Join Yapa to connect with like-minded people, share contacts, and build meaningful networks.',
+        'og_image' => '',
+        'og_type' => 'website',
+        'twitter_card' => 'summary_large_image',
+        'twitter_site' => '@yapa',
+        'twitter_creator' => '@yapa',
         // Kudisms API Settings
         'kudisms_api_key' => '',
         'kudisms_whatsapp_template_code' => '',
@@ -50,6 +70,24 @@ class SettingService
         'kudisms_app_name_code' => '',
         'kudisms_sms_url' => 'https://my.kudisms.net/api/otp',
         'kudisms_balance_url' => 'https://my.kudisms.net/api/balance',
+        // Paystack Payment Settings
+        'paystack_public_key' => '',
+        'paystack_secret_key' => '',
+        'paystack_webhook_secret' => '',
+        'paystack_environment' => 'test',
+        'paystack_enabled' => true,
+        'credit_price_naira' => 3.00,
+        'minimum_credits_purchase' => 100,
+        'minimum_amount_naira' => 300,
+        // Email Configuration Settings
+        'mail_mailer' => 'log',
+        'mail_host' => '',
+        'mail_port' => 587,
+        'mail_username' => '',
+        'mail_password' => '',
+        'mail_encryption' => 'tls',
+        'mail_from_address' => 'noreply@yoursite.com',
+        'mail_from_name' => 'Yapa',
     ];
 
     /**
@@ -460,5 +498,119 @@ class SettingService
             'max_size_bytes' => $this->get('max_file_upload_size', 5) * 1024 * 1024,
             'supported_formats' => explode(',', $this->get('supported_image_formats', 'jpg,jpeg,png')),
         ];
+    }
+
+    /**
+     * Get site branding settings.
+     */
+    public function getBrandingSettings(): array
+    {
+        return $this->getMultiple([
+            'site_name',
+            'site_logo',
+            'site_favicon',
+            'site_logo_name',
+        ]);
+    }
+
+    /**
+     * Get maintenance mode settings.
+     */
+    public function getMaintenanceSettings(): array
+    {
+        return $this->getMultiple([
+            'maintenance_mode',
+            'maintenance_message',
+            'maintenance_end_time',
+            'maintenance_allowed_ips',
+        ]);
+    }
+
+    /**
+     * Get SEO and OpenGraph settings.
+     */
+    public function getSeoSettings(): array
+    {
+        return $this->getMultiple([
+            'seo_title',
+            'seo_description',
+            'seo_keywords',
+            'og_title',
+            'og_description',
+            'og_image',
+            'og_type',
+            'twitter_card',
+            'twitter_site',
+            'twitter_creator',
+        ]);
+    }
+
+    /**
+     * Check if site is in maintenance mode.
+     */
+    public function isMaintenanceMode(): bool
+    {
+        return (bool) $this->get('maintenance_mode', false);
+    }
+
+    /**
+     * Check if IP is allowed during maintenance.
+     */
+    public function isIpAllowedDuringMaintenance(string $ip): bool
+    {
+        if (!$this->isMaintenanceMode()) {
+            return true;
+        }
+
+        $allowedIps = $this->get('maintenance_allowed_ips', '');
+        if (empty($allowedIps)) {
+            return false;
+        }
+
+        $allowedIpsArray = array_map('trim', explode(',', $allowedIps));
+        return in_array($ip, $allowedIpsArray);
+    }
+
+    /**
+     * Get maintenance end time as Carbon instance.
+     */
+    public function getMaintenanceEndTime(): ?\Carbon\Carbon
+    {
+        $endTime = $this->get('maintenance_end_time');
+        return $endTime ? \Carbon\Carbon::parse($endTime) : null;
+    }
+
+    /**
+     * Check if maintenance period has ended.
+     */
+    public function isMaintenancePeriodEnded(): bool
+    {
+        $endTime = $this->getMaintenanceEndTime();
+        return $endTime && $endTime->isPast();
+    }
+
+    /**
+     * Get Paystack payment settings.
+     */
+    public function getPaystackSettings(): array
+    {
+        return $this->getMultiple([
+            'paystack_public_key',
+            'paystack_secret_key',
+            'paystack_webhook_secret',
+            'paystack_environment',
+            'paystack_enabled',
+            'credit_price_naira',
+            'minimum_credits_purchase',
+            'minimum_amount_naira',
+        ]);
+    }
+
+    /**
+     * Check if Paystack payments are enabled.
+     */
+    public function isPaystackEnabled(): bool
+    {
+        return (bool) $this->get('paystack_enabled', true);
     }
 }

@@ -93,40 +93,37 @@ class ViewChannelAdApplication extends ViewRecord
                 }),
             
             Actions\Action::make('complete')
+                ->label('Complete & Release Payment')
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
-                ->visible(fn (ChannelAdApplication $record): bool => $record->status === ChannelAdApplication::STATUS_PROOF_SUBMITTED)
+                ->visible(fn (): bool => $this->record->status === ChannelAdApplication::STATUS_PROOF_SUBMITTED)
                 ->requiresConfirmation()
                 ->modalHeading('Complete Application & Release Payment')
-                ->modalDescription('This will release the escrow payment to the channel. Are you sure the proof is satisfactory?')
+                ->modalDescription('This will release the escrow payment to the channel owner (90%) and admin fee (10%). Are you sure the proof is satisfactory?')
                 ->action(function (ChannelAdApplication $record): void {
                     try {
-                        $transactionService = app(TransactionService::class);
+                        $record->approveProofAndReleaseEscrow();
                         
-                        // Release escrow payment
-                        if ($record->escrow_transaction_id) {
-                            $transaction = $transactionService->releaseEscrow(
-                                $record->escrow_transaction_id,
-                                $record->channel->user,
-                                "Payment for channel ad: {$record->channelAd->title}"
-                            );
-                        }
-                        
-                        $record->complete();
+                        $channelOwnerAmount = $record->escrow_amount * 0.9;
+                        $adminFee = $record->escrow_amount * 0.1;
                         
                         // Log the action
                         AuditLog::log(
                             auth()->id(),
-                            $record->channel->user_id,
                             'channel_ad_application_completed',
-                            ['status' => ChannelAdApplication::STATUS_PROOF_SUBMITTED],
-                            ['status' => ChannelAdApplication::STATUS_COMPLETED],
-                            "Completed channel ad application and released payment for: {$record->channelAd->title}"
+                            $record->channel->user_id,
+                            ['application_id' => $record->id],
+                            [
+                                'total_amount' => $record->escrow_amount,
+                                'channel_owner_amount' => $channelOwnerAmount,
+                                'admin_fee' => $adminFee
+                            ],
+                            'Application completed and payment released with admin fee'
                         );
                         
                         Notification::make()
                             ->title('Application Completed')
-                            ->body("Payment of ₦{$record->channelAd->payment_per_channel} has been released to the channel.")
+                            ->body("Payment released: ₦{$channelOwnerAmount} to channel owner, ₦{$adminFee} admin fee.")
                             ->success()
                             ->send();
                     } catch (\Exception $e) {

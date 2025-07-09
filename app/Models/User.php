@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -14,10 +14,58 @@ use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasRoles;
+    
+    /**
+     * Determine if the user must verify their email address.
+     */
+    public function mustVerifyEmail(): bool
+    {
+        return $this->email_verification_enabled ?? false;
+    }
+    
+    /**
+     * Determine if the user has verified their email address.
+     */
+    public function hasVerifiedEmail(): bool
+    {
+        if (!$this->mustVerifyEmail()) {
+            return true; // If email verification is not enabled, consider it verified
+        }
+        
+        return !is_null($this->email_verified_at);
+    }
+    
+    /**
+     * Mark the given user's email as verified.
+     */
+    public function markEmailAsVerified(): bool
+    {
+        return $this->forceFill([
+            'email_verified_at' => $this->freshTimestamp(),
+        ])->save();
+    }
+    
+    /**
+     * Send the email verification notification.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        if ($this->mustVerifyEmail()) {
+            $this->notify(new \Illuminate\Auth\Notifications\VerifyEmail);
+        }
+    }
+    
+    /**
+     * Get the email address that should be used for verification.
+     */
+    public function getEmailForVerification(): string
+    {
+        return $this->email;
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -51,8 +99,10 @@ class User extends Authenticatable
         'google_refresh_token',
         'whatsapp_notifications_enabled',
         'email_notifications_enabled',
-        'is_admin',
         'avatar',
+        'is_banned_from_batches',
+        'banned_from_batches_at',
+        'ban_reason',
         'last_login_at',
         'referral_code',
         'referred_by',
@@ -95,8 +145,9 @@ class User extends Authenticatable
             'google_people_cached_at' => 'datetime',
             'whatsapp_notifications_enabled' => 'boolean',
             'email_notifications_enabled' => 'boolean',
-            'is_admin' => 'boolean',
             'last_login_at' => 'datetime',
+            'is_banned_from_batches' => 'boolean',
+            'banned_from_batches_at' => 'datetime',
             'referred_at' => 'datetime',
         ];
     }
@@ -681,11 +732,35 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is admin.
+     * Check if user is banned from joining batches.
      */
-    public function isAdmin(): bool
+    public function isBannedFromBatches(): bool
     {
-        return $this->is_admin;
+        return $this->is_banned_from_batches;
+    }
+
+    /**
+     * Ban user from joining batches.
+     */
+    public function banFromBatches(string $reason = null): bool
+    {
+        return $this->update([
+            'is_banned_from_batches' => true,
+            'banned_from_batches_at' => now(),
+            'ban_reason' => $reason,
+        ]);
+    }
+
+    /**
+     * Unban user from joining batches.
+     */
+    public function unbanFromBatches(): bool
+    {
+        return $this->update([
+            'is_banned_from_batches' => false,
+            'banned_from_batches_at' => null,
+            'ban_reason' => null,
+        ]);
     }
 
     /**
@@ -721,11 +796,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Scope for admin users.
+     * Scope for users banned from batches.
      */
-    public function scopeAdmins($query)
+    public function scopeBannedFromBatches($query)
     {
-        return $query->where('is_admin', true);
+        return $query->where('is_banned_from_batches', true);
     }
 
     /**

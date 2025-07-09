@@ -160,6 +160,11 @@ class Batch extends Model
             return false;
         }
 
+        // Check if user is banned from joining batches
+        if ($user->isBannedFromBatches()) {
+            return false;
+        }
+
         // Check if user already joined this batch
         if ($this->members()->where('user_id', $user->id)->exists()) {
             return false;

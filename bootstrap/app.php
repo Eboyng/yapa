@@ -14,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'verified.otp' => \App\Http\Middleware\VerifiedOtp::class,
             'ads.enabled' => \App\Http\Middleware\AdsEnabledMiddleware::class,
+            'maintenance.mode' => \App\Http\Middleware\MaintenanceMode::class,
+        ]);
+        
+        // Apply maintenance mode middleware globally to web routes
+        $middleware->web(append: [
+            \App\Http\Middleware\MaintenanceMode::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

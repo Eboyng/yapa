@@ -31,6 +31,7 @@ class Profile extends Component
     public $location;
     public $selectedInterests = [];
     public $notifyWhatsapp;
+    public $emailVerificationEnabled;
     
     // WhatsApp number change
     public $newWhatsappNumber;
@@ -56,10 +57,16 @@ class Profile extends Component
     // Batch sharing
     public $openBatches = [];
     public $sharedBatches = [];
+    public $availableBatches = [];
     public $selectedBatch;
     public $shareUrl;
     public $showBatchShareSection = false;
     public $showSharedBatchesList = false;
+    
+    // Password change
+    public $current_password;
+    public $new_password;
+    public $confirm_password;
     
     // Loading states
     public $isUpdatingProfile = false;
@@ -69,6 +76,7 @@ class Profile extends Component
     public $isLoadingReferrals = false;
     public $isLoadingBatches = false;
     public $isGeneratingShareUrl = false;
+    public $isUpdatingPassword = false;
     
     // Available interests (cached)
     public $availableInterests = [];
@@ -90,6 +98,9 @@ class Profile extends Component
         'newWhatsappNumber' => 'nullable|string|regex:/^\+234[0-9]{10}$/|unique:users,whatsapp_number',
         'password' => 'nullable|string|min:8',
         'otp' => 'nullable|string|size:6',
+        'current_password' => 'required|string',
+        'new_password' => 'required|string|min:8|confirmed',
+        'confirm_password' => 'required|string|min:8',
     ];
 
     protected $messages = [
@@ -109,6 +120,7 @@ class Profile extends Component
         $this->selectedInterests = $userInterests ? $userInterests->pluck('id')->toArray() : [];
         
         $this->notifyWhatsapp = $this->user->whatsapp_notifications_enabled;
+        $this->emailVerificationEnabled = $this->user->email_verification_enabled;
         $this->googleConnected = !empty($this->user->google_access_token);
         
         // Initialize referral data
@@ -167,6 +179,50 @@ class Profile extends Component
             session()->flash('error', 'Failed to update profile. Please try again.');
         } finally {
             $this->isUpdatingProfile = false;
+        }
+    }
+
+    public function updatePassword()
+    {
+        $this->isUpdatingPassword = true;
+        
+        try {
+            $this->validate([
+                'current_password' => 'required|string',
+                'new_password' => 'required|string|min:8|confirmed',
+                'confirm_password' => 'required|string|min:8',
+            ]);
+
+            // Verify current password
+            if (!Hash::check($this->current_password, $this->user->password)) {
+                throw new \Exception('Current password is incorrect.');
+            }
+
+            // Check if new password is different from current
+            if (Hash::check($this->new_password, $this->user->password)) {
+                throw new \Exception('New password must be different from current password.');
+            }
+
+            // Update password
+            $this->user->update([
+                'password' => Hash::make($this->new_password)
+            ]);
+
+            // Reset form
+            $this->current_password = '';
+            $this->new_password = '';
+            $this->confirm_password = '';
+
+            session()->flash('success', 'Password updated successfully!');
+            
+        } catch (\Exception $e) {
+            Log::error('Password update failed', [
+                'user_id' => $this->user->id,
+                'error' => $e->getMessage()
+            ]);
+            session()->flash('error', $e->getMessage());
+        } finally {
+            $this->isUpdatingPassword = false;
         }
     }
 
@@ -354,6 +410,48 @@ class Profile extends Component
         }
     }
 
+    public function toggleEmailVerification()
+    {
+        try {
+            $this->user->update([
+                'email_verification_enabled' => $this->emailVerificationEnabled
+            ]);
+            
+            $status = $this->emailVerificationEnabled ? 'enabled' : 'disabled';
+            session()->flash('success', "Email verification {$status} successfully.");
+            
+            // If email verification is enabled and email is not verified, send verification email
+            if ($this->emailVerificationEnabled && !$this->user->hasVerifiedEmail()) {
+                $this->user->sendEmailVerificationNotification();
+                session()->flash('info', 'A verification email has been sent to your email address.');
+            }
+            
+        } catch (\Exception $e) {
+            session()->flash('error', 'Failed to update email verification preference.');
+        }
+    }
+
+    public function resendEmailVerification()
+    {
+        try {
+            if (!$this->user->emailVerificationEnabled) {
+                session()->flash('error', 'Email verification is not enabled for your account.');
+                return;
+            }
+
+            if ($this->user->hasVerifiedEmail()) {
+                session()->flash('info', 'Your email is already verified.');
+                return;
+            }
+
+            $this->user->sendEmailVerificationNotification();
+            session()->flash('success', 'Verification email sent successfully!');
+            
+        } catch (\Exception $e) {
+            session()->flash('error', 'Failed to send verification email.');
+        }
+    }
+
     public function resetNumberChangeForm()
     {
         $this->newWhatsappNumber = '';
@@ -408,6 +506,7 @@ class Profile extends Component
                 'user_id' => $this->user->id,
                 'error' => $e->getMessage()
             ]);
+            $this->referredUsers = []; // Ensure it's always an array
             session()->flash('error', 'Failed to load referral data.');
         } finally {
             $this->isLoadingReferrals = false;
@@ -449,6 +548,7 @@ class Profile extends Component
                 'user_id' => $this->user->id,
                 'error' => $e->getMessage()
             ]);
+            $this->openBatches = []; // Ensure it's always an array
             session()->flash('error', 'Failed to load batch data.');
         } finally {
             $this->isLoadingBatches = false;

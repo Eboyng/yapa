@@ -1,6 +1,6 @@
-<!-- Security Settings Tab Content -->
-<div id="security-content" class="tab-content bg-white rounded-2xl p-4 sm:p-6 lg:p-8 border border-gray-100 hidden">
-    <div class="flex items-center justify-between mb-6">
+@props(['user', 'emailVerificationEnabled'])
+
+<div class="flex items-center justify-between mb-6">
         <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Security Settings</h2>
         <div class="flex items-center space-x-2 text-sm text-gray-500">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,6 +72,59 @@
         </form>
     </div>
 
+    <!-- Email Verification Section -->
+    <div class="bg-gray-50 rounded-xl p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Email Verification</h3>
+        
+        <div class="space-y-4">
+            <!-- Email Verification Toggle -->
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <h4 class="text-sm font-medium text-gray-900 mb-1">Enable Email Verification</h4>
+                    <p class="text-sm text-gray-600">Require email verification for sensitive actions like withdrawals and WhatsApp number changes.</p>
+                </div>
+                <div class="ml-4">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" wire:model.live="emailVerificationEnabled" wire:change="toggleEmailVerification" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-orange-500 peer-checked:to-purple-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            @if($emailVerificationEnabled)
+                <!-- Email Verification Status -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-2">
+                                @if($user->hasVerifiedEmail())
+                                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <span class="text-sm font-medium text-green-700">Email Verified</span>
+                                @else
+                                    <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                    </svg>
+                                    <span class="text-sm font-medium text-yellow-700">Email Not Verified</span>
+                                @endif
+                            </div>
+                            <p class="text-sm text-gray-600">{{ $user->email }}</p>
+                            @if(!$user->hasVerifiedEmail())
+                                <p class="text-xs text-gray-500 mt-1">Please check your email for a verification link.</p>
+                            @endif
+                        </div>
+                        @if(!$user->hasVerifiedEmail())
+                            <button wire:click="resendEmailVerification" class="ml-4 px-3 py-1 text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded-md hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors duration-200">
+                                Resend Email
+                            </button>
+                        @endif
+                    </div>
+                </div>
+            @endif
+        </div>
+    </div>
+
     <!-- Password Requirements -->
     <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
         <div class="flex items-start">
@@ -94,4 +147,3 @@
             </div>
         </div>
     </div>
-</div>

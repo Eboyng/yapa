@@ -25,7 +25,7 @@ class TopPerformingBatchesWidget extends BaseWidget
             ->query(
                 Batch::query()
                     ->withCount('members')
-                    ->where('status', 'active')
+                    ->whereIn('status', ['open', 'full'])
                     ->orderByDesc('members_count')
                     ->limit(10)
             )
@@ -53,7 +53,7 @@ class TopPerformingBatchesWidget extends BaseWidget
                     ->color('success')
                     ->sortable(),
                     
-                TextColumn::make('max_members')
+                TextColumn::make('limit')
                     ->label('Capacity')
                     ->formatStateUsing(fn ($state, $record) => 
                         $record->members_count . '/' . $state
@@ -63,10 +63,10 @@ class TopPerformingBatchesWidget extends BaseWidget
                     ->label('Status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'active' => 'success',
-                        'pending' => 'warning',
-                        'completed' => 'info',
-                        'cancelled' => 'danger',
+                        'open' => 'success',
+                        'full' => 'warning',
+                        'closed' => 'info',
+                        'expired' => 'danger',
                         default => 'gray',
                     }),
                     

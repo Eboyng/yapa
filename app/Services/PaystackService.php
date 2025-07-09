@@ -15,17 +15,36 @@ class PaystackService
 {
     private string $secretKey;
     private string $publicKey;
+    private string $webhookSecret;
     private string $baseUrl;
     private TransactionService $transactionService;
     private ReferralService $referralService;
+    private SettingService $settingService;
 
-    public function __construct(TransactionService $transactionService, ReferralService $referralService)
-    {
-        $this->secretKey = config('services.paystack.secret_key');
-        $this->publicKey = config('services.paystack.public_key');
-        $this->baseUrl = config('services.paystack.base_url', 'https://api.paystack.co');
+    public function __construct(
+        TransactionService $transactionService, 
+        ReferralService $referralService,
+        SettingService $settingService
+    ) {
+        $this->settingService = $settingService;
+        $this->loadPaystackConfig();
         $this->transactionService = $transactionService;
         $this->referralService = $referralService;
+    }
+
+    /**
+     * Load Paystack configuration from settings.
+     */
+    private function loadPaystackConfig(): void
+    {
+        $settings = $this->settingService->getPaystackSettings();
+        
+        $this->secretKey = $settings['paystack_secret_key'] ?: config('services.paystack.secret_key', '');
+        $this->publicKey = $settings['paystack_public_key'] ?: config('services.paystack.public_key', '');
+        $this->webhookSecret = $settings['paystack_webhook_secret'] ?: config('services.paystack.webhook_secret', '');
+        $this->baseUrl = $settings['paystack_environment'] === 'live' 
+            ? 'https://api.paystack.co' 
+            : 'https://api.paystack.co'; // Paystack uses same URL for both
     }
 
     /**
@@ -40,11 +59,13 @@ class PaystackService
     ): array {
         $user = User::findOrFail($userId);
         
-        // Calculate credits based on amount (100 credits = NGN300)
+        // Calculate credits based on amount
         $credits = $this->calculateCreditsFromAmount($amount);
+        $minimumCredits = $this->settingService->get('minimum_credits_purchase', 100);
+        $minimumAmount = $this->settingService->get('minimum_amount_naira', 300.0);
         
-        if ($credits < 100) {
-            throw new \InvalidArgumentException('Minimum purchase is 100 credits (NGN300)');
+        if ($credits < $minimumCredits) {
+            throw new \InvalidArgumentException("Minimum purchase is {$minimumCredits} credits (NGN{$minimumAmount})");
         }
 
         // Create pending transaction
@@ -400,7 +421,8 @@ class PaystackService
      */
     private function verifyWebhookSignature(array $payload, string $signature): bool
     {
-        $computedSignature = hash_hmac('sha512', json_encode($payload), $this->secretKey);
+        $webhookSecret = $this->webhookSecret ?: $this->secretKey;
+        $computedSignature = hash_hmac('sha512', json_encode($payload), $webhookSecret);
         return hash_equals($signature, $computedSignature);
     }
 
@@ -409,8 +431,8 @@ class PaystackService
      */
     private function calculateCreditsFromAmount(float $amount): int
     {
-        // 100 credits = NGN300, so 1 credit = NGN3
-        return (int) floor($amount / 3);
+        $creditPrice = $this->settingService->get('credit_price_naira', 3.0);
+        return (int) floor($amount / $creditPrice);
     }
 
     /**
@@ -418,8 +440,8 @@ class PaystackService
      */
     public function calculateAmountFromCredits(int $credits): float
     {
-        // 1 credit = NGN3
-        return $credits * 3;
+        $creditPrice = $this->settingService->get('credit_price_naira', 3.0);
+        return $credits * $creditPrice;
     }
 
     /**
@@ -427,33 +449,37 @@ class PaystackService
      */
     public function getPricingConfig(): array
     {
+        $creditPrice = $this->settingService->get('credit_price_naira', 3.0);
+        $minimumCredits = $this->settingService->get('minimum_credits_purchase', 100);
+        $minimumAmount = $this->settingService->get('minimum_amount_naira', 300.0);
+        
         return [
-            'credit_price' => 3.0, // NGN per credit
-            'minimum_credits' => 100,
-            'minimum_amount' => 300.0, // NGN
+            'credit_price' => $creditPrice,
+            'minimum_credits' => $minimumCredits,
+            'minimum_amount' => $minimumAmount,
             'currency' => 'NGN',
             'packages' => [
                 [
                     'credits' => 100,
-                    'amount' => 300,
+                    'amount' => 100 * $creditPrice,
                     'bonus' => 0,
                     'total_credits' => 100,
                 ],
                 [
                     'credits' => 500,
-                    'amount' => 1500,
+                    'amount' => 500 * $creditPrice,
                     'bonus' => 50,
                     'total_credits' => 550,
                 ],
                 [
                     'credits' => 1000,
-                    'amount' => 3000,
+                    'amount' => 1000 * $creditPrice,
                     'bonus' => 150,
                     'total_credits' => 1150,
                 ],
                 [
                     'credits' => 2000,
-                    'amount' => 6000,
+                    'amount' => 2000 * $creditPrice,
                     'bonus' => 400,
                     'total_credits' => 2400,
                 ],
@@ -467,6 +493,16 @@ class PaystackService
     public function getPublicKey(): string
     {
         return $this->publicKey;
+    }
+
+    /**
+     * Check if Paystack is enabled.
+     */
+    public function isEnabled(): bool
+    {
+        return $this->settingService->isPaystackEnabled() && 
+               !empty($this->secretKey) && 
+               !empty($this->publicKey);
     }
 
     /**

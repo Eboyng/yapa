@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Services\TransactionService;
 use App\Services\PaystackService;
+use App\Services\AirtimeService;
 use App\Models\Transaction;
 use App\Models\User;
 use Livewire\Component;
@@ -22,18 +23,16 @@ class Withdrawal extends Component
     public string $palmpayNumber = '';
     public string $airtimeNumber = '';
     public string $airtimeNetwork = '';
+    public int $airtimeNetworkId = 0;
+    public string $detectedNetwork = '';
     public bool $isProcessing = false;
     public bool $showBvnModal = false;
     public string $bvn = '';
     public array $fees = [];
     public float $netAmount = 0;
     public array $banks = [];
-    public array $networks = [
-        'mtn' => 'MTN',
-        'glo' => 'Glo',
-        'airtel' => 'Airtel',
-        '9mobile' => '9Mobile'
-    ];
+    public array $networks = [];
+    public bool $airtimeApiEnabled = false;
     
     public const MINIMUM_WITHDRAWAL = 1000;
     public const BANK_TRANSFER_FEE_PERCENTAGE = 1.5;
@@ -65,6 +64,7 @@ class Withdrawal extends Component
     public function mount()
     {
         $this->loadBanks();
+        $this->loadAirtimeNetworks();
     }
 
     public function updatedAmount($value)
@@ -87,6 +87,15 @@ class Withdrawal extends Component
     {
         if (strlen($this->accountNumber) === 10 && !empty($this->bankCode)) {
             $this->resolveAccountName();
+        }
+    }
+
+    public function updatedAirtimeNumber()
+    {
+        if (strlen($this->airtimeNumber) === 11) {
+            $this->detectNetworkFromNumber();
+        } else {
+            $this->resetNetworkDetection();
         }
     }
 
@@ -274,12 +283,64 @@ class Withdrawal extends Component
     private function loadBanks()
     {
         try {
-            $paystackService = app(PaystackService::class);
-            $this->banks = $paystackService->getBanks();
+            $paystack = app(PaystackService::class);
+            $this->banks = $paystack->getBanks();
         } catch (\Exception $e) {
-            Log::error('Failed to load banks', ['error' => $e->getMessage()]);
+            Log::error('Failed to load banks: ' . $e->getMessage());
             $this->banks = [];
         }
+    }
+
+    private function loadAirtimeNetworks()
+    {
+        try {
+            $airtimeService = app(AirtimeService::class);
+            $this->airtimeApiEnabled = $airtimeService->isEnabled();
+            
+            if ($this->airtimeApiEnabled) {
+                $enabledNetworks = $airtimeService->getEnabledNetworks();
+                $this->networks = [];
+                
+                foreach ($enabledNetworks as $network) {
+                    $this->networks[$network['network_id']] = $network['name'];
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to load airtime networks: ' . $e->getMessage());
+            $this->networks = [];
+            $this->airtimeApiEnabled = false;
+        }
+    }
+
+    private function detectNetworkFromNumber()
+    {
+        try {
+            $airtimeService = app(AirtimeService::class);
+            $network = $airtimeService->detectNetwork($this->airtimeNumber);
+            
+            if ($network) {
+                $this->airtimeNetwork = (string) $network['network_id'];
+                $this->airtimeNetworkId = $network['network_id'];
+                $this->detectedNetwork = $network['name'];
+                
+                $this->dispatch('network-detected', [
+                    'network' => $network['name'],
+                    'networkId' => $network['network_id']
+                ]);
+            } else {
+                $this->resetNetworkDetection();
+            }
+        } catch (\Exception $e) {
+            Log::error('Network detection failed: ' . $e->getMessage());
+            $this->resetNetworkDetection();
+        }
+    }
+
+    private function resetNetworkDetection()
+    {
+        $this->airtimeNetwork = '';
+        $this->airtimeNetworkId = 0;
+        $this->detectedNetwork = '';
     }
 
     private function resolveAccountName()

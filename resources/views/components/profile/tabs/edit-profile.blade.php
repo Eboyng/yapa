@@ -1,6 +1,4 @@
-<!-- Edit Profile Tab Content -->
-<div id="profile-content" class="tab-content bg-white rounded-2xl p-4 sm:p-6 lg:p-8 border border-gray-100">
-    <div class="flex items-center justify-between mb-6">
+<div class="flex items-center justify-between mb-6">
         <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Edit Profile</h2>
         <div class="flex items-center space-x-2 text-sm text-gray-500">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,4 +131,3 @@
             </button>
         </div>
     </form>
-</div>
