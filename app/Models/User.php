@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\ChannelAd;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -211,6 +212,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function channels(): HasMany
     {
         return $this->hasMany(Channel::class);
+    }
+
+    /**
+     * Get the user's channel ads (as admin).
+     */
+    public function channelAds(): HasMany
+    {
+        return $this->hasMany(ChannelAd::class, 'created_by_admin_id');
     }
 
     /**

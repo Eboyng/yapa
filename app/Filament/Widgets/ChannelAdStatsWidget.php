@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class ChannelAdStatsWidget extends BaseWidget
 {
-    protected static ?int $sort = 9;
+    protected static ?int $sort = 3;
     
     protected function getStats(): array
     {

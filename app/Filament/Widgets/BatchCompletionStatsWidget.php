@@ -12,32 +12,32 @@ class BatchCompletionStatsWidget extends BaseWidget
 {
     protected ?string $heading = 'Batch Performance';
     
-    protected static ?int $sort = 13;
+    protected static ?int $sort = 11;
     
     protected function getStats(): array
     {
         // Total batches
         $totalBatches = Batch::count();
         
-        // Completed batches
-        $completedBatches = Batch::where('status', 'completed')->count();
+        // Completed batches (using 'closed' as completed status)
+        $completedBatches = Batch::where('status', 'closed')->count();
         
-        // Active batches
-        $activeBatches = Batch::where('status', 'active')->count();
+        // Active batches (using 'open' and 'full' as active statuses)
+        $activeBatches = Batch::whereIn('status', ['open', 'full'])->count();
         
         // Completion rate
         $completionRate = $totalBatches > 0 ? 
             round(($completedBatches / $totalBatches) * 100, 1) : 0;
         
         // Average completion time (in days) - using updated_at as proxy for completion
-        $avgCompletionTime = Batch::where('status', 'completed')
+        $avgCompletionTime = Batch::where('status', 'closed')
             ->selectRaw('AVG(DATEDIFF(updated_at, created_at)) as avg_days')
             ->value('avg_days');
         
         $avgCompletionTime = $avgCompletionTime ? round($avgCompletionTime, 1) : 0;
         
         // Batches completed today (using updated_at as proxy)
-        $completedToday = Batch::where('status', 'completed')
+        $completedToday = Batch::where('status', 'closed')
             ->whereDate('updated_at', today())
             ->count();
         
@@ -49,8 +49,8 @@ class BatchCompletionStatsWidget extends BaseWidget
         $avgMembersPerBatch = $avgMembersPerBatch ? round($avgMembersPerBatch, 1) : 0;
         
         // Fill rate (how full batches get on average)
-        $avgFillRate = Batch::selectRaw('AVG((SELECT COUNT(*) FROM batch_members WHERE batch_id = batches.id) / max_members * 100) as fill_rate')
-            ->where('max_members', '>', 0)
+        $avgFillRate = Batch::selectRaw('AVG((SELECT COUNT(*) FROM batch_members WHERE batch_id = batches.id) / `limit` * 100) as fill_rate')
+            ->where('limit', '>', 0)
             ->value('fill_rate');
         
         $avgFillRate = $avgFillRate ? round($avgFillRate, 1) : 0;

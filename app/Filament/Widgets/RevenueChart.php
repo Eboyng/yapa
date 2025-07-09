@@ -13,9 +13,15 @@ class RevenueChart extends ChartWidget
     
     protected static ?string $description = 'Daily revenue from credit purchases over the last 30 days';
     
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 7;
     
-    protected int | string | array $columnSpan = 2;
+    protected int | string | array $columnSpan = [
+        'default' => 2,
+        'sm' => 2,
+        'md' => 2,
+        'lg' => 2,
+        'xl' => 2,
+    ];
     
     protected function getData(): array
     {

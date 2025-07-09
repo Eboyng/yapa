@@ -15,9 +15,15 @@ class SystemHealthWidget extends Widget
 {
     protected static string $view = 'filament.widgets.system-health-widget';
     
-    protected static ?int $sort = 7;
+    protected static ?int $sort = 12;
     
-    protected int | string | array $columnSpan = 1;
+    protected int | string | array $columnSpan = [
+        'default' => 1,
+        'sm' => 1,
+        'md' => 1,
+        'lg' => 1,
+        'xl' => 1,
+    ];
     
     public function getHealthMetrics(): array
     {

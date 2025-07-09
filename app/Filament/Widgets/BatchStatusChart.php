@@ -12,9 +12,15 @@ class BatchStatusChart extends ChartWidget
     
     protected static ?string $description = 'Current distribution of batch statuses';
     
-    protected static ?int $sort = 4;
+    protected static ?int $sort = 10;
     
-    protected int | string | array $columnSpan = 1;
+    protected int | string | array $columnSpan = [
+        'default' => 1,
+        'sm' => 1,
+        'md' => 1,
+        'lg' => 1,
+        'xl' => 1,
+    ];
     
     protected function getData(): array
     {

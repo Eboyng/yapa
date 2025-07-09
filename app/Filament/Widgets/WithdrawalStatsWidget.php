@@ -12,7 +12,7 @@ class WithdrawalStatsWidget extends BaseWidget
 {
     protected ?string $heading = 'Withdrawal Requests';
     
-    protected static ?int $sort = 10;
+    protected static ?int $sort = 4;
     
     protected function getStats(): array
     {

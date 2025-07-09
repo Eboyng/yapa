@@ -5,7 +5,6 @@ use App\Http\Controllers\PaystackController;
 use App\Livewire\CreditPurchase;
 use App\Livewire\TransactionHistory;
 use App\Livewire\BatchList;
-use App\Livewire\ChannelList;
 use App\Livewire\ChannelCreate;
 use App\Livewire\ChannelAdList;
 use App\Livewire\MyChannelApplications;
@@ -50,9 +49,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // Channel Routes
 Route::prefix('channels')->name('channels.')->group(function () {
-    // Public channel listing (no auth required)
-    Route::get('/', ChannelList::class)
-        ->name('index');
+    // Redirect to channel ads (since channel list is redundant)
+    Route::get('/', function() {
+        return redirect()->route('channel-ads.index');
+    })->name('index');
+    
+    // Channel show page (public access for viewing and booking)
+    Route::get('/{channelAd}', \App\Livewire\ChannelShow::class)
+        ->name('show');
     
     // Protected channel routes
     Route::middleware(['auth', 'verified'])->group(function () {

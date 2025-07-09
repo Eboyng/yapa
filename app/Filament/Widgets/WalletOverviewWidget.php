@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use App\Models\User;
+use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -13,15 +14,17 @@ class WalletOverviewWidget extends BaseWidget
 {
     protected ?string $heading = 'Wallet Overview';
     
-    protected static ?int $sort = 12;
+    protected static ?int $sort = 6;
     
     protected function getStats(): array
     {
-        // Total wallet balances across all users
-        $totalWalletBalance = User::sum('wallet_balance');
+        // Total wallet balances across all users (sum all wallet types)
+        $totalWalletBalance = Wallet::where('is_active', true)->sum('balance');
         
-        // Users with positive balances
-        $usersWithBalance = User::where('wallet_balance', '>', 0)->count();
+        // Users with positive balances (any wallet type)
+        $usersWithBalance = User::whereHas('wallets', function($query) {
+            $query->where('balance', '>', 0)->where('is_active', true);
+        })->count();
         
         // Average wallet balance
         $totalUsers = User::count();

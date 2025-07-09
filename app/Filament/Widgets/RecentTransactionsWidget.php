@@ -14,9 +14,15 @@ class RecentTransactionsWidget extends BaseWidget
 {
     protected static ?string $heading = 'Recent Transactions';
     
-    protected static ?int $sort = 5;
+    protected static ?int $sort = 9;
     
-    protected int | string | array $columnSpan = 2;
+    protected int | string | array $columnSpan = [
+        'default' => 2,
+        'sm' => 2,
+        'md' => 2,
+        'lg' => 2,
+        'xl' => 2,
+    ];
     
     public function table(Table $table): Table
     {

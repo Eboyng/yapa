@@ -3,8 +3,8 @@
 namespace App\Livewire;
 
 use App\Models\ChannelAd;
-use App\Models\Channel;
 use App\Models\ChannelAdApplication;
+use App\Models\User;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
@@ -16,23 +16,33 @@ class ChannelAdList extends Component
 
     public string $search = '';
     public string $nicheFilter = '';
-    public string $statusFilter = 'active';
+    public string $locationFilter = '';
     public int $minBudget = 0;
     public int $maxBudget = 0;
     public string $sortBy = 'created_at';
     public string $sortDirection = 'desc';
     public int $perPage = 12;
+    public ?int $highlightChannelId = null;
 
     protected $queryString = [
         'search' => ['except' => ''],
         'nicheFilter' => ['except' => ''],
-        'statusFilter' => ['except' => 'active'],
+        'locationFilter' => ['except' => ''],
         'minBudget' => ['except' => 0],
         'maxBudget' => ['except' => 0],
         'sortBy' => ['except' => 'created_at'],
         'sortDirection' => ['except' => 'desc'],
         'page' => ['except' => 1],
+        'highlightChannelId' => ['except' => null],
     ];
+
+    public function mount()
+    {
+        // Handle channel_id parameter from booking flow
+        if (request()->has('channel_id')) {
+            $this->highlightChannelId = request()->get('channel_id');
+        }
+    }
 
     public function updatingSearch()
     {
@@ -44,7 +54,9 @@ class ChannelAdList extends Component
         $this->resetPage();
     }
 
-    public function updatingStatusFilter()
+
+
+    public function updatingLocationFilter()
     {
         $this->resetPage();
     }
@@ -74,7 +86,7 @@ class ChannelAdList extends Component
     {
         $this->search = '';
         $this->nicheFilter = '';
-        $this->statusFilter = 'active';
+        $this->locationFilter = '';
         $this->minBudget = 0;
         $this->maxBudget = 0;
         $this->sortBy = 'created_at';
@@ -82,75 +94,21 @@ class ChannelAdList extends Component
         $this->resetPage();
     }
 
-    public function applyToAd($channelAdId)
+    /**
+     * Book an ad - redirect to channel show page
+     */
+    public function bookAd($adId)
     {
-        try {
-            // Get user's approved channel
-            $channel = Channel::where('user_id', Auth::id())
-                ->where('status', Channel::STATUS_APPROVED)
-                ->first();
-
-            if (!$channel) {
-                session()->flash('error', 'You need an approved channel to apply for ads.');
-                return;
-            }
-
-            $channelAd = ChannelAd::findOrFail($channelAdId);
-
-            // Check if channel can apply
-            if (!$channelAd->canChannelApply($channel)) {
-                session()->flash('error', 'You are not eligible to apply for this ad.');
-                return;
-            }
-
-            // Check if advertiser has sufficient balance
-            $advertiser = $channelAd->adminUser;
-            if (!$advertiser->hasSufficientNaira($channelAd->payment_per_channel)) {
-                session()->flash('error', 'Advertiser has insufficient balance for this ad.');
-                return;
-            }
-
-            \DB::transaction(function () use ($channel, $channelAd, $advertiser) {
-                // Create application
-                $application = ChannelAdApplication::create([
-                    'channel_id' => $channel->id,
-                    'channel_ad_id' => $channelAd->id,
-                    'status' => ChannelAdApplication::STATUS_PENDING,
-                    'applied_at' => now(),
-                    'escrow_amount' => $channelAd->payment_per_channel,
-                    'escrow_status' => ChannelAdApplication::ESCROW_STATUS_PENDING,
-                ]);
-
-                // Create escrow transaction immediately
-                $transactionService = app(\App\Services\TransactionService::class);
-                $escrowTransaction = $transactionService->createEscrow(
-                    $advertiser,
-                    $channelAd->payment_per_channel,
-                    $application->id,
-                    "Escrow for channel ad application #{$application->id}"
-                );
-
-                // Update application with escrow transaction ID
-                $application->update([
-                    'escrow_transaction_id' => $escrowTransaction->id
-                ]);
-
-                // Update escrow status to held
-                $application->update([
-                    'escrow_status' => ChannelAdApplication::ESCROW_STATUS_HELD
-                ]);
-            });
-
-            session()->flash('success', 'Application submitted successfully! Payment has been held in escrow. You will be notified once it\'s reviewed.');
-            
-        } catch (\Exception $e) {
-            session()->flash('error', 'Failed to apply: ' . $e->getMessage());
-        }
+        return redirect()->route('channels.show', $adId);
     }
 
     public function render()
     {
         $query = ChannelAd::with(['adminUser'])
+            ->whereHas('adminUser', function ($q) {
+                // Only show ads from admin-verified users
+                $q->whereNotNull('email_verified_at');
+            })
             ->when($this->search, function ($q) {
                 $q->where(function ($query) {
                     $query->where('title', 'like', '%' . $this->search . '%')
@@ -160,13 +118,12 @@ class ChannelAdList extends Component
             ->when($this->nicheFilter, function ($q) {
                 $q->whereJsonContains('target_niches', $this->nicheFilter);
             })
-            ->when($this->statusFilter, function ($q) {
-                if ($this->statusFilter === 'active') {
-                    $q->active();
-                } else {
-                    $q->where('status', $this->statusFilter);
-                }
+            ->when($this->locationFilter, function ($q) {
+                $q->whereHas('adminUser', function ($query) {
+                    $query->where('location', 'like', '%' . $this->locationFilter . '%');
+                });
             })
+            ->active()
             ->when($this->minBudget > 0, function ($q) {
                 $q->where('payment_per_channel', '>=', $this->minBudget);
             })
@@ -177,40 +134,61 @@ class ChannelAdList extends Component
 
         $channelAds = $query->paginate($this->perPage);
 
-        // Get user's channel for application eligibility
-        $userChannel = Channel::where('user_id', Auth::id())
-            ->where('status', Channel::STATUS_APPROVED)
-            ->first();
-
-        // Get user's applications
+        // Channel functionality removed
+        $userChannel = null;
         $userApplications = [];
-        if ($userChannel) {
-            $userApplications = ChannelAdApplication::where('channel_id', $userChannel->id)
-                ->pluck('channel_ad_id')
-                ->toArray();
-        }
 
-        // Get statistics
-        $stats = [
-            'total_active' => ChannelAd::active()->count(),
-            'total_budget' => ChannelAd::active()->sum('budget'),
-            'avg_payment' => ChannelAd::active()->avg('payment_per_channel'),
-        ];
+
+
+        // Channel highlighting removed
+        $highlightedChannel = null;
+
+        // Get unique locations from admin users who have channel ads
+        $locations = User::whereHas('channelAds', function ($q) {
+            $q->active();
+        })
+        ->whereNotNull('location')
+        ->whereNotNull('email_verified_at')
+        ->distinct()
+        ->pluck('location')
+        ->filter()
+        ->sort()
+        ->values();
 
         return view('livewire.channel-ad-list', [
             'channelAds' => $channelAds,
             'userChannel' => $userChannel,
             'userApplications' => $userApplications,
-            'stats' => $stats,
-            'niches' => Channel::NICHES,
-            'statuses' => [
-                'active' => 'Active',
-                'draft' => 'Draft',
-                'paused' => 'Paused',
-                'completed' => 'Completed',
-                'expired' => 'Expired',
-                'cancelled' => 'Cancelled',
+            'highlightedChannel' => $highlightedChannel,
+            'niches' => [
+                'technology' => 'Technology',
+                'lifestyle' => 'Lifestyle',
+                'business' => 'Business',
+                'entertainment' => 'Entertainment',
+                'education' => 'Education',
+                'health' => 'Health & Fitness',
+                'travel' => 'Travel',
+                'food' => 'Food & Cooking',
+                'fashion' => 'Fashion & Beauty',
+                'sports' => 'Sports',
+                'music' => 'Music',
+                'gaming' => 'Gaming',
+                'news' => 'News & Politics',
+                'finance' => 'Finance',
+                'automotive' => 'Automotive',
+                'real_estate' => 'Real Estate',
+                'parenting' => 'Parenting',
+                'pets' => 'Pets & Animals',
+                'diy' => 'DIY & Crafts',
+                'science' => 'Science',
+                'art' => 'Art & Design',
+                'photography' => 'Photography',
+                'comedy' => 'Comedy',
+                'spirituality' => 'Spirituality',
+                'other' => 'Other'
             ],
+            'locations' => $locations,
+
         ]);
     }
 }

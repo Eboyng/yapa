@@ -27,18 +27,31 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
+            // Primary Stats Row (Full Width)
             StatsOverviewWidget::class,
+            
+            // Balance Widget (Full Width)
             KudismsBalanceWidget::class,
+            
+            // Secondary Stats Row (2x2 Grid)
             ChannelAdStatsWidget::class,
             WithdrawalStatsWidget::class,
             CreditUsageStatsWidget::class,
             WalletOverviewWidget::class,
-            BatchCompletionStatsWidget::class,
+            
+            // Charts Row (2+1 Layout)
             UserRegistrationChart::class,
             RevenueChart::class,
             BatchStatusChart::class,
+            
+            // Additional Stats
+            BatchCompletionStatsWidget::class,
+            
+            // Data Tables and Lists
             RecentTransactionsWidget::class,
             TopPerformingBatchesWidget::class,
+            
+            // System Monitoring
             SystemHealthWidget::class,
             NotificationStatsWidget::class,
         ];
@@ -47,8 +60,12 @@ class Dashboard extends BaseDashboard
     public function getColumns(): int | string | array
     {
         return [
-            'md' => 2,
-            'xl' => 3,
+            'default' => 2,
+            'sm' => 2,
+            'md' => 3,
+            'lg' => 4,
+            'xl' => 4,
+            '2xl' => 4,
         ];
     }
 }

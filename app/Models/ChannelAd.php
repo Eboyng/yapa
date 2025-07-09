@@ -154,14 +154,14 @@ class ChannelAd extends Model
     /**
      * Check if channel can apply.
      */
-    public function canChannelApply(Channel $channel): bool
+    public function canChannelApply($channel): bool
     {
         if (!$this->isActive() || $this->hasReachedMaxChannels()) {
             return false;
         }
 
         // Check if channel is approved
-        if (!$channel->isApproved()) {
+        if ($channel->status !== 'approved') {
             return false;
         }
 
@@ -246,8 +246,37 @@ class ChannelAd extends Model
             return [];
         }
 
-        return array_map(function ($niche) {
-            return Channel::NICHES[$niche] ?? $niche;
+        // Define niches locally to avoid Channel model dependency
+        $niches = [
+            'technology' => 'Technology',
+            'lifestyle' => 'Lifestyle',
+            'business' => 'Business',
+            'entertainment' => 'Entertainment',
+            'education' => 'Education',
+            'health' => 'Health & Fitness',
+            'travel' => 'Travel',
+            'food' => 'Food & Cooking',
+            'fashion' => 'Fashion & Beauty',
+            'sports' => 'Sports',
+            'music' => 'Music',
+            'gaming' => 'Gaming',
+            'news' => 'News & Politics',
+            'finance' => 'Finance',
+            'automotive' => 'Automotive',
+            'real_estate' => 'Real Estate',
+            'parenting' => 'Parenting',
+            'pets' => 'Pets & Animals',
+            'diy' => 'DIY & Crafts',
+            'science' => 'Science',
+            'art' => 'Art & Design',
+            'photography' => 'Photography',
+            'comedy' => 'Comedy',
+            'spirituality' => 'Spirituality',
+            'other' => 'Other'
+        ];
+
+        return array_map(function ($niche) use ($niches) {
+            return $niches[$niche] ?? $niche;
         }, $this->target_niches);
     }
 

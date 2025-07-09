@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
             InterestSeeder::class,
             RolePermissionSeeder::class,
             BatchSeeder::class,
-            ChannelSeeder::class,
+            ChannelAdSeeder::class,
             AdSeeder::class,
         ]);
 

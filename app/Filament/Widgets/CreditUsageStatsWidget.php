@@ -13,7 +13,7 @@ class CreditUsageStatsWidget extends BaseWidget
 {
     protected ?string $heading = 'Credit Usage Analytics';
     
-    protected static ?int $sort = 11;
+    protected static ?int $sort = 5;
     
     protected function getStats(): array
     {

@@ -12,7 +12,15 @@ class KudismsBalanceWidget extends Widget
 {
     protected static string $view = 'filament.widgets.kudisms-balance-widget';
     
-    protected int | string | array $columnSpan = 'full';
+    protected static ?int $sort = 2;
+    
+    protected int | string | array $columnSpan = [
+        'default' => 2,
+        'sm' => 2,
+        'md' => 'full',
+        'lg' => 'full',
+        'xl' => 'full',
+    ];
     
     public $balance = null;
     public $lastUpdated = null;

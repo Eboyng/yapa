@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class StatsOverviewWidget extends BaseWidget
 {
+    protected static ?int $sort = 1;
+    
     protected function getStats(): array
     {
         // Get current period stats

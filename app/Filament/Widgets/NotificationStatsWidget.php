@@ -11,9 +11,15 @@ class NotificationStatsWidget extends Widget
 {
     protected static string $view = 'filament.widgets.notification-stats-widget';
     
-    protected static ?int $sort = 8;
+    protected static ?int $sort = 13;
     
-    protected int | string | array $columnSpan = 1;
+    protected int | string | array $columnSpan = [
+        'default' => 1,
+        'sm' => 1,
+        'md' => 1,
+        'lg' => 1,
+        'xl' => 1,
+    ];
     
     public function getNotificationStats(): array
     {

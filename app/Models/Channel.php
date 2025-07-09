@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Str;
 
 class Channel extends Model
 {
@@ -23,17 +22,15 @@ class Channel extends Model
         'name',
         'niche',
         'follower_count',
+        'whatsapp_link',
+        'description',
         'sample_screenshot',
         'status',
+        'price_per_24_hours',
         'admin_notes',
-        'approved_by',
         'approved_at',
         'rejected_at',
         'rejection_reason',
-        'is_featured',
-        'featured_priority',
-        'whatsapp_link',
-        'description',
     ];
 
     /**
@@ -43,10 +40,9 @@ class Channel extends Model
      */
     protected $casts = [
         'follower_count' => 'integer',
+        'price_per_24_hours' => 'decimal:2',
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
-        'is_featured' => 'boolean',
-        'featured_priority' => 'integer',
     ];
 
     /**
@@ -58,7 +54,7 @@ class Channel extends Model
     const STATUS_SUSPENDED = 'suspended';
 
     /**
-     * Channel niches.
+     * Available niches.
      */
     const NICHES = [
         'technology' => 'Technology',
@@ -101,19 +97,19 @@ class Channel extends Model
     }
 
     /**
-     * Get the admin who approved the channel.
-     */
-    public function approvedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'approved_by');
-    }
-
-    /**
      * Get the channel ad applications.
      */
     public function channelAdApplications(): HasMany
     {
         return $this->hasMany(ChannelAdApplication::class);
+    }
+
+    /**
+     * Get the channel ad bookings.
+     */
+    public function channelAdBookings(): HasMany
+    {
+        return $this->hasMany(ChannelAdBooking::class);
     }
 
     /**
@@ -141,29 +137,12 @@ class Channel extends Model
     }
 
     /**
-     * Check if channel is suspended.
-     */
-    public function isSuspended(): bool
-    {
-        return $this->status === self::STATUS_SUSPENDED;
-    }
-
-    /**
-     * Check if channel is featured.
-     */
-    public function isFeatured(): bool
-    {
-        return $this->is_featured;
-    }
-
-    /**
      * Approve the channel.
      */
-    public function approve(int $adminId, ?string $notes = null): void
+    public function approve(?string $notes = null): void
     {
         $this->update([
             'status' => self::STATUS_APPROVED,
-            'approved_by' => $adminId,
             'approved_at' => now(),
             'admin_notes' => $notes,
             'rejected_at' => null,
@@ -181,26 +160,14 @@ class Channel extends Model
             'rejected_at' => now(),
             'rejection_reason' => $reason,
             'admin_notes' => $notes,
-            'approved_by' => null,
             'approved_at' => null,
         ]);
     }
 
     /**
-     * Suspend the channel.
+     * Get the niche display name.
      */
-    public function suspend(?string $notes = null): void
-    {
-        $this->update([
-            'status' => self::STATUS_SUSPENDED,
-            'admin_notes' => $notes,
-        ]);
-    }
-
-    /**
-     * Get niche display name.
-     */
-    public function getNicheDisplayName(): string
+    public function getNicheDisplayAttribute(): string
     {
         return self::NICHES[$this->niche] ?? $this->niche;
     }
@@ -214,20 +181,26 @@ class Channel extends Model
     }
 
     /**
-     * Scope for featured channels.
+     * Scope for pending channels.
      */
-    public function scopeFeatured($query)
+    public function scopePending($query)
     {
-        return $query->where('is_featured', true)
-                    ->orderBy('featured_priority', 'desc')
-                    ->orderBy('follower_count', 'desc');
+        return $query->where('status', self::STATUS_PENDING);
     }
 
     /**
-     * Scope for channels by niche.
+     * Scope by niche.
      */
     public function scopeByNiche($query, string $niche)
     {
         return $query->where('niche', $niche);
+    }
+
+    /**
+     * Scope by minimum followers.
+     */
+    public function scopeMinFollowers($query, int $minFollowers)
+    {
+        return $query->where('follower_count', '>=', $minFollowers);
     }
 }

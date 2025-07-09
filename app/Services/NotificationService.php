@@ -223,6 +223,199 @@ class NotificationService
     }
 
     /**
+     * Send booking confirmation notification to advertiser
+     */
+    public function sendBookingConfirmationNotification($booking): NotificationLog
+    {
+        $message = "Your advertisement booking for '{$booking->channel->name}' has been confirmed. Duration: {$booking->duration_hours} hours. Amount: ₦" . number_format($booking->total_amount) . ". Waiting for channel owner approval.";
+        
+        return $this->send(
+            user: $booking->user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Advertisement Booking Confirmed',
+            message: $message,
+            relatedModel: $booking
+        );
+    }
+
+    /**
+     * Send new booking notification to channel owner
+     */
+    public function sendNewBookingNotification($booking): NotificationLog
+    {
+        $message = "New advertisement booking received for your channel '{$booking->channel->name}'. Amount: ₦" . number_format($booking->total_amount) . ". Please review and accept/reject within 48 hours.";
+        
+        return $this->send(
+            user: $booking->channel->user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'New Advertisement Booking',
+            message: $message,
+            relatedModel: $booking
+        );
+    }
+
+    /**
+     * Send booking accepted notification to advertiser
+     */
+    public function sendBookingAcceptedNotification($booking): NotificationLog
+    {
+        $message = "Great news! Your advertisement booking for '{$booking->channel->name}' has been accepted. The channel owner will start your ad soon.";
+        
+        return $this->send(
+            user: $booking->user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Advertisement Booking Accepted',
+            message: $message,
+            relatedModel: $booking
+        );
+    }
+
+    /**
+     * Send booking rejected notification to advertiser
+     */
+    public function sendBookingRejectedNotification($booking): NotificationLog
+    {
+        $message = "Your advertisement booking for '{$booking->channel->name}' has been rejected. A full refund has been processed to your wallet.";
+        
+        return $this->send(
+            user: $booking->user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Advertisement Booking Rejected',
+            message: $message,
+            relatedModel: $booking
+        );
+    }
+
+    /**
+     * Send booking started notification to advertiser
+     */
+    public function sendBookingStartedNotification($booking): NotificationLog
+    {
+        $message = "Your advertisement on '{$booking->channel->name}' has started! Duration: {$booking->duration_hours} hours.";
+        
+        return $this->send(
+            user: $booking->user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Advertisement Started',
+            message: $message,
+            relatedModel: $booking
+        );
+    }
+
+    /**
+     * Send proof submitted notification to admin and advertiser
+     */
+    public function sendProofSubmittedNotification($booking): NotificationLog
+    {
+        // Send to advertiser
+        $advertiserMessage = "The channel owner has submitted proof of completion for your advertisement on '{$booking->channel->name}'. Our admin team is reviewing it.";
+        
+        $this->send(
+            user: $booking->user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Proof of Completion Submitted',
+            message: $advertiserMessage,
+            relatedModel: $booking
+        );
+
+        // Send to admin users
+        $adminUsers = \App\Models\User::where('is_admin', true)->get();
+        foreach ($adminUsers as $admin) {
+            $adminMessage = "New proof submission for advertisement booking on '{$booking->channel->name}'. Please review and approve/reject.";
+            
+            $this->send(
+                user: $admin,
+                type: NotificationLog::TYPE_GENERAL,
+                subject: 'New Proof Submission for Review',
+                message: $adminMessage,
+                relatedModel: $booking
+            );
+        }
+
+        return $this->send(
+            user: $booking->user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Proof of Completion Submitted',
+            message: $advertiserMessage,
+            relatedModel: $booking
+        );
+    }
+
+    /**
+     * Send proof approved notification to advertiser and channel owner
+     */
+    public function sendProofApprovedNotification($booking): NotificationLog
+    {
+        // Send to advertiser
+        $advertiserMessage = "Your advertisement on '{$booking->channel->name}' has been completed successfully! The proof has been approved.";
+        
+        $this->send(
+            user: $booking->user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Advertisement Completed Successfully',
+            message: $advertiserMessage,
+            relatedModel: $booking
+        );
+
+        // Send to channel owner
+        $channelOwnerMessage = "Payment released! Your advertisement for '{$booking->channel->name}' has been approved. ₦" . number_format($booking->total_amount) . " has been transferred to your wallet.";
+        
+        return $this->send(
+            user: $booking->channel->user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Payment Released - Advertisement Completed',
+            message: $channelOwnerMessage,
+            relatedModel: $booking
+        );
+    }
+
+    /**
+     * Send booking cancelled notification
+     */
+    public function sendBookingCancelledNotification($booking, $reason = 'timeout'): NotificationLog
+    {
+        $reasonText = $reason === 'timeout' ? 'The channel owner did not respond within 48 hours.' : 'The booking was cancelled.';
+        
+        // Send to advertiser
+        $advertiserMessage = "Your advertisement booking for '{$booking->channel->name}' has been cancelled. {$reasonText} A full refund has been processed.";
+        
+        $this->send(
+            user: $booking->user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Advertisement Booking Cancelled',
+            message: $advertiserMessage,
+            relatedModel: $booking
+        );
+
+        // Send to channel owner
+        $channelOwnerMessage = "Advertisement booking for '{$booking->channel->name}' has been cancelled. {$reasonText}";
+        
+        return $this->send(
+            user: $booking->channel->user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Advertisement Booking Cancelled',
+            message: $channelOwnerMessage,
+            relatedModel: $booking
+        );
+    }
+
+    /**
+     * Send refund processed notification
+     */
+    public function sendRefundProcessedNotification($booking, $amount): NotificationLog
+    {
+        $message = "Refund processed! ₦" . number_format($amount) . " has been refunded to your wallet for the cancelled booking on '{$booking->channel->name}'.";
+        
+        return $this->send(
+            user: $booking->user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Refund Processed',
+            message: $message,
+            relatedModel: $booking
+        );
+    }
+
+    /**
      * Core send method.
      */
     protected function send(

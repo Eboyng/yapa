@@ -17,26 +17,20 @@ return new class extends Migration
             $table->string('name');
             $table->string('niche');
             $table->integer('follower_count');
-            $table->string('sample_screenshot')->nullable();
+            $table->string('whatsapp_link');
+            $table->text('description');
+            $table->string('sample_screenshot');
             $table->enum('status', ['pending', 'approved', 'rejected', 'suspended'])->default('pending');
+            $table->decimal('price_per_24_hours', 10, 2)->nullable();
             $table->text('admin_notes')->nullable();
-            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('rejected_at')->nullable();
             $table->text('rejection_reason')->nullable();
-            $table->boolean('is_featured')->default(false);
-            $table->integer('featured_priority')->default(0);
-            $table->string('whatsapp_link')->nullable();
-            $table->text('description')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
-            // Indexes
-            $table->index('status');
-            $table->index('niche');
-            $table->index('is_featured');
-            $table->index(['is_featured', 'featured_priority']);
-            $table->index('follower_count');
+
+            $table->index(['status', 'niche']);
+            $table->index(['user_id', 'status']);
         });
     }
 

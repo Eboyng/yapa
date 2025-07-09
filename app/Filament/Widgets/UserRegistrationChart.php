@@ -13,9 +13,15 @@ class UserRegistrationChart extends ChartWidget
     
     protected static ?string $description = 'Daily user registrations over the last 30 days';
     
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 8;
     
-    protected int | string | array $columnSpan = 2;
+    protected int | string | array $columnSpan = [
+        'default' => 2,
+        'sm' => 2,
+        'md' => 2,
+        'lg' => 2,
+        'xl' => 2,
+    ];
     
     protected function getData(): array
     {
