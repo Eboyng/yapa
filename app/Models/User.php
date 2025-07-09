@@ -736,7 +736,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function isBannedFromBatches(): bool
     {
-        return $this->is_banned_from_batches;
+        return (bool) ($this->is_banned_from_batches ?? false);
     }
 
     /**
