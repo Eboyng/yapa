@@ -54,9 +54,9 @@
     <!-- Batches Grid -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
         @if($batches->count() > 0)
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 @foreach($batches as $batch)
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:border-orange-200 transition-all duration-300 transform hover:-translate-y-1 flex flex-col h-full">
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-xl hover:border-orange-200 transition-all duration-300 transform hover:-translate-y-1 flex flex-col h-full">
                         <!-- Batch Header -->
                         <div class="p-4 sm:p-5 flex-1">
                             <div class="flex items-start justify-between mb-3">
