@@ -78,6 +78,12 @@ Route::prefix('channel-ads')->name('channel-ads.')->group(function () {
     });
 });
 
+// Channel Bookings Routes
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/channel-bookings', \App\Livewire\ChannelBookings::class)
+        ->name('channel-bookings.index');
+});
+
 // Ad (Share & Earn) Routes
 Route::prefix('ads')->name('ads.')->middleware(['auth',  'ads.enabled'])->group(function () {
     // Ad listing page
