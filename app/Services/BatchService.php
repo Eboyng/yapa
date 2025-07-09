@@ -150,8 +150,8 @@ class BatchService
             return "You need {$batch->cost_in_credits} credits to join this batch.";
         }
 
-        if ($batch->type === Batch::TYPE_TRIAL && $user->hasTrialBatchMembership()) {
-            return 'You can only join one trial batch.';
+        if ($batch->type === Batch::TYPE_TRIAL && !$user->hasNeverJoinedAnyBatch()) {
+            return 'Trial batches are only available to new users who have never joined any batch before.';
         }
 
         return 'You cannot join this batch at the moment.';

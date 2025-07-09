@@ -598,6 +598,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Check if user has never joined any batch before.
+     */
+    public function hasNeverJoinedAnyBatch(): bool
+    {
+        return !$this->batchMemberships()->exists();
+    }
+
+    /**
      * Get user's total ad earnings.
      */
     public function getTotalAdEarnings(): float

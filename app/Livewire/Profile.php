@@ -6,12 +6,10 @@ use App\Models\Interest;
 use App\Models\User;
 use App\Models\BatchMember;
 use App\Models\Batch;
-use App\Models\BatchShare;
 use App\Services\OtpService;
 use App\Services\TransactionService;
 use App\Services\WhatsAppService;
 use App\Services\AvatarService;
-use App\Services\ReferralService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -47,21 +45,7 @@ class Profile extends Component
     // Profile picture
     public $profilePicture;
     
-    // Referral system
-    public $referralCode;
-    public $referralLink;
-    public $referredUsers = [];
-    public $totalReferralRewards = 0;
-    public $showReferralSection = false;
-    
-    // Batch sharing
-    public $openBatches = [];
-    public $sharedBatches = [];
-    public $availableBatches = [];
-    public $selectedBatch;
-    public $shareUrl;
-    public $showBatchShareSection = false;
-    public $showSharedBatchesList = false;
+
     
     // Password change
     public $current_password;
@@ -73,9 +57,7 @@ class Profile extends Component
     public $isSendingOtp = false;
     public $isVerifyingOtp = false;
     public $isConnectingGoogle = false;
-    public $isLoadingReferrals = false;
-    public $isLoadingBatches = false;
-    public $isGeneratingShareUrl = false;
+
     public $isUpdatingPassword = false;
     
     // Available interests (cached)
@@ -123,10 +105,7 @@ class Profile extends Component
         $this->emailVerificationEnabled = $this->user->email_verification_enabled;
         $this->googleConnected = !empty($this->user->google_access_token);
         
-        // Initialize referral data
-        $this->referralCode = $this->user->getReferralCode();
-        $this->referralLink = $this->user->getReferralLink();
-        $this->totalReferralRewards = $this->user->getTotalReferralRewards();
+
         
         // Cache interests for performance
         $this->availableInterests = Cache::remember('interests', 3600, function () {
@@ -486,209 +465,7 @@ class Profile extends Component
         ]);
     }
 
-    public function toggleReferralSection()
-    {
-        $this->showReferralSection = !$this->showReferralSection;
-        
-        if ($this->showReferralSection && empty($this->referredUsers)) {
-            $this->loadReferredUsers();
-        }
-    }
 
-    public function loadReferredUsers()
-    {
-        $this->isLoadingReferrals = true;
-        
-        try {
-            $this->referredUsers = $this->user->getReferredUsersWithRewards(10)->toArray();
-        } catch (\Exception $e) {
-            Log::error('Failed to load referred users', [
-                'user_id' => $this->user->id,
-                'error' => $e->getMessage()
-            ]);
-            $this->referredUsers = []; // Ensure it's always an array
-            session()->flash('error', 'Failed to load referral data.');
-        } finally {
-            $this->isLoadingReferrals = false;
-        }
-    }
-
-    public function copyReferralLink()
-    {
-        // This will be handled by JavaScript in the frontend
-        session()->flash('success', 'Referral link copied to clipboard!');
-    }
-
-    public function toggleBatchShareSection()
-    {
-        $this->showBatchShareSection = !$this->showBatchShareSection;
-        
-        if ($this->showBatchShareSection && empty($this->openBatches)) {
-            $this->loadOpenBatches();
-        }
-    }
-
-    public function toggleSharedBatchesList()
-    {
-        $this->showSharedBatchesList = !$this->showSharedBatchesList;
-        
-        if ($this->showSharedBatchesList && empty($this->sharedBatches)) {
-            $this->loadSharedBatches();
-        }
-    }
-
-    public function loadOpenBatches()
-    {
-        $this->isLoadingBatches = true;
-        
-        try {
-            $this->openBatches = $this->user->getOpenBatchesForSharing()->toArray();
-        } catch (\Exception $e) {
-            Log::error('Failed to load open batches', [
-                'user_id' => $this->user->id,
-                'error' => $e->getMessage()
-            ]);
-            $this->openBatches = []; // Ensure it's always an array
-            session()->flash('error', 'Failed to load batch data.');
-        } finally {
-            $this->isLoadingBatches = false;
-        }
-    }
-
-    public function loadSharedBatches()
-    {
-        $this->isLoadingBatches = true;
-        
-        try {
-            $this->sharedBatches = BatchShare::with(['batch', 'batch.interests'])
-                ->where('user_id', $this->user->id)
-                ->orderBy('created_at', 'desc')
-                ->get()
-                ->groupBy('batch_id')
-                ->map(function ($shares) {
-                    $batch = $shares->first()->batch;
-                    $totalShares = $shares->count();
-                    $newMembersCount = $shares->sum('new_members_count');
-                    $rewardClaimed = $shares->where('reward_claimed', true)->count() > 0;
-                    $canClaimReward = $shares->where('reward_claimed', false)->where('new_members_count', '>=', 10)->count() > 0;
-                    
-                    $platformStats = [
-                        'whatsapp' => $shares->where('platform', BatchShare::PLATFORM_WHATSAPP)->count(),
-                        'facebook' => $shares->where('platform', BatchShare::PLATFORM_FACEBOOK)->count(),
-                        'twitter' => $shares->where('platform', BatchShare::PLATFORM_TWITTER)->count(),
-                        'copy_link' => $shares->where('platform', BatchShare::PLATFORM_COPY_LINK)->count(),
-                    ];
-                    
-                    return [
-                        'batch' => $batch,
-                        'total_shares' => $totalShares,
-                        'new_members_count' => $newMembersCount,
-                        'reward_claimed' => $rewardClaimed,
-                        'can_claim_reward' => $canClaimReward,
-                        'platform_stats' => $platformStats,
-                        'progress_percentage' => min(($newMembersCount / 10) * 100, 100),
-                        'shares_data' => $shares->toArray()
-                    ];
-                })
-                ->values()
-                ->toArray();
-        } catch (\Exception $e) {
-            Log::error('Failed to load shared batches', [
-                'user_id' => $this->user->id,
-                'error' => $e->getMessage()
-            ]);
-            session()->flash('error', 'Failed to load shared batches data.');
-        } finally {
-            $this->isLoadingBatches = false;
-        }
-    }
-
-    public function generateBatchShareUrl($batchId)
-    {
-        $this->isGeneratingShareUrl = true;
-        
-        try {
-            $batch = Batch::findOrFail($batchId);
-            $this->selectedBatch = $batch;
-            $this->shareUrl = $batch->getShareLink($this->user->getReferralCode());
-            
-            session()->flash('success', 'Share link generated successfully!');
-        } catch (\Exception $e) {
-            Log::error('Failed to generate batch share URL', [
-                'user_id' => $this->user->id,
-                'batch_id' => $batchId,
-                'error' => $e->getMessage()
-            ]);
-            session()->flash('error', 'Failed to generate share link.');
-        } finally {
-            $this->isGeneratingShareUrl = false;
-        }
-    }
-
-    public function shareBatch($platform)
-    {
-        if (!$this->selectedBatch || !$this->shareUrl) {
-            session()->flash('error', 'Please generate a share link first.');
-            return;
-        }
-
-        try {
-            $referralService = app(ReferralService::class);
-            $referralService->trackBatchShare(
-                $this->user,
-                $this->selectedBatch,
-                $platform
-            );
-
-            $message = "Join this amazing batch on YAPA! {$this->shareUrl}";
-            
-            switch ($platform) {
-                case BatchShare::PLATFORM_WHATSAPP:
-                    $whatsappUrl = 'https://wa.me/?text=' . urlencode($message);
-                    $this->dispatch('openUrl', $whatsappUrl);
-                    break;
-                    
-                case BatchShare::PLATFORM_FACEBOOK:
-                    $facebookUrl = 'https://www.facebook.com/sharer/sharer.php?u=' . urlencode($this->shareUrl);
-                    $this->dispatch('openUrl', $facebookUrl);
-                    break;
-                    
-                case BatchShare::PLATFORM_TWITTER:
-                    $twitterUrl = 'https://twitter.com/intent/tweet?text=' . urlencode($message);
-                    $this->dispatch('openUrl', $twitterUrl);
-                    break;
-                    
-                case BatchShare::PLATFORM_COPY_LINK:
-                    $this->dispatch('copyToClipboard', $this->shareUrl);
-                    break;
-            }
-            
-            session()->flash('success', 'Batch shared successfully!');
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to share batch', [
-                'user_id' => $this->user->id,
-                'batch_id' => $this->selectedBatch->id,
-                'platform' => $platform,
-                'error' => $e->getMessage()
-            ]);
-            session()->flash('error', 'Failed to share batch.');
-        }
-    }
-
-    public function getBatchShareProgress($batchId)
-    {
-        try {
-            return $this->user->getBatchShareProgress($batchId);
-        } catch (\Exception $e) {
-            Log::error('Failed to get batch share progress', [
-                'user_id' => $this->user->id,
-                'batch_id' => $batchId,
-                'error' => $e->getMessage()
-            ]);
-            return null;
-        }
-    }
 
     public function render()
     {

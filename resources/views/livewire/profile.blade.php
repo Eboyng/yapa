@@ -2,9 +2,73 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <x-profile.flash-messages />
 
-        <x-profile.header :user="$user" />
+        <!-- New Profile Layout: Avatar and Wallet on Same Line -->
+        <div class="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 border border-gray-100">
+            <!-- Top Section: Avatar and Wallet Cards -->
+            <div class="flex  lg:flex-row items-start gap-3 mb-6">
+                <!-- Avatar Section -->
+                <div class="flex-shrink-0">
+                    <div class="relative">
+                        <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-r from-orange-400 to-purple-500 flex items-center justify-center text-white text-xl sm:text-2xl font-bold shadow-lg">
+                            {{ strtoupper(substr($user->name, 0, 1)) }}{{ strtoupper(substr(explode(' ', $user->name)[1] ?? '', 0, 1)) }}
+                        </div>
+                        <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
 
-        <x-profile.wallet-balances :user="$user" :creditsBalance="$this->creditsBalance" :nairaBalance="$this->nairaBalance" :earningsBalance="$this->earningsBalance" />
+                <!-- Compact Wallet Cards -->
+                <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <!-- Credits Card -->
+                    <div class="bg-gradient-to-br flex justify-between from-blue-500 to-blue-600 rounded-xl p-3 text-white transform transition-all duration-300 hover:scale-105">
+                        
+                        <div class="text-xs sm:text-xl font-bold">{{ number_format($user->credits) }}</div>
+                        <div class="text-xs opacity-75">Credits</div>
+                    </div>
+
+                    <!-- Naira Balance Card -->
+                    <div class="bg-gradient-to-br flex justify-between from-green-500 to-green-600 rounded-xl p-3 text-white transform transition-all duration-300 hover:scale-105">
+
+                        <div class="text-xs sm:text-xl font-bold">₦{{ number_format($user->naira_balance, 2) }}</div>
+                        <div class="text-xs opacity-75">Balance</div>
+                    </div>
+
+                    <!-- Earnings Card -->
+                    <div class="bg-gradient-to-br flex justify-between from-purple-500 to-purple-600 rounded-xl p-3 text-white transform transition-all duration-300 hover:scale-105">
+                
+                        <div class="text-xs sm:text-xl font-bold">₦{{ number_format($user->total_earnings, 2) }}</div>
+                        <div class="text-xs opacity-75">Earnings</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Section: User Details -->
+            <div class="border-t border-gray-100 pt-4">
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{{ $user->name }}</h1>
+                <p class="text-sm text-gray-600 mb-3">{{ $user->email }}</p>
+                
+                <div class="flex flex-wrap gap-4 text-sm text-gray-500">
+                    @if($user->location)
+                    <div class="flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <span>{{ $user->location }}, Nigeria</span>
+                    </div>
+                    @endif
+                    <div class="flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h6a2 2 0 012 2v4M5 9v10a2 2 0 002 2h10a2 2 0 002-2V9M5 9h14"></path>
+                        </svg>
+                        <span>Member since {{ $user->created_at->format('M Y') }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Settings Tabs -->
         <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
@@ -26,15 +90,7 @@
                 <x-profile.tabs.whatsapp :user="$user" :notifyWhatsapp="$notifyWhatsapp" />
             </div>
 
-            <!-- Referrals Tab -->
-            <div id="referralsTab" class="p-4 sm:p-6 lg:p-8 tab-content hidden">
-                <x-profile.tabs.referrals :referredUsers="$referredUsers" :totalReferralRewards="$totalReferralRewards" :referralCode="$referralCode" :referralLink="$referralLink" :showReferralSection="$showReferralSection" :isLoadingReferrals="$isLoadingReferrals" />
-            </div>
-            
-            <!-- Batch Share Tab -->
-            <div id="batchShareTab" class="p-4 sm:p-6 lg:p-8 tab-content hidden">
-                <x-profile.tabs.sharing :sharedBatches="$sharedBatches" :availableBatches="$availableBatches" />
-            </div>
+
 
             <!-- Integrations Tab -->
             <div id="integrationsTab" class="p-4 sm:p-6 lg:p-8 tab-content hidden">

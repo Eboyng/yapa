@@ -36,6 +36,12 @@ new class extends Component
                     <x-nav-link :href="route('home')" :active="request()->routeIs('home')" wire:navigate>
                         {{ __('Batches') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('my-batches')" :active="request()->routeIs('my-batches')" wire:navigate>
+                        {{ __('My Batches') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('referrals')" :active="request()->routeIs('referrals')" wire:navigate>
+                        {{ __('Referrals') }}
+                    </x-nav-link>
                     @if(app(\App\Services\SettingService::class)->get('ads_feature_enabled', true))
                         <x-nav-link :href="route('ads.index')" :active="request()->routeIs('ads.*')" wire:navigate>
                             {{ __('Ads') }}
@@ -100,6 +106,12 @@ new class extends Component
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('home')" :active="request()->routeIs('home')" wire:navigate>
                 {{ __('Batches') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('my-batches')" :active="request()->routeIs('my-batches')" wire:navigate>
+                {{ __('My Batches') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('referrals')" :active="request()->routeIs('referrals')" wire:navigate>
+                {{ __('Referrals') }}
             </x-responsive-nav-link>
             @if(app(\App\Services\SettingService::class)->get('ads_feature_enabled', true))
                  <x-responsive-nav-link :href="route('ads.index')" :active="request()->routeIs('ads.*')" wire:navigate>

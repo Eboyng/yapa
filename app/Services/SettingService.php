@@ -88,6 +88,26 @@ class SettingService
         'mail_encryption' => 'tls',
         'mail_from_address' => 'noreply@yoursite.com',
         'mail_from_name' => 'Yapa',
+        // Banner Settings
+        'banner_enabled' => true,
+        'banner_auto_slide' => true,
+        'banner_slide_interval' => 5000,
+        'banner_guest_title' => 'Connect & Share Contacts',
+        'banner_guest_subtitle' => 'Join Yapa to connect with like-minded people and build meaningful networks',
+        'banner_guest_description' => 'Discover new connections, share your contacts, and grow your network with people who share your interests and location.',
+        'banner_guest_primary_button_text' => 'Get Started',
+        'banner_guest_primary_button_url' => '/register',
+        'banner_guest_secondary_button_text' => 'Login',
+        'banner_guest_secondary_button_url' => '/login',
+        'banner_guest_background_image' => '',
+        'banner_guest_background_type' => 'gradient',
+        'banner_auth_title' => 'Join Our WhatsApp Community',
+        'banner_auth_subtitle' => 'Stay connected with the latest updates and connect with other members',
+        'banner_auth_description' => 'Get instant notifications about new batches, updates, and connect with fellow Yapa members.',
+        'banner_auth_button_text' => 'Join WhatsApp Group',
+        'banner_auth_button_url' => 'https://chat.whatsapp.com/your-group-link',
+        'banner_auth_background_image' => '',
+        'banner_auth_background_type' => 'gradient',
     ];
 
     /**
@@ -612,5 +632,41 @@ class SettingService
     public function isPaystackEnabled(): bool
     {
         return (bool) $this->get('paystack_enabled', true);
+    }
+
+    /**
+     * Get banner settings.
+     */
+    public function getBannerSettings(): array
+    {
+        return $this->getMultiple([
+            'banner_enabled',
+            'banner_auto_slide',
+            'banner_slide_interval',
+            'banner_guest_title',
+            'banner_guest_subtitle',
+            'banner_guest_description',
+            'banner_guest_primary_button_text',
+            'banner_guest_primary_button_url',
+            'banner_guest_secondary_button_text',
+            'banner_guest_secondary_button_url',
+            'banner_guest_background_image',
+            'banner_guest_background_type',
+            'banner_auth_title',
+            'banner_auth_subtitle',
+            'banner_auth_description',
+            'banner_auth_button_text',
+            'banner_auth_button_url',
+            'banner_auth_background_image',
+            'banner_auth_background_type',
+        ]);
+    }
+
+    /**
+     * Check if banner is enabled.
+     */
+    public function isBannerEnabled(): bool
+    {
+        return (bool) $this->get('banner_enabled', true);
     }
 }

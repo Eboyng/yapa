@@ -175,13 +175,9 @@ class Batch extends Model
             return false;
         }
 
-        // For trial batches, check if user already has a trial batch membership
+        // For trial batches, check if user has never joined any batch before
         if ($this->type === self::TYPE_TRIAL) {
-            $hasTrialMembership = BatchMember::whereHas('batch', function ($query) {
-                $query->where('type', self::TYPE_TRIAL);
-            })->where('user_id', $user->id)->exists();
-            
-            if ($hasTrialMembership) {
+            if (!$user->hasNeverJoinedAnyBatch()) {
                 return false;
             }
         }

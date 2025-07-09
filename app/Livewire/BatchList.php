@@ -47,7 +47,16 @@ class BatchList extends Component
 
     public function mount()
     {
-        $this->creditsBalance = Auth::user()->getCreditWallet()->balance ?? 0;
+        if (Auth::check()) {
+            $this->creditsBalance = Auth::user()->getCreditWallet()->balance ?? 0;
+        } else {
+            $this->creditsBalance = 0;
+        }
+    }
+
+    public function getSettingServiceProperty()
+    {
+        return app(SettingService::class);
     }
 
     public function updatedFilters()
@@ -72,6 +81,11 @@ class BatchList extends Component
 
     public function joinBatch($batchId)
     {
+        if (!Auth::check()) {
+            $this->addError('batch_join', 'You must be logged in to join a batch.');
+            return;
+        }
+
         if ($this->isProcessing) {
             return;
         }
@@ -139,6 +153,11 @@ class BatchList extends Component
 
     public function shareBatch($batchId, $platform)
     {
+        if (!Auth::check()) {
+            $this->addError('batch_share', 'You must be logged in to share a batch.');
+            return;
+        }
+
         try {
             $user = Auth::user();
             $batch = Batch::findOrFail($batchId);
@@ -194,6 +213,10 @@ class BatchList extends Component
 
     public function checkAndRewardShares()
     {
+        if (!Auth::check()) {
+            return;
+        }
+
         try {
             $user = Auth::user();
             $eligibleShares = BatchShare::where('user_id', $user->id)
@@ -244,6 +267,11 @@ class BatchList extends Component
 
     public function downloadVcf($batchId)
     {
+        if (!Auth::check()) {
+            $this->addError('download', 'You must be logged in to download contacts.');
+            return;
+        }
+
         try {
             $user = Auth::user();
             $batch = Batch::with(['members.user', 'interests'])->findOrFail($batchId);
@@ -315,7 +343,8 @@ class BatchList extends Component
 
     protected function getBatches()
     {
-        $cacheKey = 'batch_list_' . md5(serialize($this->filters) . $this->getPage() . Auth::id());
+        $userId = Auth::id() ?? 'guest';
+        $cacheKey = 'batch_list_' . md5(serialize($this->filters) . $this->getPage() . $userId);
         
         return Cache::remember($cacheKey, 300, function () {
             $user = Auth::user();
@@ -338,23 +367,28 @@ class BatchList extends Component
                 $query->where('type', $this->filters['type']);
             }
 
-            // Special handling for trial batches - users can only see one trial batch
+            // Special handling for trial batches - only show to users who have never joined any batch
             if ($this->filters['type'] === 'all' || $this->filters['type'] === Batch::TYPE_TRIAL) {
-                $hasTrialMembership = $user->hasTrialBatchMembership();
-                
-                if ($hasTrialMembership) {
-                    // If user already has trial membership, hide all trial batches
-                    $query->where('type', '!=', Batch::TYPE_TRIAL);
+                if ($user) {
+                    $hasNeverJoinedAnyBatch = $user->hasNeverJoinedAnyBatch();
+                    
+                    if (!$hasNeverJoinedAnyBatch) {
+                        // If user has joined any batch before, hide all trial batches
+                        $query->where('type', '!=', Batch::TYPE_TRIAL);
+                    } else {
+                        // If user has never joined any batch, show only one trial batch
+                        $query->where(function ($q) {
+                            $q->where('type', '!=', Batch::TYPE_TRIAL)
+                              ->orWhere(function ($subQ) {
+                                  $subQ->where('type', Batch::TYPE_TRIAL)
+                                       ->orderBy('created_at', 'desc')
+                                       ->limit(1);
+                              });
+                        });
+                    }
                 } else {
-                    // If user doesn't have trial membership, show only one trial batch
-                    $query->where(function ($q) {
-                        $q->where('type', '!=', Batch::TYPE_TRIAL)
-                          ->orWhere(function ($subQ) {
-                              $subQ->where('type', Batch::TYPE_TRIAL)
-                                   ->orderBy('created_at', 'desc')
-                                   ->limit(1);
-                          });
-                    });
+                    // For guest users, show trial batches to encourage registration
+                    // Show all batches including trial ones
                 }
             }
 
@@ -367,6 +401,11 @@ class BatchList extends Component
         // Create weighted scoring for batch recommendations
         $locationWeight = app(SettingService::class)->get('match_location_weight', 0.6);
         $interestWeight = app(SettingService::class)->get('match_interest_weight', 0.4);
+        
+        if (!$user) {
+            // For guest users, use simple ordering
+            return "CASE WHEN type = 'trial' THEN 0 ELSE 1 END, created_at DESC";
+        }
         
         $userLocation = $user->location ? "'" . addslashes($user->location) . "'" : "''";
         $userInterestIds = $user->interests()->pluck('interests.id')->toArray();
@@ -438,8 +477,8 @@ class BatchList extends Component
             return "Insufficient credits. You need {$batch->cost_in_credits} credits but only have {$user->getCreditWallet()->balance}.";
         }
 
-        if ($batch->type === Batch::TYPE_TRIAL && $user->hasTrialBatchMembership()) {
-            return 'You can only join one trial batch. Upgrade to regular batches for unlimited access.';
+        if ($batch->type === Batch::TYPE_TRIAL && !$user->hasNeverJoinedAnyBatch()) {
+            return 'Trial batches are only available to new users who have never joined any batch before.';
         }
 
         return 'Unable to join this batch at the moment.';

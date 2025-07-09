@@ -678,7 +678,7 @@ class Settings extends Page
                                     ->schema([
                                         Forms\Components\Placeholder::make('cron_info')
                                             ->label('Cron Job Setup')
-                                            ->content('To enable scheduled tasks, add this cron job to your server:\n\n* * * * * cd /path/to/your/project && php artisan schedule:run >> /dev/null 2>&1')
+                                            ->content('To enable scheduled tasks, add this cron job to your server:\n\n* * * * * cd/path/to/your/project && php artisan schedule:run >> /dev/null 2>&1')
                                             ->helperText('Replace "/path/to/your/project" with the actual path to your Laravel application'),
                                         Forms\Components\Actions::make([
                                             Forms\Components\Actions\Action::make('run_scheduler')
@@ -731,6 +731,141 @@ class Settings extends Page
                                         ])
                                     ])
                                     ->columns(1),
+                            ]),
+                        
+                        Forms\Components\Tabs\Tab::make('Banner Settings')
+                            ->schema([
+                                Forms\Components\Section::make('Banner Control')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('banner_enabled')
+                                            ->label('Enable Banner')
+                                            ->helperText('Show or hide the banner on the batch list page')
+                                            ->default(true)
+                                            ->live(),
+                                        Forms\Components\Toggle::make('banner_auto_slide')
+                                            ->label('Auto Slide')
+                                            ->helperText('Enable automatic sliding between banner slides')
+                                            ->default(true)
+                                            ->visible(fn (callable $get) => $get('banner_enabled'))
+                                            ->live(),
+                                        Forms\Components\TextInput::make('banner_slide_interval')
+                                            ->label('Slide Interval (seconds)')
+                                            ->helperText('Time between automatic slides')
+                                            ->numeric()
+                                            ->minValue(3)
+                                            ->maxValue(30)
+                                            ->default(5)
+                                            ->visible(fn (callable $get) => $get('banner_enabled') && $get('banner_auto_slide')),
+                                    ])
+                                    ->columns(3),
+                                
+                                Forms\Components\Section::make('Guest User Banner')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('banner_guest_title')
+                                            ->label('Title')
+                                            ->maxLength(100)
+                                            ->default('Welcome to Yapa')
+                                            ->helperText('Main title for guest users'),
+                                        Forms\Components\TextInput::make('banner_guest_subtitle')
+                                            ->label('Subtitle')
+                                            ->maxLength(150)
+                                            ->default('Connect, Network, Grow Together')
+                                            ->helperText('Subtitle for guest users'),
+                                        Forms\Components\Textarea::make('banner_guest_description')
+                                            ->label('Description')
+                                            ->rows(3)
+                                            ->maxLength(300)
+                                            ->default('Join our vibrant community and discover meaningful connections. Network with like-minded individuals and grow your professional circle.')
+                                            ->helperText('Detailed description for guest users'),
+                                        Forms\Components\TextInput::make('banner_guest_button_text')
+                                            ->label('Primary Button Text')
+                                            ->maxLength(50)
+                                            ->default('Get Started')
+                                            ->helperText('Text for the primary action button'),
+                                        Forms\Components\TextInput::make('banner_guest_button_url')
+                                            ->label('Primary Button URL')
+                                            ->url()
+                                            ->default('/register')
+                                            ->helperText('URL for the primary action button'),
+                                        Forms\Components\TextInput::make('banner_guest_secondary_button_text')
+                                            ->label('Secondary Button Text')
+                                            ->maxLength(50)
+                                            ->default('Login')
+                                            ->helperText('Text for the secondary action button'),
+                                        Forms\Components\TextInput::make('banner_guest_secondary_button_url')
+                                            ->label('Secondary Button URL')
+                                            ->url()
+                                            ->default('/login')
+                                            ->helperText('URL for the secondary action button'),
+                                        Forms\Components\FileUpload::make('banner_guest_background_image')
+                                            ->label('Background Image')
+                                            ->image()
+                                            ->directory('banners')
+                                            ->visibility('public')
+                                            ->acceptedFileTypes(['image/png', 'image/jpg', 'image/jpeg', 'image/webp'])
+                                            ->maxSize(2048)
+                                            ->helperText('Background image for guest banner (optional)'),
+                                        Forms\Components\Select::make('banner_guest_background_type')
+                                            ->label('Background Type')
+                                            ->options([
+                                                'gradient' => 'Gradient',
+                                                'image' => 'Image',
+                                                'color' => 'Solid Color',
+                                            ])
+                                            ->default('gradient')
+                                            ->helperText('Choose background style'),
+                                    ])
+                                    ->columns(2)
+                                    ->visible(fn (callable $get) => $get('banner_enabled')),
+                                
+                                Forms\Components\Section::make('Authenticated User Banner')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('banner_auth_title')
+                                            ->label('Title')
+                                            ->maxLength(100)
+                                            ->default('Join Our WhatsApp Community')
+                                            ->helperText('Main title for authenticated users'),
+                                        Forms\Components\TextInput::make('banner_auth_subtitle')
+                                            ->label('Subtitle')
+                                            ->maxLength(150)
+                                            ->default('Stay Connected & Get Updates')
+                                            ->helperText('Subtitle for authenticated users'),
+                                        Forms\Components\Textarea::make('banner_auth_description')
+                                            ->label('Description')
+                                            ->rows(3)
+                                            ->maxLength(300)
+                                            ->default('Join our WhatsApp community to receive instant updates, connect with other members, and never miss important announcements.')
+                                            ->helperText('Detailed description for authenticated users'),
+                                        Forms\Components\TextInput::make('banner_auth_button_text')
+                                            ->label('Button Text')
+                                            ->maxLength(50)
+                                            ->default('Join WhatsApp Group')
+                                            ->helperText('Text for the action button'),
+                                        Forms\Components\TextInput::make('banner_auth_button_url')
+                                            ->label('WhatsApp Group URL')
+                                            ->url()
+                                            ->default('https://chat.whatsapp.com/your-group-link')
+                                            ->helperText('WhatsApp group invitation link'),
+                                        Forms\Components\FileUpload::make('banner_auth_background_image')
+                                            ->label('Background Image')
+                                            ->image()
+                                            ->directory('banners')
+                                            ->visibility('public')
+                                            ->acceptedFileTypes(['image/png', 'image/jpg', 'image/jpeg', 'image/webp'])
+                                            ->maxSize(2048)
+                                            ->helperText('Background image for auth banner (optional)'),
+                                        Forms\Components\Select::make('banner_auth_background_type')
+                                            ->label('Background Type')
+                                            ->options([
+                                                'gradient' => 'Gradient',
+                                                'image' => 'Image',
+                                                'color' => 'Solid Color',
+                                            ])
+                                            ->default('gradient')
+                                            ->helperText('Choose background style'),
+                                    ])
+                                    ->columns(2)
+                                    ->visible(fn (callable $get) => $get('banner_enabled')),
                             ]),
                     ])
                     ->columnSpanFull(),

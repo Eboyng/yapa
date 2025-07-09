@@ -12,6 +12,7 @@ use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class ChannelBookings extends Component
 {
@@ -22,19 +23,31 @@ class ChannelBookings extends Component
     public $proof_screenshot;
     public $proof_description = '';
     public $filter = 'all'; // all, pending, accepted, running, completed
+    
+    // Channel creation modal properties
+    public $showCreateModal = false;
+    public $name = '';
+    public $niche = '';
+    public $follower_count = '';
+    public $whatsapp_link = '';
+    public $description = '';
+    public $sample_screenshot;
 
     protected $rules = [
         'proof_screenshot' => 'required|image|max:2048',
         'proof_description' => 'required|string|max:500',
+        'name' => 'required|string|max:255',
+        'niche' => 'required|string',
+        'follower_count' => 'required|integer|min:1',
+        'whatsapp_link' => 'required|url',
+        'description' => 'nullable|string|max:1000',
+        'sample_screenshot' => 'required|image|max:10240',
     ];
 
     public function mount()
     {
-        // Check if user has any channels
-        if (!Auth::user()->channels()->exists()) {
-            session()->flash('error', 'You don\'t have any channels yet.');
-            return redirect()->route('channels.create');
-        }
+        // We'll handle the case where user has no channels in the view
+        // No need to redirect, just show appropriate message
     }
 
     public function acceptBooking($bookingId)
@@ -154,6 +167,64 @@ class ChannelBookings extends Component
     public function updatedFilter()
     {
         $this->resetPage();
+    }
+
+    public function openCreateModal()
+    {
+        $this->showCreateModal = true;
+        $this->resetChannelForm();
+    }
+
+    public function closeCreateModal()
+    {
+        $this->showCreateModal = false;
+        $this->resetChannelForm();
+        $this->resetValidation();
+    }
+
+    private function resetChannelForm()
+    {
+        $this->name = '';
+        $this->niche = '';
+        $this->follower_count = '';
+        $this->whatsapp_link = '';
+        $this->description = '';
+        $this->sample_screenshot = null;
+    }
+
+    public function createChannel()
+    {
+        $this->validate([
+            'name' => 'required|string|max:255',
+            'niche' => 'required|string',
+            'follower_count' => 'required|integer|min:1',
+            'whatsapp_link' => 'required|url',
+            'description' => 'nullable|string|max:1000',
+            'sample_screenshot' => 'required|image|max:10240',
+        ]);
+
+        try {
+            // Upload sample screenshot
+            $screenshotPath = $this->sample_screenshot->store('channel-screenshots', 'public');
+
+            // Create the channel
+            Channel::create([
+                'user_id' => Auth::id(),
+                'name' => $this->name,
+                'niche' => $this->niche,
+                'follower_count' => $this->follower_count,
+                'whatsapp_link' => $this->whatsapp_link,
+                'description' => $this->description,
+                'sample_screenshot' => $screenshotPath,
+                'status' => 'pending', // Default status
+            ]);
+
+            $this->closeCreateModal();
+            session()->flash('success', 'Channel created successfully! It will be reviewed by admin.');
+        } catch (\Exception $e) {
+            Log::error('Error creating channel: ' . $e->getMessage());
+            session()->flash('error', 'Failed to create channel. Please try again.');
+        }
     }
 
     public function render()

@@ -6,8 +6,9 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\Batch;
 use App\Models\BatchMember;
+use App\Models\BatchShare;
+use App\Services\ReferralService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
@@ -17,6 +18,22 @@ class MyBatches extends Component
 
     public $filter = 'all'; // all, active, closed
     public $isProcessing = false;
+    
+    public function mount()
+    {
+        // Load open batches for sharing functionality
+        $this->loadOpenBatches();
+    }
+    
+    // Batch sharing properties
+    public $showBatchShareSection = false;
+    public $showSharedBatchesList = false;
+    public $openBatches = [];
+    public $sharedBatches = [];
+    public $selectedBatch = null;
+    public $shareUrl = '';
+    public $isLoadingBatches = false;
+    public $isGeneratingShareUrl = false;
 
     protected $queryString = [
         'filter' => ['except' => 'all'],
@@ -182,5 +199,209 @@ class MyBatches extends Component
         }
         
         return $uniqueContacts;
+    }
+
+    // Batch sharing methods
+    public function toggleBatchShareSection()
+    {
+        $this->showBatchShareSection = !$this->showBatchShareSection;
+        
+        if ($this->showBatchShareSection && empty($this->openBatches)) {
+            $this->loadOpenBatches();
+        }
+    }
+
+    public function toggleSharedBatchesList()
+    {
+        $this->showSharedBatchesList = !$this->showSharedBatchesList;
+        
+        if ($this->showSharedBatchesList && empty($this->sharedBatches)) {
+            $this->loadSharedBatches();
+        }
+    }
+
+    public function loadOpenBatches()
+    {
+        $this->isLoadingBatches = true;
+        
+        try {
+            $user = Auth::user();
+            $this->openBatches = Batch::where('status', 'open')
+                ->select('id', 'name', 'description', 'limit', 'location')
+                ->withCount('members')
+                ->latest()
+                ->get()
+                ->map(function ($batch) {
+                    return [
+                        'id' => $batch->id,
+                        'name' => $batch->name,
+                        'description' => $batch->description,
+                        'members_count' => $batch->members_count,
+                        'limit' => $batch->limit,
+                        'location' => $batch->location,
+                    ];
+                })
+                ->toArray();
+        } catch (\Exception $e) {
+            Log::error('Failed to load open batches', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage()
+            ]);
+            $this->openBatches = [];
+            session()->flash('error', 'Failed to load batch data.');
+        } finally {
+            $this->isLoadingBatches = false;
+        }
+    }
+
+    public function loadSharedBatches()
+    {
+        $this->isLoadingBatches = true;
+        
+        try {
+            $user = Auth::user();
+            $this->sharedBatches = BatchShare::with(['batch', 'batch.interests'])
+                ->where('user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->groupBy('batch_id')
+                ->map(function ($shares) {
+                    $batch = $shares->first()->batch;
+                    $totalShares = $shares->count();
+                    $newMembersCount = $shares->sum('new_members_count');
+                    $rewardClaimed = $shares->where('reward_claimed', true)->count() > 0;
+                    $canClaimReward = $shares->where('reward_claimed', false)->where('new_members_count', '>=', 10)->count() > 0;
+                    
+                    $platformStats = [
+                        'whatsapp' => $shares->where('platform', BatchShare::PLATFORM_WHATSAPP)->count(),
+                        'facebook' => $shares->where('platform', BatchShare::PLATFORM_FACEBOOK)->count(),
+                        'twitter' => $shares->where('platform', BatchShare::PLATFORM_TWITTER)->count(),
+                        'copy_link' => $shares->where('platform', BatchShare::PLATFORM_COPY_LINK)->count(),
+                    ];
+                    
+                    return [
+                        'batch' => $batch,
+                        'total_shares' => $totalShares,
+                        'new_members_count' => $newMembersCount,
+                        'reward_claimed' => $rewardClaimed,
+                        'can_claim_reward' => $canClaimReward,
+                        'platform_stats' => $platformStats,
+                        'progress_percentage' => min(($newMembersCount / 10) * 100, 100),
+                        'shares_data' => $shares->toArray()
+                    ];
+                })
+                ->values()
+                ->toArray();
+        } catch (\Exception $e) {
+            Log::error('Failed to load shared batches', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage()
+            ]);
+            session()->flash('error', 'Failed to load shared batches data.');
+        } finally {
+            $this->isLoadingBatches = false;
+        }
+    }
+
+    public function generateBatchShareUrl($batchId)
+    {
+        $this->isGeneratingShareUrl = true;
+        
+        try {
+            $user = Auth::user();
+            $batch = Batch::findOrFail($batchId);
+            $this->selectedBatch = $batch;
+            $this->shareUrl = $batch->getShareLink($user->getReferralCode());
+            
+            session()->flash('success', 'Share link generated successfully!');
+        } catch (\Exception $e) {
+            Log::error('Failed to generate batch share URL', [
+                'user_id' => Auth::id(),
+                'batch_id' => $batchId,
+                'error' => $e->getMessage()
+            ]);
+            session()->flash('error', 'Failed to generate share link.');
+        } finally {
+            $this->isGeneratingShareUrl = false;
+        }
+    }
+
+    public function shareBatch($platform)
+    {
+        if (!$this->selectedBatch || !$this->shareUrl) {
+            session()->flash('error', 'Please generate a share link first.');
+            return;
+        }
+
+        try {
+            $user = Auth::user();
+            
+            // Create share record immediately
+             $batchId = is_array($this->selectedBatch) ? $this->selectedBatch['id'] : $this->selectedBatch->id;
+             
+             // Check if share record already exists for this user and batch
+             $existingShare = BatchShare::where('user_id', $user->id)
+                 ->where('batch_id', $batchId)
+                 ->first();
+             
+             if (!$existingShare) {
+                 BatchShare::create([
+                     'user_id' => $user->id,
+                     'batch_id' => $batchId,
+                     'platform' => $platform,
+                     'new_members_count' => 0,
+                     'reward_claimed' => false,
+                 ]);
+             }
+
+            $message = "Join this amazing batch on YAPA! {$this->shareUrl}";
+            
+            switch ($platform) {
+                case BatchShare::PLATFORM_WHATSAPP:
+                    $whatsappUrl = 'https://wa.me/?text=' . urlencode($message);
+                    $this->dispatch('openUrl', $whatsappUrl);
+                    break;
+                    
+                case BatchShare::PLATFORM_FACEBOOK:
+                    $facebookUrl = 'https://www.facebook.com/sharer/sharer.php?u=' . urlencode($this->shareUrl);
+                    $this->dispatch('openUrl', $facebookUrl);
+                    break;
+                    
+                case BatchShare::PLATFORM_TWITTER:
+                    $twitterUrl = 'https://twitter.com/intent/tweet?text=' . urlencode($message);
+                    $this->dispatch('openUrl', $twitterUrl);
+                    break;
+                    
+                case BatchShare::PLATFORM_COPY_LINK:
+                    $this->dispatch('copyToClipboard', $this->shareUrl);
+                    break;
+            }
+            
+            session()->flash('success', 'Batch shared successfully!');
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to share batch', [
+                'user_id' => Auth::id(),
+                'batch_id' => $this->selectedBatch->id,
+                'platform' => $platform,
+                'error' => $e->getMessage()
+            ]);
+            session()->flash('error', 'Failed to share batch.');
+        }
+    }
+
+    public function getBatchShareProgress($batchId)
+    {
+        try {
+            $user = Auth::user();
+            return $user->getBatchShareProgress($batchId);
+        } catch (\Exception $e) {
+            Log::error('Failed to get batch share progress', [
+                'user_id' => Auth::id(),
+                'batch_id' => $batchId,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
     }
 }

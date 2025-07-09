@@ -15,9 +15,7 @@ use App\Livewire\Profile;
 use App\Livewire\MyBatches;
 
 // Homepage - Batch List (protected by auth and verified.otp middleware)
-Route::get('/', BatchList::class)
-    ->middleware(['auth', 'verified.otp'])
-    ->name('home');
+Route::get('/', BatchList::class)->name('home');
 
 // Redirect unauthenticated users to login
 Route::redirect('/welcome', '/login');
@@ -33,6 +31,10 @@ Route::get('/profile', Profile::class)
 Route::get('/my-batches', MyBatches::class)
     ->middleware(['auth', 'verified.otp'])
     ->name('my-batches');
+
+Route::get('/referrals', \App\Livewire\Referrals::class)
+    ->middleware(['auth', 'verified.otp'])
+    ->name('referrals');
 
 // Credit System Routes
 Route::middleware(['auth', 'verified'])->group(function () {
