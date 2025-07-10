@@ -3,7 +3,6 @@
 namespace App\Livewire;
 
 use Livewire\Component;
-use Livewire\WithPagination;
 use App\Models\Batch;
 use App\Models\BatchMember;
 use App\Models\BatchShare;
@@ -22,7 +21,6 @@ use Carbon\Carbon;
 
 class BatchList extends Component
 {
-    use WithPagination;
 
     public $filters = [
         'location' => '',
@@ -33,6 +31,9 @@ class BatchList extends Component
     public $creditsBalance = 0;
     public $showFilters = false;
     public $isProcessing = false;
+    public $page = 1;
+    public $perPage = 12;
+    public $hasMorePages = true;
 
     protected $queryString = [
         'filters.location' => ['except' => ''],
@@ -61,7 +62,7 @@ class BatchList extends Component
 
     public function updatedFilters()
     {
-        $this->resetPage();
+        $this->resetPagination();
     }
 
     public function toggleFilters()
@@ -76,7 +77,20 @@ class BatchList extends Component
             'interests' => [],
             'type' => 'all',
         ];
-        $this->resetPage();
+        $this->resetPagination();
+    }
+
+    public function loadMore()
+    {
+        if ($this->hasMorePages) {
+            $this->page++;
+        }
+    }
+
+    public function resetPagination()
+    {
+        $this->page = 1;
+        $this->hasMorePages = true;
     }
 
     public function joinBatch($batchId)
@@ -330,21 +344,35 @@ class BatchList extends Component
 
     public function render()
     {
-        $batches = $this->getBatches();
+        $allBatches = collect();
+        
+        // Load all pages up to current page
+        for ($i = 1; $i <= $this->page; $i++) {
+            $currentPage = $this->page;
+            $this->page = $i;
+            $pageBatches = $this->getBatches();
+            $this->page = $currentPage;
+            
+            if ($pageBatches->isNotEmpty()) {
+                $allBatches = $allBatches->merge($pageBatches);
+            }
+        }
+        
         $interests = $this->getInterests();
         $locations = $this->getLocations();
 
         return view('livewire.batch-list', [
-            'batches' => $batches,
+            'batches' => $allBatches,
             'interests' => $interests,
             'locations' => $locations,
+            'hasMorePages' => $this->hasMorePages,
         ]);
     }
 
     protected function getBatches()
     {
         $userId = Auth::id() ?? 'guest';
-        $cacheKey = 'batch_list_' . md5(serialize($this->filters) . $this->getPage() . $userId);
+        $cacheKey = 'batch_list_' . md5(serialize($this->filters) . $this->page . $userId);
         
         return Cache::remember($cacheKey, 300, function () {
             $user = Auth::user();
@@ -392,7 +420,17 @@ class BatchList extends Component
                 }
             }
 
-            return $query->paginate(12);
+            $batches = $query->skip(($this->page - 1) * $this->perPage)
+                           ->take($this->perPage + 1)
+                           ->get();
+            
+            $this->hasMorePages = $batches->count() > $this->perPage;
+            
+            if ($this->hasMorePages) {
+                $batches = $batches->take($this->perPage);
+            }
+            
+            return $batches;
         });
     }
 

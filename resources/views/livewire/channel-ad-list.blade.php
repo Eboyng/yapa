@@ -46,7 +46,7 @@
         <!-- Check if there are any ads to display -->
         @if($channelAds->isNotEmpty())
             <!-- Channel Ads Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 @foreach($channelAds as $ad)
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-xl hover:border-orange-200 transition-all duration-300 transform hover:-translate-y-1 flex flex-col h-full">
                         
@@ -120,36 +120,8 @@
                                 </div>
                             @endif
                             
-                            <!-- Deadline -->
-                            @if($ad->end_date)
-                                <div class="mb-4">
-                                    <div class="flex items-center text-sm text-gray-600">
-                                        <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                        </svg>
-                                        Deadline: {{ $ad->end_date->format('M j, Y') }}
-                                        @if($ad->end_date->isPast())
-                                            <span class="ml-2 text-red-600 font-medium">(Expired)</span>
-                                        @elseif($ad->end_date->diffInDays() <= 3)
-                                            <span class="ml-2 text-orange-600 font-medium">({{ $ad->end_date->diffForHumans() }})</span>
-                                        @endif
-                                    </div>
-                                </div>
-                            @endif
-                            
                             <!-- Progress Bar -->
-                            @php
-                                $progress = $ad->max_channels > 0 ? (($ad->applications_count ?? 0) / $ad->max_channels) * 100 : 0;
-                            @endphp
-                            <div class="mb-4">
-                                <div class="flex justify-between text-sm text-gray-600 mb-1">
-                                    <span>Progress</span>
-                                    <span>{{ number_format($progress, 1) }}%</span>
-                                </div>
-                                <div class="w-full bg-gray-100 rounded-full h-2">
-                                    <div class="bg-gradient-to-r from-orange-500 to-purple-500 h-2 rounded-full transition-all duration-500 ease-out" style="width: {{ min($progress, 100) }}%"></div>
-                                </div>
-                            </div>
+
                         </div>
                         
                         <!-- Action Footer -->
@@ -179,10 +151,21 @@
                 @endforeach
             </div>
 
-            <!-- Pagination -->
-            <div class="mt-8">
-                {{ $channelAds->links() }}
-            </div>
+            <!-- Load More Button -->
+            @if($hasMorePages)
+                <div class="mt-8 text-center">
+                    <button wire:click="loadMore" 
+                            class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-500 to-purple-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-purple-600 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Load More Ads
+                    </button>
+                </div>
+            @endif
+            
+            <!-- Auto-scroll trigger -->
+            <div id="scroll-trigger" class="h-1"></div>
 
         @else
             <!-- Empty State -->
@@ -407,6 +390,23 @@
                     }
                 });
             }, 5000);
+            
+            // Infinite scroll functionality
+            const scrollTrigger = document.getElementById('scroll-trigger');
+            
+            if (scrollTrigger) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            @this.call('loadMore');
+                        }
+                    });
+                }, {
+                    rootMargin: '100px'
+                });
+                
+                observer.observe(scrollTrigger);
+            }
         });
     </script>
 </div>

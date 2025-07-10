@@ -89,6 +89,8 @@ class Transaction extends Model
     const CATEGORY_MANUAL_ADJUSTMENT = 'manual_adjustment';
     const CATEGORY_CHANNEL_AD_ESCROW = 'channel_ad_escrow';
     const CATEGORY_CHANNEL_AD_PAYMENT = 'channel_ad_payment';
+    const CATEGORY_CHANNEL_SALE_ESCROW = 'channel_sale_escrow';
+    const CATEGORY_CHANNEL_SALE_PAYMENT = 'channel_sale_payment';
     const CATEGORY_REFERRAL_REWARD = 'referral_reward';
     const CATEGORY_BATCH_SHARE_REWARD = 'batch_share_reward';
 

@@ -78,9 +78,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'whatsapp_number',
         'password',
-        'credits_balance',
-        'naira_balance',
-        'earnings_balance',
         'location',
         'bvn',
         'whatsapp_verified_at',
@@ -927,5 +924,18 @@ class User extends Authenticatable implements MustVerifyEmail
     public function scopeWithReferralCode($query, string $code)
     {
         return $query->where('referral_code', $code);
+    }
+
+    /**
+     * Boot the model.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::created(function ($user) {
+            // Automatically create default wallets for new users
+            Wallet::createDefaultWallets($user);
+        });
     }
 }

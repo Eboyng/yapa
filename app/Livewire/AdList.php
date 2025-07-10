@@ -6,17 +6,17 @@ use App\Models\Ad;
 use App\Models\AdTask;
 use App\Models\User;
 use Livewire\Component;
-use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class AdList extends Component
 {
-    use WithPagination;
-
     public bool $showGuideModal = false;
     public ?Ad $selectedAd = null;
     public bool $isProcessing = false;
+    public int $page = 1;
+    public int $perPage = 10;
+    public bool $hasMorePages = true;
 
     protected $listeners = ['refreshAdList' => '$refresh'];
 
@@ -111,25 +111,64 @@ class AdList extends Component
         }
     }
 
+    public function loadMore()
+    {
+        if ($this->hasMorePages) {
+            $this->page++;
+        }
+    }
+
+    public function resetPagination()
+    {
+        $this->page = 1;
+        $this->hasMorePages = true;
+    }
+
     public function render()
     {
         $user = Auth::user();
         $isFlagged = $user->isFlaggedForAds();
         
-        $ads = Ad::available() // Use available scope which filters active ads and max participants
-            ->where('status', '!=', Ad::STATUS_EXPIRED) // Remove expired ads
+        // Get all ads up to current page
+        $allAds = collect();
+        for ($currentPage = 1; $currentPage <= $this->page; $currentPage++) {
+            $pageAds = Ad::available()
+                ->where('status', '!=', Ad::STATUS_EXPIRED)
+                ->where(function ($q) {
+                    $q->whereNull('end_date')
+                      ->orWhere('end_date', '>=', now());
+                })
+                ->whereDoesntHave('adTasks', function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                })
+                ->with(['adTasks' => function($query) {
+                    $query->select('ad_id', 'id');
+                }])
+                ->orderBy('created_at', 'desc')
+                ->skip(($currentPage - 1) * $this->perPage)
+                ->take($this->perPage)
+                ->get();
+            
+            $allAds = $allAds->concat($pageAds);
+        }
+        
+        // Check if there are more pages
+        $nextPageAds = Ad::available()
+            ->where('status', '!=', Ad::STATUS_EXPIRED)
             ->where(function ($q) {
                 $q->whereNull('end_date')
-                  ->orWhere('end_date', '>=', now()); // Remove ads past end date
+                  ->orWhere('end_date', '>=', now());
             })
             ->whereDoesntHave('adTasks', function ($query) use ($user) {
-                $query->where('user_id', $user->id); // Remove ads user already participated in
+                $query->where('user_id', $user->id);
             })
-            ->with(['adTasks' => function($query) {
-                $query->select('ad_id', 'id');
-            }])
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+            ->skip($this->page * $this->perPage)
+            ->take(1)
+            ->exists();
+        
+        $this->hasMorePages = $nextPageAds;
+        
+        $ads = $allAds;
 
         // Get ad settings for earnings display
         $adSettings = [

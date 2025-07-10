@@ -6,14 +6,11 @@ use App\Models\ChannelAd;
 use App\Models\ChannelAdApplication;
 use App\Models\User;
 use Livewire\Component;
-use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ChannelAdList extends Component
 {
-    use WithPagination;
-
     public string $search = '';
     public string $nicheFilter = '';
     public string $locationFilter = '';
@@ -23,6 +20,8 @@ class ChannelAdList extends Component
     public string $sortDirection = 'desc';
     public int $perPage = 12;
     public ?int $highlightChannelId = null;
+    public int $page = 1;
+    public bool $hasMorePages = true;
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -32,7 +31,6 @@ class ChannelAdList extends Component
         'maxBudget' => ['except' => 0],
         'sortBy' => ['except' => 'created_at'],
         'sortDirection' => ['except' => 'desc'],
-        'page' => ['except' => 1],
         'highlightChannelId' => ['except' => null],
     ];
 
@@ -46,29 +44,27 @@ class ChannelAdList extends Component
 
     public function updatingSearch()
     {
-        $this->resetPage();
+        $this->resetPagination();
     }
 
     public function updatingNicheFilter()
     {
-        $this->resetPage();
+        $this->resetPagination();
     }
-
-
 
     public function updatingLocationFilter()
     {
-        $this->resetPage();
+        $this->resetPagination();
     }
 
     public function updatingMinBudget()
     {
-        $this->resetPage();
+        $this->resetPagination();
     }
 
     public function updatingMaxBudget()
     {
-        $this->resetPage();
+        $this->resetPagination();
     }
 
     public function sortBy($field)
@@ -79,7 +75,20 @@ class ChannelAdList extends Component
             $this->sortBy = $field;
             $this->sortDirection = 'asc';
         }
-        $this->resetPage();
+        $this->resetPagination();
+    }
+
+    public function loadMore()
+    {
+        if ($this->hasMorePages) {
+            $this->page++;
+        }
+    }
+
+    public function resetPagination()
+    {
+        $this->page = 1;
+        $this->hasMorePages = true;
     }
 
     public function clearFilters()
@@ -91,7 +100,7 @@ class ChannelAdList extends Component
         $this->maxBudget = 0;
         $this->sortBy = 'created_at';
         $this->sortDirection = 'desc';
-        $this->resetPage();
+        $this->resetPagination();
     }
 
     /**
@@ -104,9 +113,46 @@ class ChannelAdList extends Component
 
     public function render()
     {
-        $query = ChannelAd::with(['adminUser'])
+        // Get all channel ads up to current page
+        $allChannelAds = collect();
+        for ($currentPage = 1; $currentPage <= $this->page; $currentPage++) {
+            $pageChannelAds = ChannelAd::with(['adminUser'])
+                ->whereHas('adminUser', function ($q) {
+                    // Only show ads from admin-verified users
+                    $q->whereNotNull('email_verified_at');
+                })
+                ->when($this->search, function ($q) {
+                    $q->where(function ($query) {
+                        $query->where('title', 'like', '%' . $this->search . '%')
+                              ->orWhere('description', 'like', '%' . $this->search . '%');
+                    });
+                })
+                ->when($this->nicheFilter, function ($q) {
+                    $q->whereJsonContains('target_niches', $this->nicheFilter);
+                })
+                ->when($this->locationFilter, function ($q) {
+                    $q->whereHas('adminUser', function ($query) {
+                        $query->where('location', 'like', '%' . $this->locationFilter . '%');
+                    });
+                })
+                ->active()
+                ->when($this->minBudget > 0, function ($q) {
+                    $q->where('payment_per_channel', '>=', $this->minBudget);
+                })
+                ->when($this->maxBudget > 0, function ($q) {
+                    $q->where('payment_per_channel', '<=', $this->maxBudget);
+                })
+                ->orderBy($this->sortBy, $this->sortDirection)
+                ->skip(($currentPage - 1) * $this->perPage)
+                ->take($this->perPage)
+                ->get();
+            
+            $allChannelAds = $allChannelAds->concat($pageChannelAds);
+        }
+        
+        // Check if there are more pages
+        $nextPageChannelAds = ChannelAd::with(['adminUser'])
             ->whereHas('adminUser', function ($q) {
-                // Only show ads from admin-verified users
                 $q->whereNotNull('email_verified_at');
             })
             ->when($this->search, function ($q) {
@@ -130,9 +176,14 @@ class ChannelAdList extends Component
             ->when($this->maxBudget > 0, function ($q) {
                 $q->where('payment_per_channel', '<=', $this->maxBudget);
             })
-            ->orderBy($this->sortBy, $this->sortDirection);
-
-        $channelAds = $query->paginate($this->perPage);
+            ->orderBy($this->sortBy, $this->sortDirection)
+            ->skip($this->page * $this->perPage)
+            ->take(1)
+            ->exists();
+        
+        $this->hasMorePages = $nextPageChannelAds;
+        
+        $channelAds = $allChannelAds;
 
         // Channel functionality removed
         $userChannel = null;

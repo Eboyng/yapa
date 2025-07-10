@@ -488,7 +488,7 @@ class TransactionService
         return DB::transaction(function () use ($escrowTransactionId, $channelOwner, $description, $adminFeePercentage) {
             $escrowTransaction = Transaction::findOrFail($escrowTransactionId);
             
-            if ($escrowTransaction->category !== Transaction::CATEGORY_CHANNEL_AD_ESCROW) {
+            if (!in_array($escrowTransaction->category, [Transaction::CATEGORY_CHANNEL_AD_ESCROW, Transaction::CATEGORY_CHANNEL_SALE_ESCROW])) {
                 throw new \InvalidArgumentException('Transaction is not an escrow transaction');
             }
             
@@ -576,7 +576,7 @@ class TransactionService
         return DB::transaction(function () use ($escrowTransactionId, $reason) {
             $escrowTransaction = Transaction::findOrFail($escrowTransactionId);
             
-            if ($escrowTransaction->category !== Transaction::CATEGORY_CHANNEL_AD_ESCROW) {
+            if (!in_array($escrowTransaction->category, [Transaction::CATEGORY_CHANNEL_AD_ESCROW, Transaction::CATEGORY_CHANNEL_SALE_ESCROW])) {
                 throw new \InvalidArgumentException('Transaction is not an escrow transaction');
             }
             

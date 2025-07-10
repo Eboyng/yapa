@@ -86,6 +86,39 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('channel-bookings.index');
 });
 
+// Channel Sale Marketplace Routes
+Route::prefix('channel-sale')->name('channel-sale.')->group(function () {
+    // Public browse page (no auth required)
+    Route::get('/', \App\Livewire\ChannelSale\Browse::class)
+        ->name('browse');
+    
+    // Protected routes requiring authentication
+    Route::middleware(['auth', 'verified'])->group(function () {
+        // Seller routes
+        Route::get('/create', \App\Livewire\ChannelSale\CreateListing::class)
+            ->name('create');
+        Route::get('/my-listings', \App\Livewire\ChannelSale\MyListings::class)
+            ->name('my-listings');
+        
+        // Buyer routes
+        Route::get('/buy/{channelSale}', \App\Livewire\ChannelSale\BuyNow::class)
+            ->name('buy-now');
+        Route::get('/my-purchases', \App\Livewire\ChannelSale\MyPurchases::class)
+            ->name('my-purchases');
+        Route::get('/confirm/{purchase}', \App\Livewire\ChannelSale\BuyerConfirm::class)
+            ->name('buyer-confirm');
+        
+        // Purchase details route
+        Route::get('/purchase/{purchase}', function(\App\Models\ChannelPurchase $purchase) {
+            // Ensure user can only view their own purchases
+            if ($purchase->buyer_id !== auth()->id()) {
+                abort(403);
+            }
+            return redirect()->route('channel-sale.buyer-confirm', $purchase);
+        })->name('purchase-details');
+    });
+});
+
 // Ad (Share & Earn) Routes
 Route::prefix('ads')->name('ads.')->middleware(['auth',  'ads.enabled'])->group(function () {
     // Ad listing page
