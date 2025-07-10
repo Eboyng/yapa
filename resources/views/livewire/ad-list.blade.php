@@ -114,8 +114,8 @@
                     </div>
                     <div class="ml-3 min-w-0 flex-1">
                         <p class="text-xs text-gray-600 truncate">Status</p>
-                        <p class="text-sm font-bold {{ $hasActiveTask ? 'text-orange-600' : 'text-gray-600' }}">
-                            {{ $hasActiveTask ? 'Active' : 'Ready' }}
+                        <p class="text-sm font-bold text-green-600">
+                            Ready
                         </p>
                     </div>
                 </div>
@@ -192,10 +192,11 @@
 
                             <!-- Earn Button -->
                             @php
+                                $userAlreadyParticipated = $ad->adTasks()->where('user_id', auth()->id())->exists();
                                 $isDisabled =
-                                    $hasActiveTask ||
                                     $ad->participants_count >= $ad->max_participants ||
-                                    auth()->user()->isFlaggedForAds();
+                                    auth()->user()->isFlaggedForAds() ||
+                                    $userAlreadyParticipated;
                                 $buttonText = '';
                                 $buttonIcon = '';
 
@@ -203,9 +204,9 @@
                                     $buttonText = 'Account Flagged';
                                     $buttonIcon =
                                         'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728';
-                                } elseif ($hasActiveTask) {
-                                    $buttonText = 'Task in Progress';
-                                    $buttonIcon = 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z';
+                                } elseif ($userAlreadyParticipated) {
+                                    $buttonText = 'Already Participated';
+                                    $buttonIcon = 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z';
                                 } elseif ($ad->participants_count >= $ad->max_participants) {
                                     $buttonText = 'Completed';
                                     $buttonIcon = 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z';

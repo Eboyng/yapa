@@ -190,26 +190,5 @@
     }
 </style>
 
-<!-- Demo: Different active states -->
-<script>
-    // Demo script to show different active states
-    document.addEventListener('DOMContentLoaded', function() {
-        const navItems = document.querySelectorAll('.nav-item');
-        
-        navItems.forEach((item, index) => {
-            item.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                // Remove active class from all items
-                navItems.forEach(nav => nav.classList.remove('active'));
-                
-                // Add active class to clicked item
-                this.classList.add('active');
-                
-                // Demo: simulate route change for showcase
-                console.log(`Navigated to: ${this.querySelector('span').textContent}`);
-            });
-        });
-    });
-</script>
+
 </footer>

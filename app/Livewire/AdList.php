@@ -71,8 +71,6 @@ class AdList extends Component
                     $message .= 'The ad has reached maximum participants.';
                 } elseif ($user->isFlaggedForAds()) {
                     $message .= 'Your account has been flagged.';
-                } elseif ($user->hasActiveAdTask()) {
-                    $message .= 'You already have an active ad task.';
                 } elseif ($ad->adTasks()->where('user_id', $user->id)->exists()) {
                     $message .= 'You have already participated in this ad.';
                 }
@@ -116,10 +114,17 @@ class AdList extends Component
     public function render()
     {
         $user = Auth::user();
-        $hasActiveTask = $user->hasActiveAdTask();
         $isFlagged = $user->isFlaggedForAds();
         
-        $ads = Ad::active()
+        $ads = Ad::available() // Use available scope which filters active ads and max participants
+            ->where('status', '!=', Ad::STATUS_EXPIRED) // Remove expired ads
+            ->where(function ($q) {
+                $q->whereNull('end_date')
+                  ->orWhere('end_date', '>=', now()); // Remove ads past end date
+            })
+            ->whereDoesntHave('adTasks', function ($query) use ($user) {
+                $query->where('user_id', $user->id); // Remove ads user already participated in
+            })
             ->with(['adTasks' => function($query) {
                 $query->select('ad_id', 'id');
             }])
@@ -133,7 +138,6 @@ class AdList extends Component
 
         return view('livewire.ad-list', [
             'ads' => $ads,
-            'hasActiveTask' => $hasActiveTask,
             'isFlagged' => $isFlagged,
             'adSettings' => $adSettings,
         ]);

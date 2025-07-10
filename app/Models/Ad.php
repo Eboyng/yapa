@@ -153,11 +153,6 @@ class Ad extends Model
             return false;
         }
 
-        // Check if user already has an active ad task
-        if ($user->hasActiveAdTask()) {
-            return false;
-        }
-
         // Check if user already participated in this specific ad
         if ($this->adTasks()->where('user_id', $user->id)->exists()) {
             return false;

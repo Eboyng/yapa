@@ -103,10 +103,6 @@ class AdService
             return 'You are currently flagged and cannot participate in ad campaigns. Please submit an appeal if you believe this is an error.';
         }
 
-        if ($user->hasActiveAdTask()) {
-            return 'You already have an active ad task. Please complete it before starting a new one.';
-        }
-
         if ($user->adTasks()->where('ad_id', $ad->id)->exists()) {
             return 'You have already participated in this ad campaign.';
         }
