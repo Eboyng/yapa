@@ -22,8 +22,8 @@ class Referrals extends Component
         $this->user = Auth::user();
         $this->referralCode = $this->user->getReferralCode();
         $this->referralLink = $this->user->getReferralLink();
-        $this->totalReferrals = $this->user->referrals()->count();
-        $this->totalReferralRewards = $this->user->getTotalReferralRewards();
+        $this->totalReferrals = $this->user->referredUsers()->count();
+        $this->totalRewards = $this->user->getTotalReferralRewards();
         
         // Load initial data
         $this->loadReferredUsers();
@@ -34,7 +34,22 @@ class Referrals extends Component
         $this->isLoadingReferrals = true;
         
         try {
-            $this->referredUsers = $this->user->getReferredUsersWithRewards(10)->toArray();
+            $paginatedUsers = $this->user->getReferredUsersWithRewards(10);
+            
+            // Extract the actual user data and calculate reward amounts
+            $this->referredUsers = $paginatedUsers->map(function ($user) {
+                $rewardAmount = $user->transactions->sum('amount');
+                
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'created_at' => $user->created_at,
+                    'reward_amount' => $rewardAmount,
+                    'reward_status' => $rewardAmount > 0 ? 'Completed' : 'Pending',
+                    'total_deposits' => $user->total_deposits ?? 0,
+                ];
+            })->toArray();
         } catch (\Exception $e) {
             Log::error('Failed to load referred users', [
                 'user_id' => $this->user->id,
@@ -55,7 +70,7 @@ class Referrals extends Component
 
     public function refreshReferralData()
     {
-        $this->totalReferrals = $this->user->getTotalReferrals();
+        $this->totalReferrals = $this->user->referredUsers()->count();
         $this->totalRewards = $this->user->getTotalReferralRewards();
         $this->loadReferredUsers();
         
