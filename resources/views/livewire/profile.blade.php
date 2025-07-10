@@ -32,7 +32,7 @@
                     <!-- Naira Balance Card -->
                     <div class="bg-gradient-to-br flex justify-between from-green-500 to-green-600 rounded-xl p-3 text-white transform transition-all duration-300 hover:scale-105">
 
-                        <div class="text-xs sm:text-xl font-bold">₦{{ number_format($user->naira_balance, 2) }}</div>
+                        <div class="text-xs sm:text-xl font-bold">₦{{ number_format($user->getNairaWallet()->balance, 2) }}</div>
                         <div class="text-xs opacity-75">Balance</div>
                     </div>
 

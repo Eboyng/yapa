@@ -64,7 +64,8 @@ class ChannelPurchaseTest extends TestCase
     
     public function test_buyer_cannot_purchase_their_own_channel()
     {
-        $user = User::factory()->create(['wallet_balance' => 100000]);
+        $user = User::factory()->create();
+        // Wallets are automatically created with default balances via User::boot()
         
         $channelSale = ChannelSale::factory()->listed()->create([
             'user_id' => $user->id,
@@ -110,7 +111,8 @@ class ChannelPurchaseTest extends TestCase
     
     public function test_buyer_can_confirm_receipt_and_complete_purchase()
     {
-        $seller = User::factory()->create(['earnings_balance' => 0]);
+        $seller = User::factory()->create();
+        // Wallets are automatically created with default balances via User::boot()
         $buyer = User::factory()->create();
         
         $channelSale = ChannelSale::factory()->listed()->create([
@@ -144,7 +146,8 @@ class ChannelPurchaseTest extends TestCase
     
     public function test_admin_can_approve_and_release_funds()
     {
-        $seller = User::factory()->create(['earnings_balance' => 0]);
+        $seller = User::factory()->create();
+        // Wallets are automatically created with default balances via User::boot()
         $buyer = User::factory()->create();
         
         $channelSale = ChannelSale::factory()->listed()->create([

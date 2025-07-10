@@ -24,13 +24,11 @@ class AdSeeder extends Seeder
                 'password' => bcrypt('password'),
                 'email_verified_at' => now(),
                 'whatsapp_number' => '+2348012345678',
-                'credits_balance' => 100,
-                'naira_balance' => 0,
-                'earnings_balance' => 0,
                 'location' => 'Lagos, Nigeria',
                 'email_verification_enabled' => true,
                 'whatsapp_verified_at' => now(),
             ]);
+            // Wallets are automatically created with default balances via User::boot()
         }
 
         $adData = [

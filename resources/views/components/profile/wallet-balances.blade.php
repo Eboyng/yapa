@@ -24,7 +24,7 @@
             </div>
             <span class="text-xs sm:text-sm font-medium opacity-90">Naira</span>
         </div>
-        <div class="text-2xl sm:text-3xl font-bold mb-1">₦{{ number_format($user->naira_balance, 2) }}</div>
+        <div class="text-2xl sm:text-3xl font-bold mb-1">₦{{ number_format($user->getNairaWallet()->balance, 2) }}</div>
         <div class="text-xs sm:text-sm opacity-75">Wallet Balance</div>
     </div>
 

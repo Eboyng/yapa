@@ -218,14 +218,8 @@ new #[Layout('layouts.guest')] class extends Component
                 'email_verification_enabled' => $emailVerificationEnabled,
             ]);
             
-            // Credit 100 free credits
-            $transactionService = app(TransactionService::class);
-            $transactionService->credit(
-                $user->id,
-                100,
-                'registration_bonus',
-                'Welcome bonus - 100 free credits'
-            );
+            // Wallets are automatically created with default balances via User::boot()
+            // No need to manually credit registration bonus
             
             // Process referral if applicable
             if ($this->pendingUser->referred_by) {

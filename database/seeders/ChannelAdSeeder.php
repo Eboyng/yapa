@@ -25,9 +25,7 @@ class ChannelAdSeeder extends Seeder
                     'name' => "Admin User {$i}",
                     'whatsapp_number' => '+234' . str_pad(rand(8000000000, 8999999999), 10, '0', STR_PAD_LEFT),
                     'password' => Hash::make('password'),
-                    'credits_balance' => rand(1000, 5000),
-                    'naira_balance' => rand(50000, 200000),
-                    'earnings_balance' => rand(10000, 50000),
+                    // Wallets are automatically created with default balances via User::boot()
                     'location' => collect(['Lagos', 'Abuja', 'Port Harcourt', 'Kano', 'Ibadan'])->random() . ', Nigeria',
                     'email_verification_enabled' => true,
                     'whatsapp_verified_at' => now(),

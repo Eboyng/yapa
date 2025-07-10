@@ -38,7 +38,7 @@ class TransactionService
         string $walletType,
         string $category,
         string $description,
-        ?int $relatedId = null,
+        string|int|null $relatedId = null,
         ?string $source = null,
         ?array $metadata = null
     ): Transaction {
@@ -116,7 +116,7 @@ class TransactionService
         string $walletType,
         string $category,
         string $description,
-        ?int $relatedId = null,
+        string|int|null $relatedId = null,
         ?string $source = null,
         ?array $metadata = null
     ): Transaction {

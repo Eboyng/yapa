@@ -65,9 +65,7 @@ class RolePermissionSeeder extends Seeder
                 'email_verified_at' => now(),
                 'whatsapp_notifications_enabled' => true,
                 'email_notifications_enabled' => true,
-                'credits_balance' => 1000,
-                'naira_balance' => 10000,
-                'earnings_balance' => 0,
+                // Wallets are automatically created with default balances via User::boot()
                 'avatar' => 'https://ui-avatars.com/api/?name=Admin+User&color=7F9CF5&background=EBF4FF',
             ]
         );
@@ -83,9 +81,7 @@ class RolePermissionSeeder extends Seeder
                 'email_verified_at' => now(),
                 'whatsapp_notifications_enabled' => true,
                 'email_notifications_enabled' => true,
-                'credits_balance' => 500,
-                'naira_balance' => 5000,
-                'earnings_balance' => 0,
+                // Wallets are automatically created with default balances via User::boot()
                 'avatar' => 'https://ui-avatars.com/api/?name=Moderator+User&color=10B981&background=D1FAE5',
             ]
         );

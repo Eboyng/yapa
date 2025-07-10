@@ -130,9 +130,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'whatsapp_verified_at' => 'datetime',
             'otp_expires_at' => 'datetime',
             'password' => 'hashed',
-            'credits_balance' => 'integer',
-            'naira_balance' => 'decimal:2',
-            'earnings_balance' => 'decimal:2',
+            // Balance fields removed - now using Wallet system
             'email_verification_enabled' => 'boolean',
             'otp_attempts' => 'integer',
             'ad_rejection_count' => 'integer',

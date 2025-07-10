@@ -29,14 +29,12 @@ class DatabaseSeeder extends Seeder
                 'email' => 'admin@yapa.ng',
                 'password' => bcrypt('password'),
                 'whatsapp_number' => '+2348012345678',
-                'credits_balance' => 100, // Free credits upon registration
-                'naira_balance' => 0,
-                'earnings_balance' => 0,
                 'location' => 'Lagos, Nigeria',
                 'email_verification_enabled' => true,
                 'whatsapp_verified_at' => now(),
                 'email_verified_at' => now(),
             ]);
+            // Wallets are automatically created with default balances via User::boot()
         }
 
         // Create additional test users if needed
