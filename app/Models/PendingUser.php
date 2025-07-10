@@ -148,8 +148,8 @@ class PendingUser extends Model
             'whatsapp_verified_at' => Carbon::now(),
         ]);
         
-        // Give free credits on registration using wallet system
-        $user->getCreditWallet()->deposit(100);
+        // Wallets are automatically created with default balances via User::boot()
+        // No need to manually create wallets or deposit credits
 
         // Delete the pending user record
         $this->delete();
