@@ -17,7 +17,7 @@
     <body class="font-sans text-gray-900 antialiased">
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gradient-to-br from-orange-50 via-white to-purple-50">
             
-            <div class="w-full sm:max-w-md mt-6 px-6 py-4  overflow-hidden sm:rounded-lg">
+            <div class="w-full sm:max-w-md mt-6 p-3 overflow-hidden sm:rounded-lg">
                 {{ $slot }}
             </div>
         </div>

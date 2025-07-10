@@ -22,10 +22,16 @@ use Livewire\WithFileUploads;
 class Profile extends Component
 {
     use WithFileUploads;
+    
+    protected $listeners = [
+        'connectGoogle' => 'connectGoogle',
+        'disconnectGoogle' => 'disconnectGoogle',
+    ];
 
     // User data
     public $user;
     public $name;
+     public $email; // Add this line
     public $location;
     public $selectedInterests = [];
     public $notifyWhatsapp;
@@ -93,32 +99,24 @@ class Profile extends Component
 
     public function mount()
     {
-        $this->user = Auth::user()->load(['interests', 'wallets']);
+        $this->user = Auth::user()->load(['wallets']);
         $this->name = $this->user->name;
+        $this->email = $this->user->email;
         $this->location = $this->user->location;
         
-        // Ensure selectedInterests is always an array
+        // Load interests from JSON field
         $userInterests = $this->user->interests;
-        $this->selectedInterests = $userInterests ? $userInterests->pluck('id')->toArray() : [];
+        if (is_string($userInterests)) {
+            $this->selectedInterests = json_decode($userInterests, true) ?? [];
+        } elseif (is_array($userInterests)) {
+            $this->selectedInterests = $userInterests;
+        } else {
+            $this->selectedInterests = [];
+        }
         
         $this->notifyWhatsapp = $this->user->whatsapp_notifications_enabled;
         $this->emailVerificationEnabled = $this->user->email_verification_enabled;
         $this->googleConnected = !empty($this->user->google_access_token);
-        
-
-        
-        // Cache interests for performance
-        $this->availableInterests = Cache::remember('interests', 3600, function () {
-            return Interest::where('is_active', true)
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(['id', 'name', 'icon', 'color']);
-        });
-        
-        // Ensure availableInterests is a collection
-        if (!$this->availableInterests) {
-            $this->availableInterests = collect([]);
-        }
     }
 
     public function updateProfile()
@@ -126,26 +124,42 @@ class Profile extends Component
         $this->isUpdatingProfile = true;
         
         try {
+            // Handle interests from Alpine.js (comes as JSON string)
+            $interests = request('interests');
+            if (is_string($interests)) {
+                $interests = json_decode($interests, true) ?? [];
+            } elseif (!is_array($interests)) {
+                $interests = [];
+            }
+            
             $this->validate([
                 'name' => 'required|string|max:255',
                 'location' => 'nullable|string|max:255',
-                'selectedInterests' => 'array|max:5',
-                'selectedInterests.*' => 'exists:interests,id',
             ]);
+            
+            // Validate interests separately since they come from request
+            if (count($interests) > 5) {
+                throw new \Exception('You can select maximum 5 interests.');
+            }
 
-            DB::transaction(function () {
+            DB::transaction(function () use ($interests) {
                 // Update user basic info
                 $this->user->update([
                     'name' => $this->name,
                     'location' => $this->location,
                 ]);
 
-                // Sync interests
-                $this->user->interests()->sync($this->selectedInterests);
+                // For now, we'll store interests as a simple array in user preferences
+                // Since we don't have an interests table, we'll store them as JSON
+                $this->user->update([
+                    'interests' => json_encode($interests)
+                ]);
+                
+                // Update the component property
+                $this->selectedInterests = $interests;
                 
                 // Refresh user data
                 $this->user->refresh();
-                $this->user->load(['interests', 'wallets']);
             });
 
             session()->flash('success', 'Profile updated successfully!');
@@ -155,7 +169,7 @@ class Profile extends Component
                 'user_id' => $this->user->id,
                 'error' => $e->getMessage()
             ]);
-            session()->flash('error', 'Failed to update profile. Please try again.');
+            session()->flash('error', $e->getMessage());
         } finally {
             $this->isUpdatingProfile = false;
         }
@@ -337,24 +351,62 @@ class Profile extends Component
 
     public function connectGoogle()
     {
-        $this->isConnectingGoogle = true;
-        
-        // Generate Google OAuth URL
-        $clientId = config('services.google.client_id');
-        $redirectUri = route('google.callback');
-        $scope = 'https://www.googleapis.com/auth/contacts.readonly';
-        $state = base64_encode(json_encode(['user_id' => $this->user->id, 'action' => 'connect']));
-        
-        $googleAuthUrl = 'https://accounts.google.com/o/oauth2/auth?' . http_build_query([
-            'client_id' => $clientId,
-            'redirect_uri' => $redirectUri,
-            'scope' => $scope,
-            'response_type' => 'code',
-            'access_type' => 'offline',
-            'state' => $state,
-        ]);
-        
-        return redirect($googleAuthUrl);
+        try {
+            $this->isConnectingGoogle = true;
+            
+            $settingService = app(\App\Services\SettingService::class);
+            
+            // Check if Google OAuth is enabled
+            if (!$settingService->isGoogleOAuthEnabled()) {
+                $this->dispatch('google-oauth-error', ['message' => 'Google OAuth is currently disabled.']);
+                $this->isConnectingGoogle = false;
+                return;
+            }
+            
+            $googleSettings = $settingService->getGoogleOAuthSettings();
+            
+            // Validate required settings
+            if (empty($googleSettings['client_id'])) {
+                $this->dispatch('google-oauth-error', ['message' => 'Google OAuth is not properly configured. Please contact administrator.']);
+                $this->isConnectingGoogle = false;
+                return;
+            }
+            
+            // Generate Google OAuth URL
+            $clientId = $googleSettings['client_id'];
+            $redirectUri = $googleSettings['redirect_uri'] ?: route('google.callback');
+            $scopes = $googleSettings['scopes'] ?: ['openid', 'profile', 'email'];
+            $scope = is_array($scopes) ? implode(' ', $scopes) : $scopes;
+            $state = base64_encode(json_encode(['user_id' => $this->user->id, 'action' => 'connect']));
+            
+            $googleAuthUrl = 'https://accounts.google.com/o/oauth2/auth?' . http_build_query([
+                'client_id' => $clientId,
+                'redirect_uri' => $redirectUri,
+                'scope' => $scope,
+                'response_type' => 'code',
+                'access_type' => 'offline',
+                'state' => $state,
+            ]);
+            
+            // Log the OAuth attempt
+            \Log::info('Google OAuth connection initiated', [
+                'user_id' => $this->user->id,
+                'redirect_uri' => $redirectUri
+            ]);
+            
+            // Dispatch browser event to redirect to Google
+            $this->dispatch('google-oauth-redirect', ['url' => $googleAuthUrl]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Google OAuth connection failed', [
+                'user_id' => $this->user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            $this->dispatch('google-oauth-error', ['message' => 'Failed to connect to Google. Please try again later.']);
+            $this->isConnectingGoogle = false;
+        }
     }
 
     public function disconnectGoogle()
@@ -367,10 +419,21 @@ class Profile extends Component
             ]);
             
             $this->googleConnected = false;
-            session()->flash('success', 'Google account disconnected successfully.');
+            
+            // Log the disconnection
+            \Log::info('Google OAuth disconnected', [
+                'user_id' => $this->user->id
+            ]);
+            
+            $this->dispatch('google-oauth-success', ['message' => 'Google account disconnected successfully.']);
             
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to disconnect Google account.');
+            \Log::error('Google OAuth disconnection failed', [
+                'user_id' => $this->user->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            $this->dispatch('google-oauth-error', ['message' => 'Failed to disconnect Google account. Please try again.']);
         }
     }
 

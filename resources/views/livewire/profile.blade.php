@@ -251,106 +251,18 @@ function setActiveTab(tabName) {
 }
 
 // Interest management
-const interestData = {
-    business: { name: 'Business', icon: '🎯' },
-    technology: { name: 'Technology', icon: '💻' },
-    design: { name: 'Design', icon: '🎨' },
-    marketing: { name: 'Marketing', icon: '📢' },
-    finance: { name: 'Finance', icon: '💰' },
-    health: { name: 'Health', icon: '🏥' },
-    education: { name: 'Education', icon: '📚' },
-    sports: { name: 'Sports', icon: '⚽' },
-    music: { name: 'Music', icon: '🎵' },
-    travel: { name: 'Travel', icon: '✈️' },
-    food: { name: 'Food', icon: '🍽️' }
-};
+// Interest data and management moved to scripts.blade.php component
+// to prevent conflicts and ensure proper functionality
 
-let selectedInterests = new Set(['business', 'technology', 'design']);
-let showingAllInterests = false;
+// This function is handled by the scripts.blade.php component
+// Removed to prevent conflicts with the working implementation
 
-function updateInterestDisplay() {
-    const selectedContainer = document.getElementById('selectedInterests');
-    const selectedCountElement = document.getElementById('selectedCount');
-    
-    // Update selected interests display
-    selectedContainer.innerHTML = '';
-    selectedInterests.forEach(interestId => {
-        const interest = interestData[interestId];
-        const badge = document.createElement('span');
-        badge.className = 'inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-orange-100 text-orange-800';
-        badge.innerHTML = `
-            ${interest.icon} ${interest.name}
-            <button type="button" onclick="removeInterest('${interestId}')" class="ml-1 text-orange-600 hover:text-orange-800">×</button>
-        `;
-        selectedContainer.appendChild(badge);
-    });
-    
-    // Update count
-    selectedCountElement.textContent = selectedInterests.size;
-    
-    // Update checkboxes and borders
-    document.querySelectorAll('.interest-option').forEach(option => {
-        const interestId = option.dataset.interest;
-        const checkbox = option.querySelector('.interest-checkbox');
-        const isSelected = selectedInterests.has(interestId);
-        
-        checkbox.checked = isSelected;
-        
-        if (isSelected) {
-            option.classList.add('border-orange-500', 'bg-orange-50');
-            option.classList.remove('border-gray-200');
-        } else {
-            option.classList.remove('border-orange-500', 'bg-orange-50');
-            option.classList.add('border-gray-200');
-        }
-        
-        // Disable/enable based on selection limit
-        if (selectedInterests.size >= 5 && !isSelected) {
-            option.classList.add('disabled');
-        } else {
-            option.classList.remove('disabled');
-        }
-    });
-}
+// Interest management is handled by scripts.blade.php component
+// Removed to prevent conflicts
 
-function removeInterest(interestId) {
-    selectedInterests.delete(interestId);
-    updateInterestDisplay();
-}
+// toggleMoreInterests function is handled by scripts.blade.php component
 
-function toggleMoreInterests() {
-    const hiddenOptions = document.querySelectorAll('.interest-option.hidden');
-    const showMoreBtn = document.getElementById('showMoreInterests');
-    
-    if (showingAllInterests) {
-        hiddenOptions.forEach(option => option.classList.add('hidden'));
-        showMoreBtn.textContent = 'Show more interests';
-        showingAllInterests = false;
-    } else {
-        hiddenOptions.forEach(option => option.classList.remove('hidden'));
-        showMoreBtn.textContent = 'Show fewer interests';
-        showingAllInterests = true;
-    }
-}
-
-// Handle interest selection
-document.addEventListener('click', function(e) {
-    const interestOption = e.target.closest('.interest-option');
-    if (interestOption && !interestOption.classList.contains('disabled')) {
-        const interestId = interestOption.dataset.interest;
-        const checkbox = interestOption.querySelector('.interest-checkbox');
-        
-        if (selectedInterests.has(interestId)) {
-            selectedInterests.delete(interestId);
-        } else {
-            if (selectedInterests.size < 5) {
-                selectedInterests.add(interestId);
-            }
-        }
-        
-        updateInterestDisplay();
-    }
-});
+// Interest selection event handling is managed by scripts.blade.php component
 
 // Form submissions
 function updateProfile(event) {
@@ -461,7 +373,6 @@ function showNotification(message, type = 'success') {
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     setActiveTab('profile');
-    updateInterestDisplay();
     
     // Add smooth scrolling behavior
     document.documentElement.style.scrollBehavior = 'smooth';

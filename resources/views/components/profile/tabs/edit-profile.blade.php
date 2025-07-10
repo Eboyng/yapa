@@ -94,27 +94,80 @@
         </div>
 
         <!-- Interests Section -->
-        <div class="form-group">
-            <label class="block text-sm font-medium text-gray-700 mb-3">Interests</label>
+        <div class="form-group" x-data="{
+            selectedInterests: @js($selectedInterests ?? []),
+            showingMoreInterests: false,
+            baseInterests: ['Technology', 'Sports', 'Music', 'Movies', 'Travel', 'Food', 'Fashion', 'Art', 'Books', 'Gaming', 'Fitness', 'Photography', 'Cooking', 'Dancing', 'Writing', 'Science', 'History', 'Politics', 'Business', 'Health'],
+            moreInterests: ['Nature', 'Meditation', 'Yoga', 'Gardening', 'Astronomy', 'Psychology', 'Philosophy', 'Economics', 'Environment', 'Volunteering'],
+            get allInterests() {
+                return this.showingMoreInterests ? [...this.baseInterests, ...this.moreInterests] : this.baseInterests;
+            },
+            toggleInterest(interest) {
+                const index = this.selectedInterests.indexOf(interest);
+                if (index > -1) {
+                    this.selectedInterests.splice(index, 1);
+                } else {
+                    if (this.selectedInterests.length < 5) {
+                        this.selectedInterests.push(interest);
+                    }
+                }
+            },
+            isSelected(interest) {
+                return this.selectedInterests.includes(interest);
+            },
+            removeInterest(interest) {
+                const index = this.selectedInterests.indexOf(interest);
+                if (index > -1) {
+                    this.selectedInterests.splice(index, 1);
+                }
+            },
+            toggleMoreInterests() {
+                this.showingMoreInterests = !this.showingMoreInterests;
+            }
+        }">
+            <label class="block text-sm font-medium text-gray-700 mb-3">Interests (Select up to 5)</label>
             <div class="space-y-4">
-                <div id="selected-interests" class="flex flex-wrap gap-2 min-h-[2.5rem] p-3 border border-gray-300 rounded-xl bg-gray-50">
-                    <!-- Selected interests will be displayed here -->
+                <!-- Selected interests display -->
+                <div class="flex flex-wrap gap-2 min-h-[2.5rem] p-3 border border-gray-300 rounded-xl bg-gray-50">
+                    <template x-if="selectedInterests.length === 0">
+                        <span class="text-gray-400 text-sm">No interests selected</span>
+                    </template>
+                    <template x-for="interest in selectedInterests" :key="interest">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-orange-100 text-orange-800">
+                            <span x-text="interest"></span>
+                            <button type="button" @click="removeInterest(interest)" class="ml-2 text-orange-600 hover:text-orange-800">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </span>
+                    </template>
                 </div>
                 
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2" id="interests-grid">
-                    @php
-                        $interests = ['Technology', 'Sports', 'Music', 'Movies', 'Travel', 'Food', 'Fashion', 'Art', 'Books', 'Gaming', 'Fitness', 'Photography', 'Cooking', 'Dancing', 'Writing', 'Science', 'History', 'Politics', 'Business', 'Health'];
-                    @endphp
-                    @foreach($interests as $interest)
-                    <button type="button" onclick="toggleInterest('{{ $interest }}')" class="interest-btn px-3 py-2 text-sm border border-gray-300 rounded-lg hover:border-orange-500 hover:text-orange-600 transition-all duration-200 text-center">
-                        {{ $interest }}
-                    </button>
-                    @endforeach
+                <!-- Interest selection grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                    <template x-for="interest in allInterests" :key="interest">
+                        <button type="button" 
+                                @click="toggleInterest(interest)"
+                                :disabled="selectedInterests.length >= 5 && !isSelected(interest)"
+                                :class="{
+                                    'bg-orange-100 border-orange-500 text-orange-600': isSelected(interest),
+                                    'border-gray-300 hover:border-orange-500 hover:text-orange-600': !isSelected(interest) && selectedInterests.length < 5,
+                                    'opacity-50 cursor-not-allowed': selectedInterests.length >= 5 && !isSelected(interest)
+                                }"
+                                class="px-3 py-2 text-sm border rounded-lg transition-all duration-200 text-center">
+                            <span x-text="interest"></span>
+                        </button>
+                    </template>
                 </div>
                 
-                <button type="button" id="show-more-interests" onclick="toggleMoreInterests()" class="text-orange-600 hover:text-orange-700 text-sm font-medium transition-colors duration-200">
-                    Show more interests
+                <!-- Show more/less button -->
+                <button type="button" @click="toggleMoreInterests()" class="text-orange-600 hover:text-orange-700 text-sm font-medium transition-colors duration-200">
+                    <span x-text="showingMoreInterests ? 'Show fewer interests' : 'Show more interests'"></span>
                 </button>
+                
+                <!-- Hidden input for form submission -->
+                <input type="hidden" name="interests" :value="JSON.stringify(selectedInterests)">
             </div>
             @error('interests') <span class="text-red-500 text-sm mt-1">{{ $message }}</span> @enderror
         </div>

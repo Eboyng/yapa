@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\SettingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -10,6 +11,13 @@ use Illuminate\Support\Facades\Auth;
 
 class GoogleOAuthController extends Controller
 {
+    protected $settingService;
+    
+    public function __construct(SettingService $settingService)
+    {
+        $this->settingService = $settingService;
+    }
+    
     /**
      * Handle Google OAuth callback.
      */
@@ -44,13 +52,27 @@ class GoogleOAuthController extends Controller
                     ->with('error', 'Unauthorized OAuth request.');
             }
             
+            // Check if Google OAuth is enabled
+            if (!$this->settingService->isGoogleOAuthEnabled()) {
+                return redirect()->route('profile')
+                    ->with('error', 'Google OAuth is currently disabled.');
+            }
+            
+            $googleSettings = $this->settingService->getGoogleOAuthSettings();
+            
+            // Validate required settings
+            if (empty($googleSettings['client_id']) || empty($googleSettings['client_secret'])) {
+                return redirect()->route('profile')
+                    ->with('error', 'Google OAuth is not properly configured.');
+            }
+            
             // Exchange code for access token
             $tokenResponse = Http::post('https://oauth2.googleapis.com/token', [
-                'client_id' => config('services.google.client_id'),
-                'client_secret' => config('services.google.client_secret'),
+                'client_id' => $googleSettings['client_id'],
+                'client_secret' => $googleSettings['client_secret'],
                 'code' => $code,
                 'grant_type' => 'authorization_code',
-                'redirect_uri' => route('google.callback'),
+                'redirect_uri' => $googleSettings['redirect_uri'] ?: route('google.callback'),
             ]);
             
             if (!$tokenResponse->successful()) {

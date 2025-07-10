@@ -37,6 +37,11 @@ class SettingService
         'supported_image_formats' => 'jpg,jpeg,png',
         'vcf_export_enabled' => true,
         'google_oauth_enabled' => false,
+        // Google OAuth Settings
+        'google_client_id' => '',
+        'google_client_secret' => '',
+        'google_redirect_uri' => '',
+        'google_scopes' => 'https://www.googleapis.com/auth/contacts.readonly',
         // Site Branding Settings
         'site_name' => 'Yapa',
         'site_logo' => '',
@@ -668,5 +673,27 @@ class SettingService
     public function isBannerEnabled(): bool
     {
         return (bool) $this->get('banner_enabled', true);
+    }
+
+    /**
+     * Get Google OAuth settings.
+     */
+    public function getGoogleOAuthSettings(): array
+    {
+        return $this->getMultiple([
+            'google_oauth_enabled',
+            'google_client_id',
+            'google_client_secret',
+            'google_redirect_uri',
+            'google_scopes',
+        ]);
+    }
+
+    /**
+     * Check if Google OAuth is enabled.
+     */
+    public function isGoogleOAuthEnabled(): bool
+    {
+        return (bool) $this->get('google_oauth_enabled', false);
     }
 }

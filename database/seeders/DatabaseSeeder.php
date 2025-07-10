@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\ChannelSale;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -21,6 +22,7 @@ class DatabaseSeeder extends Seeder
             ChannelAdSeeder::class,
             AdSeeder::class,
             TipSeeder::class,
+            ChannelSaleSeeder::class,
         ]);
 
         // Create test user with enhanced fields if not exists

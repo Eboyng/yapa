@@ -458,6 +458,73 @@ class Settings extends Page
                                     ->columns(2),
                             ]),
                         
+                        Forms\Components\Tabs\Tab::make('Google OAuth')
+                            ->schema([
+                                Forms\Components\Section::make('Google OAuth Configuration')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('google_oauth_enabled')
+                                            ->label('Enable Google OAuth')
+                                            ->helperText('Enable Google OAuth authentication for users')
+                                            ->live(),
+                                        Forms\Components\TextInput::make('google_client_id')
+                                            ->label('Google Client ID')
+                                            ->placeholder('Enter your Google OAuth Client ID')
+                                            ->maxLength(255)
+                                            ->helperText('OAuth 2.0 Client ID from Google Cloud Console')
+                                            ->visible(fn (callable $get) => $get('google_oauth_enabled')),
+                                        Forms\Components\TextInput::make('google_client_secret')
+                                            ->label('Google Client Secret')
+                                            ->password()
+                                            ->revealable()
+                                            ->placeholder('Enter your Google OAuth Client Secret')
+                                            ->maxLength(255)
+                                            ->helperText('OAuth 2.0 Client Secret from Google Cloud Console')
+                                            ->visible(fn (callable $get) => $get('google_oauth_enabled')),
+                                        Forms\Components\TextInput::make('google_redirect_uri')
+                                            ->label('Redirect URI')
+                                            ->url()
+                                            ->placeholder('https://yoursite.com/auth/google/callback')
+                                            ->maxLength(255)
+                                            ->helperText('Must match the redirect URI configured in Google Cloud Console')
+                                            ->visible(fn (callable $get) => $get('google_oauth_enabled')),
+                                        Forms\Components\TagsInput::make('google_scopes')
+                                            ->label('OAuth Scopes')
+                                            ->placeholder('Add scope')
+                                            ->helperText('Google OAuth scopes (e.g., openid, profile, email)')
+                                            ->suggestions([
+                                                'openid',
+                                                'profile', 
+                                                'email',
+                                                'https://www.googleapis.com/auth/userinfo.profile',
+                                                'https://www.googleapis.com/auth/userinfo.email'
+                                            ])
+                                            ->visible(fn (callable $get) => $get('google_oauth_enabled')),
+                                    ])
+                                    ->columns(2),
+                                    
+                                Forms\Components\Section::make('Setup Instructions')
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('google_setup_instructions')
+                                            ->label('')
+                                            ->content(new \Illuminate\Support\HtmlString('
+                                                <div class="space-y-4">
+                                                    <h4 class="font-semibold text-gray-900 dark:text-gray-100">Google OAuth Setup Instructions:</h4>
+                                                    <ol class="list-decimal list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                                                        <li>Go to <a href="https://console.cloud.google.com/" target="_blank" class="text-blue-600 hover:underline">Google Cloud Console</a></li>
+                                                        <li>Create a new project or select an existing one</li>
+                                                        <li>Enable the Google+ API and Google OAuth2 API</li>
+                                                        <li>Go to "Credentials" and create "OAuth 2.0 Client IDs"</li>
+                                                        <li>Set the authorized redirect URI to: <code class="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">' . url('/auth/google/callback') . '</code></li>
+                                                        <li>Copy the Client ID and Client Secret to the fields above</li>
+                                                        <li>Save the settings and test the OAuth flow</li>
+                                                    </ol>
+                                                </div>
+                                            '))
+                                    ])
+                                    ->columns(1)
+                                    ->visible(fn (callable $get) => $get('google_oauth_enabled')),
+                            ]),
+                        
                         Forms\Components\Tabs\Tab::make('System Management')
                             ->schema([
                                 Forms\Components\Section::make('Cache Management')
