@@ -90,6 +90,14 @@ class ChannelPurchase extends Model
     }
 
     /**
+     * Get the seller user model.
+     */
+    public function getSellerAttribute()
+    {
+        return $this->channelSale->user;
+    }
+
+    /**
      * Get the escrow transaction.
      */
     public function escrowTransaction(): BelongsTo
@@ -190,7 +198,7 @@ class ChannelPurchase extends Model
             // Release escrow to seller
             $result = $transactionService->releaseEscrow(
                 $this->escrow_transaction_id,
-                $this->seller(),
+                $this->seller,
                 "Payment for WhatsApp Channel: {$this->channelSale->channel_name}"
             );
             
@@ -208,7 +216,7 @@ class ChannelPurchase extends Model
     /**
      * Refund the purchase.
      */
-    public function refund(string $reason): void
+    public function refund(string $reason = 'Buyer requested refund'): void
     {
         DB::transaction(function () use ($reason) {
             if (!$this->escrow_transaction_id) {

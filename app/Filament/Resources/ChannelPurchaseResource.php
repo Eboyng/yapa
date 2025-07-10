@@ -162,7 +162,11 @@ class ChannelPurchaseResource extends Resource
                         try {
                             \DB::transaction(function () use ($record, $transactionService) {
                                 // Release escrow funds
-                                $transactionService->releaseEscrow($record->escrow_transaction_id);
+                                $transactionService->releaseEscrow(
+                                    $record->escrow_transaction_id,
+                                    $record->channelSale->user,
+                                    'Channel purchase completed by admin'
+                                );
                                 
                                 // Update purchase status
                                 $record->update([

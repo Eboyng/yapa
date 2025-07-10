@@ -76,11 +76,14 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         
+        <!-- Livewire Styles -->
+        @livewireStyles
+        
         <!-- Additional Head Content -->
         @stack('head')
     </head>
     <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100">
+        <div class="min-h-screen bg-gray-100 overflow-y-auto">
             <!-- Header -->
             @livewire('partials.header')
 
@@ -135,12 +138,15 @@
             @endif
 
             <!-- Page Content -->
-            <main>
+            <main class="mb-20">
                 {{ $slot }}
             </main>
 
             <!-- Footer -->
             @livewire('partials.footer')
         </div>
+        
+        <!-- Livewire Scripts -->
+        @livewireScripts
     </body>
 </html>

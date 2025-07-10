@@ -53,6 +53,12 @@ class BuyerConfirm extends Component
         try {
             DB::beginTransaction();
 
+            // Verify purchase is still in escrow status
+            $this->purchase->refresh();
+            if (!$this->purchase->isInEscrow()) {
+                throw new \InvalidArgumentException('Purchase is no longer in escrow status');
+            }
+
             // Complete the purchase and release escrow
             $this->purchase->completeAndReleaseEscrow();
 
@@ -66,12 +72,22 @@ class BuyerConfirm extends Component
 
             DB::commit();
 
+            // Close the confirmation modal
+            $this->showConfirmation = false;
+
             session()->flash('success', 'Purchase confirmed successfully! The seller has been paid.');
             return redirect()->route('channel-sale.my-purchases');
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Failed to confirm channel purchase', [
+                'purchase_id' => $this->purchase->id,
+                'buyer_id' => $this->purchase->buyer_id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             session()->flash('error', 'Failed to confirm purchase: ' . $e->getMessage());
+            $this->showConfirmation = false;
         }
     }
 
@@ -80,18 +96,20 @@ class BuyerConfirm extends Component
         try {
             DB::beginTransaction();
 
-            // Refund the purchase
-            $this->purchase->refund();
-
-            // Add refund note
-            $refundNote = 'Buyer requested refund';
-            if ($this->confirmationNote) {
-                $refundNote .= ': ' . $this->confirmationNote;
+            // Verify purchase is still in escrow status
+            $this->purchase->refresh();
+            if (!$this->purchase->isInEscrow()) {
+                throw new \InvalidArgumentException('Purchase is no longer in escrow status');
             }
 
-            $this->purchase->update([
-                'admin_note' => ($this->purchase->admin_note ? $this->purchase->admin_note . "\n\n" : '') . $refundNote
-            ]);
+            // Prepare refund reason
+            $refundReason = 'Buyer requested refund';
+            if ($this->confirmationNote) {
+                $refundReason .= ': ' . $this->confirmationNote;
+            }
+
+            // Refund the purchase
+            $this->purchase->refund($refundReason);
 
             DB::commit();
 
@@ -100,6 +118,12 @@ class BuyerConfirm extends Component
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Failed to process channel purchase refund', [
+                'purchase_id' => $this->purchase->id,
+                'buyer_id' => $this->purchase->buyer_id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             session()->flash('error', 'Failed to process refund: ' . $e->getMessage());
         }
     }

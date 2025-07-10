@@ -48,19 +48,19 @@
             <div class="absolute inset-0 bg-gradient-to-r from-orange-50 to-purple-50 rounded-2xl opacity-0 transition-all duration-300 {{ request()->routeIs('ads.*') ? 'opacity-100' : 'group-hover:opacity-50' }}"></div>
         </a>
 
-        <!-- Credits -->
-        <a href="{{ route('credits.purchase') }}" 
-           class="nav-item {{ request()->routeIs('credits.*') ? 'active' : '' }} flex flex-col items-center py-2.5 px-3 rounded-2xl transition-all duration-300 min-w-0 relative overflow-hidden group">
+        <!-- Tips -->
+        <a href="{{ route('tips.index') }}" 
+           class="nav-item {{ request()->routeIs('tips.*') ? 'active' : '' }} flex flex-col items-center py-2.5 px-3 rounded-2xl transition-all duration-300 min-w-0 relative overflow-hidden group">
             <div class="relative z-10">
-                <!-- Credits Icon (Credit Card/Wallet) -->
+                <!-- Tips Icon (Light Bulb) -->
                 <svg class="w-5 h-5 transition-all duration-300 group-active:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                 </svg>
-                <div class="indicator absolute -top-1 -right-1 w-2 h-2 rounded-full transition-all duration-300 {{ request()->routeIs('credits.*') ? 'bg-gradient-to-r from-orange-400 to-purple-400 opacity-100 scale-100' : 'opacity-0 scale-0' }}"></div>
+                <div class="indicator absolute -top-1 -right-1 w-2 h-2 rounded-full transition-all duration-300 {{ request()->routeIs('tips.*') ? 'bg-gradient-to-r from-orange-400 to-purple-400 opacity-100 scale-100' : 'opacity-0 scale-0' }}"></div>
             </div>
-            <span class="text-[10px] font-medium mt-1 truncate relative z-10 transition-all duration-300">Credits</span>
+            <span class="text-[10px] font-medium mt-1 truncate relative z-10 transition-all duration-300">Tips</span>
             <!-- Active background -->
-            <div class="absolute inset-0 bg-gradient-to-r from-orange-50 to-purple-50 rounded-2xl opacity-0 transition-all duration-300 {{ request()->routeIs('credits.*') ? 'opacity-100' : 'group-hover:opacity-50' }}"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-orange-50 to-purple-50 rounded-2xl opacity-0 transition-all duration-300 {{ request()->routeIs('tips.*') ? 'opacity-100' : 'group-hover:opacity-50' }}"></div>
         </a>
 
         <!-- Profile -->

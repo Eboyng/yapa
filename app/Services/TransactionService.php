@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Wallet;
 use App\Models\Transaction;
 use App\Models\AuditLog;
+use App\Models\NotificationLog;
 use App\Exceptions\InsufficientBalanceException;
 use App\Exceptions\OptimisticLockException;
 use Illuminate\Support\Facades\DB;
@@ -84,7 +85,7 @@ class TransactionService
                 ]);
 
                 // Send notification if significant amount
-                if ($this->shouldNotifyUser($amount, $type)) {
+                if ($this->shouldNotifyUser($amount, $walletType)) {
                     $this->notifyUser($user, 'credit', $transaction);
                 }
 
@@ -413,15 +414,56 @@ class TransactionService
      */
     private function notifyUser(User $user, string $action, Transaction $transaction): void
     {
-        // Implementation would depend on notification channels
-        // For now, just log
-        Log::info('User notification sent', [
-            'user_id' => $user->id,
-            'action' => $action,
-            'transaction_id' => $transaction->id,
-            'amount' => $transaction->amount,
-            'type' => $transaction->type,
-        ]);
+        try {
+            $notificationService = app(NotificationService::class);
+            
+            // Create appropriate message based on action
+            $amount = number_format($transaction->amount, 2);
+            $subject = '';
+            $message = '';
+            
+            switch ($action) {
+                case 'credited':
+                    $subject = 'Account Credited';
+                    $message = "Your account has been credited with ₦{$amount}. Transaction reference: {$transaction->reference}";
+                    break;
+                case 'debited':
+                    $subject = 'Account Debited';
+                    $message = "₦{$amount} has been debited from your account. Transaction reference: {$transaction->reference}";
+                    break;
+                default:
+                    $subject = 'Transaction Notification';
+                    $message = "Transaction of ₦{$amount} has been processed. Reference: {$transaction->reference}";
+            }
+            
+            // Send notification via NotificationService (WhatsApp/Email)
+            $notificationService->send(
+                user: $user,
+                type: NotificationLog::TYPE_GENERAL,
+                subject: $subject,
+                message: $message,
+                relatedModel: $transaction
+            );
+            
+            // Also create Laravel notification for the notification bell
+            $user->notify(new \App\Notifications\TransactionNotification($transaction, $action, $subject, $message));
+            
+            Log::info('User notification sent', [
+                'user_id' => $user->id,
+                'action' => $action,
+                'transaction_id' => $transaction->id,
+                'amount' => $transaction->amount,
+                'type' => $transaction->type,
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to send user notification', [
+                'user_id' => $user->id,
+                'action' => $action,
+                'transaction_id' => $transaction->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -520,8 +562,8 @@ class TransactionService
             // Create admin fee transaction
             $adminFeeTransaction = null;
             if ($adminFee > 0) {
-                // Find admin user (you may need to adjust this logic)
-                $adminUser = User::where('role', 'admin')->first() ?? User::find(1);
+                // Find admin user using role relationship
+                $adminUser = User::role('admin')->first() ?? User::find(1);
                 
                 $adminFeeTransaction = $this->credit(
                     $adminUser->id,

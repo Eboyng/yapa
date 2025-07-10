@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             BatchSeeder::class,
             ChannelAdSeeder::class,
             AdSeeder::class,
+            TipSeeder::class,
         ]);
 
         // Create test user with enhanced fields if not exists

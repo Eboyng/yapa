@@ -190,6 +190,17 @@ Route::middleware(['auth', 'verified.otp'])->group(function () {
     })->name('impersonate.stop');
 });
 
+// Tips Routes
+Route::prefix('tips')->name('tips.')->group(function () {
+    // Public tips listing (no auth required)
+    Route::get('/', \App\Livewire\Tips\ListTips::class)
+        ->name('index');
+    
+    // Individual tip page (no auth required)
+    Route::get('/{tip:slug}', \App\Livewire\Tips\ShowTip::class)
+        ->name('show');
+});
+
 // Batch Routes
 Route::middleware(['auth', 'verified.otp'])->group(function () {
     // Batch download route (handled by BatchList component)
