@@ -46,11 +46,9 @@ class Settings extends Page
                                     ->schema([
                                         Forms\Components\TextInput::make('app_name')
                                             ->label('Application Name')
-                                            ->required()
                                             ->maxLength(255),
                                         Forms\Components\TextInput::make('app_version')
                                             ->label('Application Version')
-                                            ->required()
                                             ->maxLength(50),
                                         Forms\Components\Toggle::make('registration_enabled')
                                             ->label('Registration Enabled')
@@ -62,11 +60,9 @@ class Settings extends Page
                                     ->schema([
                                         Forms\Components\TextInput::make('admin_contact_name')
                                             ->label('Admin Contact Name')
-                                            ->required()
                                             ->maxLength(255),
                                         Forms\Components\TextInput::make('admin_contact_number')
                                             ->label('Admin Contact Number')
-                                            ->required()
                                             ->tel()
                                             ->maxLength(20),
                                     ])
@@ -79,7 +75,6 @@ class Settings extends Page
                                     ->schema([
                                         Forms\Components\TextInput::make('site_name')
                                             ->label('Site Name')
-                                            ->required()
                                             ->maxLength(255)
                                             ->helperText('The name displayed in the browser title and throughout the site'),
                                         Forms\Components\TextInput::make('site_logo_name')
@@ -213,21 +208,18 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('batch_auto_close_days')
                                             ->label('Auto Close Days')
                                             ->helperText('Number of days after which batches auto-close')
-                                            ->required()
                                             ->numeric()
                                             ->minValue(1)
                                             ->maxValue(365),
                                         Forms\Components\TextInput::make('trial_batch_limit')
                                             ->label('Trial Batch Limit')
                                             ->helperText('Maximum members in trial batches')
-                                            ->required()
                                             ->numeric()
                                             ->minValue(1)
                                             ->maxValue(1000),
                                         Forms\Components\TextInput::make('regular_batch_limit')
                                             ->label('Regular Batch Limit')
                                             ->helperText('Maximum members in regular batches')
-                                            ->required()
                                             ->numeric()
                                             ->minValue(1)
                                             ->maxValue(1000),
@@ -239,7 +231,6 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('location_weight')
                                             ->label('Location Weight (%)')
                                             ->helperText('Weight given to location matching')
-                                            ->required()
                                             ->numeric()
                                             ->minValue(0)
                                             ->maxValue(100)
@@ -247,7 +238,6 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('interests_weight')
                                             ->label('Interests Weight (%)')
                                             ->helperText('Weight given to interests matching')
-                                            ->required()
                                             ->numeric()
                                             ->minValue(0)
                                             ->maxValue(100)
@@ -272,7 +262,6 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('ad_earnings_per_view')
                                             ->label('Earnings Per View')
                                             ->helperText('Amount earned per ad view')
-                                            ->required()
                                             ->numeric()
                                             ->minValue(0)
                                             ->step(0.01)
@@ -280,21 +269,18 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('ad_screenshot_wait_hours')
                                             ->label('Screenshot Wait Hours')
                                             ->helperText('Hours to wait before requiring screenshot')
-                                            ->required()
                                             ->numeric()
                                             ->minValue(1)
                                             ->maxValue(168),
                                         Forms\Components\TextInput::make('max_ad_rejection_count')
                                             ->label('Max Rejection Count')
                                             ->helperText('Maximum rejections before account suspension')
-                                            ->required()
                                             ->numeric()
                                             ->minValue(1)
                                             ->maxValue(10),
                                         Forms\Components\TextInput::make('appeal_cooldown_days')
                                             ->label('Appeal Cooldown Days')
                                             ->helperText('Days to wait before allowing appeals')
-                                            ->required()
                                             ->numeric()
                                             ->minValue(1)
                                             ->maxValue(30),
@@ -392,13 +378,11 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('paystack_public_key')
                                             ->label('Paystack Public Key')
                                             ->helperText('Your Paystack public key for frontend integration')
-                                            ->required()
                                             ->maxLength(255)
                                             ->placeholder('pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'),
                                         Forms\Components\TextInput::make('paystack_secret_key')
                                             ->label('Paystack Secret Key')
                                             ->helperText('Your Paystack secret key for backend API calls')
-                                            ->required()
                                             ->password()
                                             ->revealable()
                                             ->maxLength(255)
@@ -415,8 +399,7 @@ class Settings extends Page
                                                 'test' => 'Test/Sandbox',
                                                 'live' => 'Live/Production',
                                             ])
-                                            ->default('test')
-                                            ->required(),
+                                            ->default('test'),
                                     ])
                                     ->columns(2),
                                 
@@ -425,7 +408,6 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('credit_price_naira')
                                             ->label('Credit Price (NGN)')
                                             ->helperText('Price per credit in Nigerian Naira')
-                                            ->required()
                                             ->numeric()
                                             ->minValue(0.01)
                                             ->step(0.01)
@@ -434,14 +416,12 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('minimum_credits_purchase')
                                             ->label('Minimum Credits Purchase')
                                             ->helperText('Minimum number of credits that can be purchased')
-                                            ->required()
                                             ->numeric()
                                             ->minValue(1)
                                             ->default(100),
                                         Forms\Components\TextInput::make('minimum_amount_naira')
                                             ->label('Minimum Amount (NGN)')
                                             ->helperText('Minimum payment amount in Nigerian Naira')
-                                            ->required()
                                             ->numeric()
                                             ->minValue(1)
                                             ->default(300)
@@ -460,7 +440,6 @@ class Settings extends Page
                                     ->schema([
                                         Forms\Components\TextInput::make('max_file_upload_size')
                                             ->label('Max File Upload Size (MB)')
-                                            ->required()
                                             ->numeric()
                                             ->minValue(1)
                                             ->maxValue(100)
@@ -468,7 +447,6 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('supported_image_formats')
                                             ->label('Supported Image Formats')
                                             ->helperText('Comma-separated list of supported formats')
-                                            ->required()
                                             ->placeholder('jpg,jpeg,png,gif'),
                                         Forms\Components\Toggle::make('vcf_export_enabled')
                                             ->label('VCF Export Enabled')
@@ -537,8 +515,7 @@ class Settings extends Page
                                                 'array' => 'Array (Testing)',
                                             ])
                                             ->default('log')
-                                            ->live()
-                                            ->required(),
+                                            ->live(),
                                         Forms\Components\TextInput::make('mail_host')
                                             ->label('SMTP Host')
                                             ->placeholder('smtp.gmail.com')
@@ -569,11 +546,9 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('mail_from_address')
                                             ->label('From Email Address')
                                             ->email()
-                                            ->required()
                                             ->placeholder('noreply@yoursite.com'),
                                         Forms\Components\TextInput::make('mail_from_name')
                                             ->label('From Name')
-                                            ->required()
                                             ->placeholder('Your Site Name'),
                                     ])
                                     ->columns(2),
@@ -609,14 +584,12 @@ class Settings extends Page
                                             ->label('Airtime API Token')
                                             ->password()
                                             ->revealable()
-                                            ->required()
                                             ->maxLength(255)
                                             ->helperText('API token for Wazobianet airtime service'),
                                         Forms\Components\TextInput::make('airtime_api_url')
                                             ->label('Airtime API Base URL')
                                             ->url()
                                             ->default('https://wazobianet.com/api')
-                                            ->required()
                                             ->maxLength(255)
                                             ->helperText('Base URL for the airtime API service'),
                                         Forms\Components\Toggle::make('airtime_api_enabled')
@@ -649,16 +622,13 @@ class Settings extends Page
                                             ->schema([
                                                 Forms\Components\TextInput::make('name')
                                                     ->label('Network Name')
-                                                    ->required()
                                                     ->maxLength(50),
                                                 Forms\Components\TextInput::make('network_id')
                                                     ->label('Network ID')
                                                     ->numeric()
-                                                    ->required()
                                                     ->helperText('API network ID'),
                                                 Forms\Components\TextInput::make('prefix')
                                                     ->label('Phone Prefix')
-                                                    ->required()
                                                     ->maxLength(10)
                                                     ->helperText('Phone number prefix for auto-detection'),
                                                 Forms\Components\Toggle::make('enabled')
