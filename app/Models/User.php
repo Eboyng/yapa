@@ -861,10 +861,12 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getTotalReferralRewards(): float
     {
         return $this->transactions()
-            ->where('category', Transaction::CATEGORY_REFERRAL_REWARD)
-            ->where('type', Transaction::TYPE_CREDIT)
-            ->where('status', Transaction::STATUS_COMPLETED)
-            ->sum('amount');
+            ->join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
+            ->where('transactions.category', Transaction::CATEGORY_REFERRAL_REWARD)
+            ->where('transactions.type', Transaction::TYPE_CREDIT)
+            ->where('transactions.status', Transaction::STATUS_COMPLETED)
+            ->where('wallets.type', Wallet::TYPE_EARNINGS)
+            ->sum('transactions.amount');
     }
 
     /**
@@ -879,10 +881,12 @@ class User extends Authenticatable implements MustVerifyEmail
                       ->where('status', Transaction::STATUS_COMPLETED);
             }])
             ->with(['transactions' => function ($query) {
-                $query->where('category', Transaction::CATEGORY_REFERRAL_REWARD)
-                      ->where('type', Transaction::TYPE_CREDIT)
-                      ->where('status', Transaction::STATUS_COMPLETED)
-                      ->select('user_id', 'amount');
+                $query->join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
+                      ->where('transactions.category', Transaction::CATEGORY_REFERRAL_REWARD)
+                      ->where('transactions.type', Transaction::TYPE_CREDIT)
+                      ->where('transactions.status', Transaction::STATUS_COMPLETED)
+                      ->where('wallets.type', Wallet::TYPE_EARNINGS)
+                      ->select('transactions.user_id', 'transactions.amount');
             }])
             ->latest()
             ->paginate($perPage);

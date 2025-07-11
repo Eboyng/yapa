@@ -68,9 +68,13 @@ class PaystackService
             throw new \InvalidArgumentException("Minimum purchase is {$minimumCredits} credits (NGN{$minimumAmount})");
         }
 
+        // Get user's credits wallet
+        $creditsWallet = $user->getCreditWallet();
+
         // Create pending transaction
         $transaction = Transaction::create([
             'user_id' => $userId,
+            'wallet_id' => $creditsWallet->id,
             'amount' => $credits,
             'type' => 'credit',
             'category' => Transaction::CATEGORY_CREDIT_PURCHASE,

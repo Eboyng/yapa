@@ -57,6 +57,7 @@ class TransactionService
             // Create transaction record
             $transaction = Transaction::create([
                 'user_id' => $userId,
+                'wallet_id' => $wallet->id,
                 'amount' => $amount,
                 'type' => $transactionType,
                 'category' => $category,
@@ -145,6 +146,7 @@ class TransactionService
             // Create transaction record
             $transaction = Transaction::create([
                 'user_id' => $userId,
+                'wallet_id' => $wallet->id,
                 'amount' => $amount,
                 'type' => $transactionType,
                 'category' => $category,

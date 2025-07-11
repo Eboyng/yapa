@@ -50,7 +50,7 @@ class ReferralService
             $this->giveReferralReward(
                 $referrer,
                 $registrationReward,
-                'credits',
+                'earnings',
                 "Registration referral reward for {$user->name}",
                 $user->id
             );
@@ -126,7 +126,7 @@ class ReferralService
                 $rewardAmount,
                 Transaction::CATEGORY_BATCH_SHARE_REWARD,
                 "Batch sharing reward for {$batchShare->batch->name}",
-                'credits',
+                'earnings',
                 $batchShare->batch_id
             );
 
@@ -228,13 +228,17 @@ class ReferralService
             'total_referred' => $user->referredUsers()->count(),
             'total_rewards' => $user->getTotalReferralRewards(),
             'registration_rewards' => $user->transactions()
-                ->where('category', Transaction::CATEGORY_REFERRAL_REWARD)
-                ->where('description', 'like', '%Registration referral reward%')
-                ->sum('amount'),
+                ->join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
+                ->where('transactions.category', Transaction::CATEGORY_REFERRAL_REWARD)
+                ->where('transactions.description', 'like', '%Registration referral reward%')
+                ->where('wallets.type', 'earnings')
+                ->sum('transactions.amount'),
             'deposit_rewards' => $user->transactions()
-                ->where('category', Transaction::CATEGORY_REFERRAL_REWARD)
-                ->where('description', 'like', '%Deposit referral reward%')
-                ->sum('amount'),
+                ->join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
+                ->where('transactions.category', Transaction::CATEGORY_REFERRAL_REWARD)
+                ->where('transactions.description', 'like', '%Deposit referral reward%')
+                ->where('wallets.type', 'earnings')
+                ->sum('transactions.amount'),
         ];
     }
 
@@ -250,8 +254,10 @@ class ReferralService
             'total_new_members' => $batchShares->sum('new_members_count'),
             'total_rewards_claimed' => $batchShares->where('reward_claimed', true)->count(),
             'total_reward_amount' => $user->transactions()
-                ->where('category', Transaction::CATEGORY_BATCH_SHARE_REWARD)
-                ->sum('amount'),
+                ->join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
+                ->where('transactions.category', Transaction::CATEGORY_BATCH_SHARE_REWARD)
+                ->where('wallets.type', 'earnings')
+                ->sum('transactions.amount'),
         ];
     }
 }
