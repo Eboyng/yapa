@@ -481,7 +481,7 @@ class NotificationService
     /**
      * Core send method.
      */
-    protected function send(
+    public function send(
         User $user,
         string $type,
         string $subject,

@@ -168,4 +168,59 @@ class WalletService
         
         return $query->limit($limit)->get();
     }
+    
+    /**
+     * Credit a user's wallet for batch share rewards.
+     */
+    public function credit(User $user, float $amount, string $category, $relatedId = null): \App\Models\Transaction
+    {
+        return DB::transaction(function () use ($user, $amount, $category, $relatedId) {
+            // Validate amount
+            if ($amount <= 0) {
+                throw new Exception('Amount must be greater than zero');
+            }
+            
+            // Get current balance using wallet system
+            $wallet = $user->getWallet('credits');
+            $balanceBefore = $wallet->balance;
+            $balanceAfter = $balanceBefore + $amount;
+            
+            // Update user balance using wallet system
+            $wallet->deposit($amount);
+            
+            // Create transaction record
+            $transaction = \App\Models\Transaction::create([
+                'user_id' => $user->id,
+                'wallet_id' => $wallet->id,
+                'type' => \App\Models\Transaction::TYPE_CREDIT,
+                'category' => $category,
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'description' => $this->getDescriptionForCategory($category, $amount),
+                'status' => \App\Models\Transaction::STATUS_COMPLETED,
+                'payment_method' => \App\Models\Transaction::PAYMENT_METHOD_SYSTEM,
+                'related_id' => $relatedId,
+                'completed_at' => now(),
+                'processed_at' => now(),
+            ]);
+            
+            return $transaction;
+        });
+    }
+    
+    /**
+     * Get description for transaction category.
+     */
+    private function getDescriptionForCategory(string $category, float $amount): string
+    {
+        switch ($category) {
+            case 'batch_share_reward':
+                return "Batch sharing reward: {$amount} credits";
+            case 'referral_reward':
+                return "Referral reward: {$amount} credits";
+            default:
+                return "Credit reward: {$amount} credits";
+        }
+    }
 }

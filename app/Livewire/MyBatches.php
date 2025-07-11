@@ -8,6 +8,8 @@ use App\Models\Batch;
 use App\Models\BatchMember;
 use App\Models\BatchShare;
 use App\Services\ReferralService;
+use App\Services\WalletService;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -268,9 +270,9 @@ class MyBatches extends Component
                 ->map(function ($shares) {
                     $batch = $shares->first()->batch;
                     $totalShares = $shares->count();
-                    $newMembersCount = $shares->sum('new_members_count');
-                    $rewardClaimed = $shares->where('reward_claimed', true)->count() > 0;
-                    $canClaimReward = $shares->where('reward_claimed', false)->where('new_members_count', '>=', 10)->count() > 0;
+                    $shareCount = $shares->sum('share_count');
+                    $rewarded = $shares->where('rewarded', true)->count() > 0;
+                    $canClaimReward = $shares->where('rewarded', false)->where('share_count', '>=', 10)->count() > 0;
                     
                     $platformStats = [
                         'whatsapp' => $shares->where('platform', BatchShare::PLATFORM_WHATSAPP)->count(),
@@ -282,11 +284,11 @@ class MyBatches extends Component
                     return [
                         'batch' => $batch,
                         'total_shares' => $totalShares,
-                        'new_members_count' => $newMembersCount,
-                        'reward_claimed' => $rewardClaimed,
+                        'share_count' => $shareCount,
+                        'rewarded' => $rewarded,
                         'can_claim_reward' => $canClaimReward,
                         'platform_stats' => $platformStats,
-                        'progress_percentage' => min(($newMembersCount / 10) * 100, 100),
+                        'progress_percentage' => min(($shareCount / 10) * 100, 100),
                         'shares_data' => $shares->toArray()
                     ];
                 })
@@ -300,6 +302,83 @@ class MyBatches extends Component
             session()->flash('error', 'Failed to load shared batches data.');
         } finally {
             $this->isLoadingBatches = false;
+        }
+    }
+
+    /**
+     * Handle referral when someone joins a batch through a shared link
+     */
+    public static function handleBatchJoinReferral($batchId, $referrerId, $newUserId)
+    {
+        try {
+            // Find the batch share record
+            $batchShare = BatchShare::where('user_id', $referrerId)
+                ->where('batch_id', $batchId)
+                ->where('rewarded', false)
+                ->first();
+
+            if (!$batchShare) {
+                return;
+            }
+
+            // Increment share count
+            $batchShare->incrementShareCount();
+
+            // Check if reward should be given
+            if ($batchShare->share_count >= 10 && !$batchShare->rewarded) {
+                static::processShareReward($batchShare);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Failed to handle batch join referral', [
+                'batch_id' => $batchId,
+                'referrer_id' => $referrerId,
+                'new_user_id' => $newUserId,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Process the share reward for reaching 10 referrals
+     */
+    private static function processShareReward(BatchShare $batchShare)
+    {
+        try {
+            $walletService = new WalletService();
+            $user = $batchShare->user;
+            
+            // Credit the user with 100 credits
+            $walletService->credit($user, 100, 'batch_share_reward');
+            
+            // Mark as rewarded
+            $batchShare->update(['rewarded' => true]);
+            
+            // Send notification (optional)
+            try {
+                $notificationService = new NotificationService();
+                $message = "Congratulations! You've earned 100 credits for successfully sharing the batch '{$batchShare->batch->name}' and bringing in 10 new members!";
+                $notificationService->send($user, $message, 'batch_share_reward');
+            } catch (\Exception $e) {
+                Log::warning('Failed to send batch share reward notification', [
+                    'user_id' => $user->id,
+                    'batch_share_id' => $batchShare->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+            
+            Log::info('Batch share reward processed successfully', [
+                'user_id' => $user->id,
+                'batch_id' => $batchShare->batch_id,
+                'share_count' => $batchShare->share_count
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to process share reward', [
+                'batch_share_id' => $batchShare->id,
+                'user_id' => $batchShare->user_id,
+                'error' => $e->getMessage()
+            ]);
         }
     }
 
@@ -349,8 +428,8 @@ class MyBatches extends Component
                      'user_id' => $user->id,
                      'batch_id' => $batchId,
                      'platform' => $platform,
-                     'new_members_count' => 0,
-                     'reward_claimed' => false,
+                     'share_count' => 0,
+                     'rewarded' => false,
                  ]);
              }
 

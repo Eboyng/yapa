@@ -5,6 +5,8 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\WalletResource\Pages;
 use App\Models\Wallet;
 use App\Models\User;
+use App\Models\Transaction;
+use App\Models\AuditLog;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -19,8 +21,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Tables\Actions\Action;
 use Filament\Notifications\Notification;
-use App\Models\AuditLog;
-use App\Models\Transaction;
 
 class WalletResource extends Resource
 {
@@ -106,8 +106,13 @@ class WalletResource extends Resource
                     ->label('Currency'),
                 
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Active')
-                    ->boolean(),
+                    ->label('Status')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('danger')
+                    ->sortable(),
                 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Created')
@@ -133,9 +138,18 @@ class WalletResource extends Resource
                         Wallet::CURRENCY_CREDITS => 'Credits',
                     ]),
                 
-                Filter::make('is_active')
-                    ->query(fn (Builder $query): Builder => $query->where('is_active', true))
-                    ->label('Active Only'),
+                SelectFilter::make('is_active')
+                    ->label('Status')
+                    ->options([
+                        '1' => 'Active',
+                        '0' => 'Paused',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (isset($data['value'])) {
+                            return $query->where('is_active', (bool) $data['value']);
+                        }
+                        return $query;
+                    }),
                 
                 Filter::make('has_balance')
                     ->query(fn (Builder $query): Builder => $query->where('balance', '>', 0))

@@ -457,7 +457,7 @@
             <div class="absolute inset-0 bg-black bg-opacity-50 transition-opacity" wire:click="closeCreateModal">
             </div>
             <div
-                class="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl transform transition-transform duration-300 ease-in-out max-h-[85vh] overflow-hidden">
+                class="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl transform transition-transform duration-300 ease-in-out max-h-[115vh] overflow-hidden">
                 <form wire:submit.prevent="createChannel" class="flex flex-col h-full">
                     <!-- Mobile Header -->
                     <div
@@ -499,50 +499,53 @@
                              @enderror
                          </div>
 
-                        <!-- Niche -->
-                         <div>
-                             <label for="mobile-niche"
-                                 class="block text-sm font-medium text-gray-700 mb-1">Niche *</label>
-                             <select wire:model="niche" id="mobile-niche"
-                                 class="w-full px-3 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-orange-500 focus:border-orange-500 text-sm">
-                                 <option value="">Select a niche</option>
-                                 <option value="technology">Technology</option>
-                                 <option value="business">Business</option>
-                                 <option value="entertainment">Entertainment</option>
-                                 <option value="education">Education</option>
-                                 <option value="health">Health & Fitness</option>
-                                 <option value="lifestyle">Lifestyle</option>
-                                 <option value="news">News</option>
-                                 <option value="sports">Sports</option>
-                                 <option value="travel">Travel</option>
-                                 <option value="food">Food & Cooking</option>
-                                 <option value="fashion">Fashion</option>
-                                 <option value="finance">Finance</option>
-                                 <option value="gaming">Gaming</option>
-                                 <option value="music">Music</option>
-                                 <option value="art">Art & Design</option>
-                                 <option value="science">Science</option>
-                                 <option value="politics">Politics</option>
-                                 <option value="religion">Religion</option>
-                                 <option value="comedy">Comedy</option>
-                                 <option value="other">Other</option>
-                             </select>
-                             @error('niche')
-                                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                             @enderror
-                         </div>
+                        <!-- Two Column Grid for Mobile -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- Niche -->
+                             <div>
+                                 <label for="mobile-niche"
+                                     class="block text-xs font-medium text-gray-700 mb-1">Niche *</label>
+                                 <select wire:model="niche" id="mobile-niche"
+                                     class="w-full px-2 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 text-xs">
+                                     <option value="">Select niche</option>
+                                     <option value="technology">Technology</option>
+                                     <option value="business">Business</option>
+                                     <option value="entertainment">Entertainment</option>
+                                     <option value="education">Education</option>
+                                     <option value="health">Health & Fitness</option>
+                                     <option value="lifestyle">Lifestyle</option>
+                                     <option value="news">News</option>
+                                     <option value="sports">Sports</option>
+                                     <option value="travel">Travel</option>
+                                     <option value="food">Food & Cooking</option>
+                                     <option value="fashion">Fashion</option>
+                                     <option value="finance">Finance</option>
+                                     <option value="gaming">Gaming</option>
+                                     <option value="music">Music</option>
+                                     <option value="art">Art & Design</option>
+                                     <option value="science">Science</option>
+                                     <option value="politics">Politics</option>
+                                     <option value="religion">Religion</option>
+                                     <option value="comedy">Comedy</option>
+                                     <option value="other">Other</option>
+                                 </select>
+                                 @error('niche')
+                                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                 @enderror
+                             </div>
 
-                        <!-- Follower Count -->
-                         <div>
-                             <label for="mobile-follower-count"
-                                 class="block text-sm font-medium text-gray-700 mb-1">Follower Count *</label>
-                             <input type="number" wire:model="follower_count" id="mobile-follower-count"
-                                 class="w-full px-3 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-orange-500 focus:border-orange-500 text-sm"
-                                 placeholder="Enter number of followers..." min="1">
-                             @error('follower_count')
-                                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                             @enderror
-                         </div>
+                            <!-- Follower Count -->
+                             <div>
+                                 <label for="mobile-follower-count"
+                                     class="block text-xs font-medium text-gray-700 mb-1">Followers *</label>
+                                 <input type="number" wire:model="follower_count" id="mobile-follower-count"
+                                     class="w-full px-2 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 text-xs"
+                                     placeholder="Count..." min="1">
+                                 @error('follower_count')
+                                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                 @enderror
+                             </div>
+                        </div>
 
                         <!-- WhatsApp Link -->
                          <div>
@@ -560,23 +563,23 @@
                          <div>
                              <label for="mobile-sample-screenshot"
                                  class="block text-sm font-medium text-gray-700 mb-1">Sample Screenshot *</label>
-                             <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                             <div class="mt-1 flex justify-center px-4 pt-4 pb-4 border-2 border-gray-300 border-dashed rounded-lg">
                                  <div class="space-y-1 text-center">
                                      @if ($sample_screenshot)
-                                         <div class="mb-4">
-                                             <img src="{{ $sample_screenshot->temporaryUrl() }}" class="mx-auto h-20 w-auto rounded-lg shadow-md">
-                                             <button type="button" wire:click="$set('sample_screenshot', null)" class="mt-2 text-sm text-red-600 hover:text-red-800">
+                                         <div class="mb-3">
+                                             <img src="{{ $sample_screenshot->temporaryUrl() }}" class="mx-auto h-16 w-auto rounded-lg shadow-md">
+                                             <button type="button" wire:click="$set('sample_screenshot', null)" class="mt-2 text-xs text-red-600 hover:text-red-800">
                                                  Remove
                                              </button>
                                          </div>
                                      @else
-                                         <svg class="mx-auto h-8 w-8 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                         <svg class="mx-auto h-6 w-6 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                                              <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                          </svg>
                                      @endif
-                                     <div class="flex text-xs text-gray-600">
+                                     <div class="flex text-xs text-gray-600 justify-center">
                                          <label for="mobile-sample-screenshot" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
-                                             <span>Upload screenshot</span>
+                                             <span>Upload</span>
                                              <input id="mobile-sample-screenshot" wire:model="sample_screenshot" type="file" accept="image/*" class="sr-only">
                                          </label>
                                      </div>

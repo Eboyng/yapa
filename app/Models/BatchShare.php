@@ -19,9 +19,9 @@ class BatchShare extends Model
         'user_id',
         'batch_id',
         'platform',
-        'new_members_count',
-        'reward_claimed',
-        'reward_claimed_at',
+        'share_count',
+        'rewarded',
+        'rewarded_at',
     ];
 
     /**
@@ -30,9 +30,9 @@ class BatchShare extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'new_members_count' => 'integer',
-        'reward_claimed' => 'boolean',
-        'reward_claimed_at' => 'datetime',
+        'share_count' => 'integer',
+        'rewarded' => 'boolean',
+        'rewarded_at' => 'datetime',
     ];
 
     /**
@@ -65,7 +65,7 @@ class BatchShare extends Model
     public function canClaimReward(): bool
     {
         $threshold = app(\App\Services\SettingService::class)->get('batch_share_threshold', 10);
-        return !$this->reward_claimed && $this->new_members_count >= $threshold;
+        return !$this->rewarded && $this->share_count >= $threshold;
     }
 
     /**
@@ -74,17 +74,17 @@ class BatchShare extends Model
     public function markRewardClaimed(): bool
     {
         return $this->update([
-            'reward_claimed' => true,
-            'reward_claimed_at' => now(),
+            'rewarded' => true,
+            'rewarded_at' => now(),
         ]);
     }
 
     /**
      * Increment new members count.
      */
-    public function incrementNewMembersCount(): bool
+    public function incrementShareCount(): bool
     {
-        return $this->increment('new_members_count');
+        return $this->increment('share_count');
     }
 
     /**
@@ -92,7 +92,7 @@ class BatchShare extends Model
      */
     public function scopeUnclaimedRewards($query)
     {
-        return $query->where('reward_claimed', false);
+        return $query->where('rewarded', false);
     }
 
     /**
@@ -101,8 +101,8 @@ class BatchShare extends Model
     public function scopeEligibleForReward($query)
     {
         $threshold = app(\App\Services\SettingService::class)->get('batch_share_threshold', 10);
-        return $query->where('reward_claimed', false)
-                    ->where('new_members_count', '>=', $threshold);
+        return $query->where('rewarded', false)
+                    ->where('share_count', '>=', $threshold);
     }
 
     /**

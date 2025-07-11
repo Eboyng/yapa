@@ -12,6 +12,8 @@ use App\Models\Wallet;
 use App\Services\TransactionService;
 use App\Services\SettingService;
 use App\Services\OtpService;
+use App\Services\WalletService;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -52,6 +54,28 @@ class BatchList extends Component
             $this->creditsBalance = Auth::user()->getCreditWallet()->balance ?? 0;
         } else {
             $this->creditsBalance = 0;
+        }
+        
+        // Handle referral tracking from shared batch links
+        $this->handleReferralFromUrl();
+    }
+    
+    /**
+     * Handle referral tracking when user visits a shared batch link
+     */
+    private function handleReferralFromUrl()
+    {
+        $referrerId = request()->get('ref');
+        
+        if ($referrerId && is_numeric($referrerId)) {
+            // Store referral in session for later use when user joins a batch
+            session(['batch_referral_id' => $referrerId]);
+            
+            Log::info('Batch referral captured from URL', [
+                'referrer_id' => $referrerId,
+                'visitor_ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
         }
     }
 
@@ -137,6 +161,9 @@ class BatchList extends Component
                     'whatsapp_number' => $user->whatsapp_number,
                 ]);
 
+                // Handle referral tracking if user joined through a shared link
+                $this->handleReferralTracking($batch->id, $user->id);
+
                 // If this is a trial batch and it becomes full, auto-create a new one
                 if ($batch->type === Batch::TYPE_TRIAL && $batch->isFull()) {
                     $batch->markAsFull();
@@ -190,13 +217,13 @@ class BatchList extends Component
                     'platform' => $platform,
                 ],
                 [
-                    'new_members_count' => 0,
-                    'reward_claimed' => false,
+                    'share_count' => 0,
+                    'rewarded' => false,
                 ]
             );
 
-            // Generate sharing URL
-            $shareUrl = url("/batch/{$batch->id}?ref={$user->referral_code}");
+            // Generate sharing URL with user ID as referral
+            $shareUrl = url("/?ref={$user->id}");
 
             // Dispatch event with sharing data
             $this->dispatch('batchShared', [
@@ -242,25 +269,18 @@ class BatchList extends Component
                 // Calculate reward amount
                 $rewardAmount = app(SettingService::class)->get('batch_share_reward_amount', 100);
 
-                // Credit the reward
-                $transactionService = app(TransactionService::class);
-                $transactionService->credit(
-                    $user->id,
-                    $rewardAmount,
-                    Wallet::TYPE_CREDITS,
-                    'batch_share_reward',
-                    "Batch sharing reward for '{$share->batch->name}' - {$share->new_members_count} new members",
-                    $share->batch_id
-                );
+                // Credit the reward using WalletService
+                $walletService = app(WalletService::class);
+                $walletService->credit($user, $rewardAmount, 'batch_share_reward');
 
                 // Mark reward as claimed
-                $share->markRewardClaimed();
+                $share->update(['rewarded' => true]);
 
                 Log::info('Batch share reward credited', [
                     'user_id' => $user->id,
                     'batch_id' => $share->batch_id,
                     'platform' => $share->platform,
-                    'new_members' => $share->new_members_count,
+                    'share_count' => $share->share_count,
                     'reward_amount' => $rewardAmount,
                 ]);
             }
@@ -274,6 +294,99 @@ class BatchList extends Component
         } catch (\Exception $e) {
             Log::error('Failed to process batch share rewards', [
                 'user_id' => Auth::id(),
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Handle referral tracking when a user joins a batch
+     */
+    private function handleReferralTracking($batchId, $newUserId)
+    {
+        try {
+            // Check if there's a referral ID in the session
+            $referrerId = session('batch_referral_id');
+            
+            if (!$referrerId || $referrerId == $newUserId) {
+                return; // No referral or self-referral
+            }
+
+            // Find the batch share record for the referrer
+            $batchShare = BatchShare::where('user_id', $referrerId)
+                ->where('batch_id', $batchId)
+                ->where('rewarded', false)
+                ->first();
+
+            if (!$batchShare) {
+                return; // No share record found
+            }
+
+            // Increment share count
+            $batchShare->incrementShareCount();
+
+            // Check if reward should be given
+            if ($batchShare->share_count >= 10 && !$batchShare->rewarded) {
+                $this->processShareReward($batchShare);
+            }
+
+            // Clear the referral from session
+            session()->forget('batch_referral_id');
+
+            Log::info('Batch referral tracked successfully', [
+                'batch_id' => $batchId,
+                'referrer_id' => $referrerId,
+                'new_user_id' => $newUserId,
+                'new_share_count' => $batchShare->share_count
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to handle referral tracking', [
+                'batch_id' => $batchId,
+                'new_user_id' => $newUserId,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Process the share reward for reaching 10 referrals
+     */
+    private function processShareReward(BatchShare $batchShare)
+    {
+        try {
+            $walletService = app(WalletService::class);
+            $user = $batchShare->user;
+            
+            // Credit the user with 100 credits
+            $walletService->credit($user, 100, 'batch_share_reward');
+            
+            // Mark as rewarded
+            $batchShare->update(['rewarded' => true]);
+            
+            // Send notification (optional)
+            try {
+                $notificationService = app(NotificationService::class);
+                $message = "Congratulations! You've earned 100 credits for successfully sharing the batch '{$batchShare->batch->name}' and bringing in 10 new members!";
+                $notificationService->send($user, $message, 'batch_share_reward');
+            } catch (\Exception $e) {
+                Log::warning('Failed to send batch share reward notification', [
+                    'user_id' => $user->id,
+                    'batch_share_id' => $batchShare->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+            
+            Log::info('Batch share reward processed successfully', [
+                'user_id' => $user->id,
+                'batch_id' => $batchShare->batch_id,
+                'share_count' => $batchShare->share_count
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to process share reward', [
+                'batch_share_id' => $batchShare->id,
+                'user_id' => $batchShare->user_id,
                 'error' => $e->getMessage()
             ]);
         }
