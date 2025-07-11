@@ -220,6 +220,7 @@
 
                                 <!-- Mobile-Only Main Navigation -->
                                 <div class="py-2 border-b border-gray-100 lg:hidden">
+                                      @guest
                                     <!-- Channel Marketplace (always visible) -->
                                     <a href="{{ route('channel-sale.browse') }}"
                                         class="flex items-center px-4 py-2 text-sm  transition-colors {{ request()->routeIs('channel-sale.*') ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-600' }}">
@@ -231,6 +232,7 @@
                                         </svg>
                                         Channel Marketplace
                                     </a>
+                                    @endguest
 
                                     <!-- Authenticated User Navigation -->
                                     @auth

@@ -67,9 +67,9 @@
                                 <div class="absolute inset-0 bg-black bg-opacity-40"></div>
                             @endif
 
-                            <div class="relative z-10 h-full flex items-center justify-center px-6 md:px-12">
-                                <div class="text-cente text-white max-w-4xl mx-auto">
-                                    <div class="flex items-center p-2 gap-3 justify-between">
+                            <div class="relative z-10 h-full flex items-center px-6 md:px-12">
+                                <div class="text-left text-white w-full">
+                                    <div class="flex items-center p-2 gap-3">
                                         <div class="">
                                             <div class="bg-white bg-opacity-20 rounded-full animate-pulse-slow">
                                                 <svg class="w-6 h-6 md:w-20 md:h-20 text-white" fill="currentColor"
