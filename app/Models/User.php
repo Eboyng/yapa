@@ -913,9 +913,9 @@ class User extends Authenticatable implements MustVerifyEmail
         $threshold = app(\App\Services\SettingService::class)->get('batch_share_threshold', 10);
         
         return [
-            'current' => $share ? $share->new_members_count : 0,
+            'current' => $share ? $share->share_count : 0,
             'threshold' => $threshold,
-            'reward_claimed' => $share ? $share->reward_claimed : false,
+            'rewarded' => $share ? $share->rewarded : false,
             'can_claim' => $share ? $share->canClaimReward() : false,
         ];
     }

@@ -618,14 +618,14 @@
                                                     <div
                                                         class="text-center bg-white rounded-lg p-3 hover:bg-blue-50 transition-colors">
                                                         <div class="font-semibold text-gray-900">
-                                                            {{ $batchData['new_members_count'] }}</div>
+                                            {{ $batchData['share_count'] }}</div>
                                                         <div class="text-gray-500">New Members</div>
                                                     </div>
                                                     <div
                                                         class="text-center bg-white rounded-lg p-3 hover:bg-green-50 transition-colors">
                                                         <div class="font-semibold text-orange-600">
-                                                            ₦{{ number_format($batchData['new_members_count'] * 100, 2) }}
-                                                        </div>
+                                            ₦{{ number_format($batchData['share_count'] * 100, 2) }}
+                                        </div>
                                                         <div class="text-gray-500">Potential Reward</div>
                                                     </div>
                                                 </div>

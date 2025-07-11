@@ -110,7 +110,7 @@ class ReferralService
      */
     public function processBatchSharingReward(BatchShare $batchShare): void
     {
-        if ($batchShare->reward_claimed || !$batchShare->canClaimReward()) {
+        if ($batchShare->rewarded || !$batchShare->canClaimReward()) {
             return;
         }
 
@@ -142,7 +142,7 @@ class ReferralService
             'user_id' => $batchShare->user_id,
             'batch_id' => $batchShare->batch_id,
             'reward_amount' => $rewardAmount,
-            'new_members_count' => $batchShare->new_members_count,
+            'share_count' => $batchShare->share_count,
         ]);
     }
 
@@ -158,8 +158,8 @@ class ReferralService
             ],
             [
                 'platform' => $platform,
-                'new_members_count' => 0,
-                'reward_claimed' => false,
+                'share_count' => 0,
+                'rewarded' => false,
             ]
         );
     }
@@ -183,7 +183,7 @@ class ReferralService
             ->first();
 
         if ($batchShare) {
-            $batchShare->incrementNewMembersCount();
+            $batchShare->incrementShareCount();
             
             // Check if reward can be claimed
             if ($batchShare->canClaimReward()) {
@@ -251,8 +251,8 @@ class ReferralService
         
         return [
             'total_shared_batches' => $batchShares->count(),
-            'total_new_members' => $batchShares->sum('new_members_count'),
-            'total_rewards_claimed' => $batchShares->where('reward_claimed', true)->count(),
+            'total_new_members' => $batchShares->sum('share_count'),
+            'total_rewards_claimed' => $batchShares->where('rewarded', true)->count(),
             'total_reward_amount' => $user->transactions()
                 ->join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
                 ->where('transactions.category', Transaction::CATEGORY_BATCH_SHARE_REWARD)
