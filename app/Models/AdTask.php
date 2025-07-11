@@ -346,8 +346,12 @@ class AdTask extends Model
             return;
         }
         
+        // Get user's earnings wallet
+        $earningsWallet = $this->user->getEarningsWallet();
+        
         // Create transaction for earnings
         $this->user->transactions()->create([
+            'wallet_id' => $earningsWallet->id,
             'type' => Transaction::TYPE_CREDIT,
             'category' => Transaction::CATEGORY_AD_EARNING,
             'amount' => $this->earnings_amount,
@@ -365,7 +369,7 @@ class AdTask extends Model
         ]);
         
         // Update user's earnings balance using wallet system
-        $this->user->getEarningsWallet()->deposit($this->earnings_amount);
+        $this->user->getEarningsWallet()->credit($this->earnings_amount);
     }
 
     /**

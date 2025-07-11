@@ -416,6 +416,69 @@ class NotificationService
     }
 
     /**
+     * Send ad task approved notification.
+     */
+    public function sendAdTaskApprovedNotification(User $user, $adTask, float $earnings): NotificationLog
+    {
+        $message = "Great news! Your ad task for '{$adTask->ad->title}' has been approved. You've earned ₦" . number_format($earnings, 2) . " which has been added to your earnings wallet.";
+        
+        return $this->send(
+            user: $user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Ad Task Approved - Earnings Added!',
+            message: $message,
+            relatedModel: $adTask,
+            metadata: [
+                'earnings_amount' => $earnings,
+                'view_count' => $adTask->view_count,
+                'ad_title' => $adTask->ad->title
+            ]
+        );
+    }
+
+    /**
+     * Send ad task rejected notification.
+     */
+    public function sendAdTaskRejectedNotification(User $user, $adTask, string $reason): NotificationLog
+    {
+        $message = "Your ad task for '{$adTask->ad->title}' has been rejected. Reason: {$reason}. You can submit an appeal if you believe this was a mistake.";
+        
+        return $this->send(
+            user: $user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Ad Task Rejected',
+            message: $message,
+            relatedModel: $adTask,
+            metadata: [
+                'rejection_reason' => $reason,
+                'view_count' => $adTask->view_count,
+                'ad_title' => $adTask->ad->title
+            ]
+        );
+    }
+
+    /**
+     * Send ad task submitted notification.
+     */
+    public function sendAdTaskSubmittedNotification(User $user, $adTask, float $estimatedEarnings): NotificationLog
+    {
+        $message = "Your ad task for '{$adTask->ad->title}' has been submitted for review. Estimated earnings: ₦" . number_format($estimatedEarnings, 2) . ". You'll be notified once it's reviewed.";
+        
+        return $this->send(
+            user: $user,
+            type: NotificationLog::TYPE_GENERAL,
+            subject: 'Ad Task Submitted for Review',
+            message: $message,
+            relatedModel: $adTask,
+            metadata: [
+                'estimated_earnings' => $estimatedEarnings,
+                'view_count' => $adTask->view_count,
+                'ad_title' => $adTask->ad->title
+            ]
+        );
+    }
+
+    /**
      * Core send method.
      */
     protected function send(

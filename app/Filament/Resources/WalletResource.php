@@ -145,72 +145,165 @@ class WalletResource extends Resource
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 
-                Action::make('adjust_balance')
-                    ->label('Adjust Balance')
-                    ->icon('heroicon-o-calculator')
-                    ->color('warning')
-                    ->form([
-                        Select::make('type')
-                            ->label('Adjustment Type')
-                            ->options([
-                                'credit' => 'Credit (Add)',
-                                'debit' => 'Debit (Subtract)',
-                            ])
-                            ->required(),
-                        
-                        TextInput::make('amount')
-                            ->label('Amount')
-                            ->numeric()
-                            ->step(0.01)
-                            ->required()
-                            ->rules(['min:0.01']),
-                        
-                        Forms\Components\Textarea::make('reason')
-                            ->label('Reason')
-                            ->required()
-                            ->rows(3),
-                    ])
-                    ->action(function (Wallet $record, array $data) {
-                        $amount = (float) $data['amount'];
-                        $type = $data['type'];
-                        $reason = $data['reason'];
-                        
-                        try {
-                            if ($type === 'credit') {
-                                $record->credit($amount);
-                            } else {
-                                $record->debit($amount);
-                            }
+                Tables\Actions\ActionGroup::make([
+                    Action::make('adjust_balance')
+                        ->label('Adjust Balance')
+                        ->icon('heroicon-o-calculator')
+                        ->color('warning')
+                        ->form([
+                            Select::make('wallet_type')
+                                ->label('Wallet Type')
+                                ->options([
+                                    Wallet::TYPE_CREDITS => 'Credits',
+                                    Wallet::TYPE_NAIRA => 'Naira',
+                                    Wallet::TYPE_EARNINGS => 'Earnings',
+                                ])
+                                ->default(fn (Wallet $record) => $record->type),
                             
-                            // Create transaction record
-                            Transaction::create([
-                                'user_id' => $record->user_id,
-                                'wallet_id' => $record->id,
-                                'type' => $type === 'credit' ? Transaction::TYPE_CREDIT : Transaction::TYPE_DEBIT,
-                                'category' => Transaction::CATEGORY_MANUAL_ADJUSTMENT,
-                                'amount' => $amount,
-                                'balance_before' => $type === 'credit' ? $record->balance - $amount : $record->balance + $amount,
-                                'balance_after' => $record->balance,
-                                'description' => 'Manual adjustment by admin: ' . $reason,
-                                'status' => Transaction::STATUS_COMPLETED,
-                                'payment_method' => Transaction::PAYMENT_METHOD_SYSTEM,
-                                'source' => 'admin_panel',
-                                'completed_at' => now(),
-                            ]);
+                            Select::make('type')
+                                ->label('Adjustment Type')
+                                ->options([
+                                    'credit' => 'Credit (Add)',
+                                    'debit' => 'Debit (Subtract)',
+                                ]),
                             
-                            Notification::make()
-                                ->title('Balance adjusted successfully')
-                                ->success()
-                                ->send();
+                            TextInput::make('amount')
+                                ->label('Amount')
+                                ->numeric()
+                                ->step(0.01)
+                                ->rules(['min:0.01']),
+                            
+                            Forms\Components\Textarea::make('reason')
+                                ->label('Reason (Optional)')
+                                ->rows(3),
+                        ])
+                        ->action(function (Wallet $record, array $data) {
+                            $amount = (float) $data['amount'];
+                            $type = $data['type'];
+                            $reason = $data['reason'] ?? 'Manual adjustment by admin';
+                            $walletType = $data['wallet_type'] ?? $record->type;
+                            
+                            try {
+                                // Get the target wallet
+                                $targetWallet = $record;
+                                if ($walletType !== $record->type) {
+                                    $targetWallet = $record->user->getWallet($walletType);
+                                }
                                 
-                        } catch (\Exception $e) {
-                            Notification::make()
-                                ->title('Failed to adjust balance')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
+                                if ($type === 'credit') {
+                                    $targetWallet->credit($amount);
+                                } else {
+                                    $targetWallet->debit($amount);
+                                }
+                                
+                                // Create transaction record
+                                Transaction::create([
+                                    'user_id' => $targetWallet->user_id,
+                                    'wallet_id' => $targetWallet->id,
+                                    'type' => $type === 'credit' ? Transaction::TYPE_CREDIT : Transaction::TYPE_DEBIT,
+                                    'category' => Transaction::CATEGORY_MANUAL_ADJUSTMENT,
+                                    'amount' => $amount,
+                                    'balance_before' => $type === 'credit' ? $targetWallet->balance - $amount : $targetWallet->balance + $amount,
+                                    'balance_after' => $targetWallet->balance,
+                                    'description' => 'Manual adjustment by admin: ' . $reason,
+                                    'status' => Transaction::STATUS_COMPLETED,
+                                    'payment_method' => Transaction::PAYMENT_METHOD_SYSTEM,
+                                    'source' => 'admin_panel',
+                                    'completed_at' => now(),
+                                ]);
+                                
+                                Notification::make()
+                                    ->title('Balance adjusted successfully')
+                                    ->success()
+                                    ->send();
+                                    
+                            } catch (\Exception $e) {
+                                Notification::make()
+                                    ->title('Failed to adjust balance')
+                                    ->body($e->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+                    
+                    Action::make('pause_wallet')
+                        ->label('Pause Wallet')
+                        ->icon('heroicon-o-pause')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Pause Wallet')
+                        ->modalDescription('Are you sure you want to pause this wallet? The user will not be able to use this wallet until it is reactivated.')
+                        ->visible(fn (Wallet $record) => $record->is_active)
+                        ->action(function (Wallet $record) {
+                            try {
+                                $record->update(['is_active' => false]);
+                                
+                                // Create audit log
+                                AuditLog::create([
+                                    'admin_user_id' => auth()->id(),
+                                    'target_user_id' => $record->user_id,
+                                    'action' => 'wallet_paused',
+                                    'description' => "Paused {$record->user->name}'s {$record->type} wallet",
+                                    'metadata' => [
+                                        'wallet_id' => $record->id,
+                                        'wallet_type' => $record->type,
+                                        'balance' => $record->balance,
+                                    ],
+                                ]);
+                                
+                                Notification::make()
+                                    ->title('Wallet paused successfully')
+                                    ->success()
+                                    ->send();
+                                    
+                            } catch (\Exception $e) {
+                                Notification::make()
+                                    ->title('Failed to pause wallet')
+                                    ->body($e->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+                    
+                    Action::make('activate_wallet')
+                        ->label('Activate Wallet')
+                        ->icon('heroicon-o-play')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Activate Wallet')
+                        ->modalDescription('Are you sure you want to activate this wallet?')
+                        ->visible(fn (Wallet $record) => !$record->is_active)
+                        ->action(function (Wallet $record) {
+                            try {
+                                $record->update(['is_active' => true]);
+                                
+                                // Create audit log
+                                AuditLog::create([
+                                    'admin_user_id' => auth()->id(),
+                                    'target_user_id' => $record->user_id,
+                                    'action' => 'wallet_activated',
+                                    'description' => "Activated {$record->user->name}'s {$record->type} wallet",
+                                    'metadata' => [
+                                        'wallet_id' => $record->id,
+                                        'wallet_type' => $record->type,
+                                        'balance' => $record->balance,
+                                    ],
+                                ]);
+                                
+                                Notification::make()
+                                    ->title('Wallet activated successfully')
+                                    ->success()
+                                    ->send();
+                                    
+                            } catch (\Exception $e) {
+                                Notification::make()
+                                    ->title('Failed to activate wallet')
+                                    ->body($e->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
