@@ -48,9 +48,9 @@
 
             <!-- Wallet Cards -->
             <div class="space-y-4 mb-6">
-                <!-- Credit Wallet Card -->
+                <!-- Naira Wallet Card -->
                 <div
-                    class="bg-gradient-to-r from-orange-500 to-purple-600 rounded-2xl p-5 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]">
+                    class="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl p-5 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]">
                     <!-- Card Header -->
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center">
@@ -62,20 +62,18 @@
                                     </path>
                                 </svg>
                             </div>
-                            <h3 class="text-sm font-medium opacity-90 ml-2">Credits</h3>
+                            <h3 class="text-sm font-medium opacity-90 ml-2">Naira Wallet</h3>
                         </div>
                         <div class="text-xs opacity-75">Available</div>
                     </div>
 
                     <!-- Balance Display -->
                     <div class="mb-4">
-                        <div class="text-2xl font-bold">{{ number_format($user->getCreditWallet()->balance) }}</div>
-                        <div class="text-white/70 text-sm">≈
-                            ₦{{ number_format($user->getCreditWallet()->balance * $pricingConfig['credit_price'], 2) }}
-                        </div>
+                        <div class="text-2xl font-bold">₦{{ number_format($user->getNairaWallet()->balance, 2) }}</div>
+                        <div class="text-white/70 text-sm">Ready for transactions</div>
                     </div>
 
-                    <!-- Purchase Button -->
+                    <!-- Fund Button -->
                     <button
                         class="w-full bg-white/20 backdrop-blur-sm text-white font-medium py-3 px-4 rounded-xl hover:bg-white/30 transition-all duration-200 active:scale-95 flex items-center justify-center group">
                         <svg class="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" fill="none"
@@ -83,8 +81,39 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
-                        Buy Credits
+                        Fund Wallet
                     </button>
+                </div>
+
+                <!-- Credits Wallet Card (Read-only) -->
+                <div
+                    class="bg-gradient-to-r from-orange-500 to-purple-600 rounded-2xl p-5 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]">
+                    <!-- Card Header -->
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div
+                                class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h3 class="text-sm font-medium opacity-90 ml-2">Credits</h3>
+                        </div>
+                        <div class="text-xs opacity-75">Messaging</div>
+                    </div>
+
+                    <!-- Balance Display -->
+                    <div class="mb-4">
+                        <div class="text-2xl font-bold">{{ number_format($user->getCreditWallet()->balance) }}</div>
+                        <div class="text-white/70 text-sm">For WhatsApp messaging</div>
+                    </div>
+
+                    <!-- Info Button -->
+                    <div class="w-full bg-white/10 backdrop-blur-sm text-white/70 font-medium py-3 px-4 rounded-xl text-center text-sm">
+                        💡 Credits earned from channel ads
+                    </div>
                 </div>
 
                 <!-- Earnings Wallet Card -->
@@ -127,25 +156,25 @@
                 </div>
             </div>
 
-            <!-- Credit Purchase Section -->
+            <!-- Naira Wallet Funding Section -->
             <div class="bg-white rounded-2xl p-5 mb-6 shadow-lg">
                 <div class="flex items-center mb-4">
                     <div
-                        class="w-8 h-8 bg-gradient-to-r from-orange-500 to-purple-500 rounded-lg flex items-center justify-center mr-3">
+                        class="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center mr-3">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900">Buy Credits</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">Fund Naira Wallet</h3>
                 </div>
 
                 <!-- Pricing Info -->
-                <div class="bg-gradient-to-r from-orange-50 to-purple-50 border border-orange-200 rounded-lg p-3 mb-4">
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-4">
                     <div class="text-sm text-gray-700 space-y-1">
-                        <div>1 Credit = ₦{{ number_format($pricingConfig['credit_price'], 2) }}</div>
-                        <div>Min: {{ $pricingConfig['minimum_credits'] }} credits</div>
-                        <div class="text-purple-600 font-medium">💰 Bonus credits on large packages!</div>
+                        <div>💳 Secure payment via Paystack</div>
+                        <div>⚡ Instant wallet funding</div>
+                        <div class="text-blue-600 font-medium">🎁 Bonus Naira on large packages!</div>
                     </div>
                 </div>
 
@@ -157,29 +186,29 @@
                                 id="package-{{ $index }}" class="sr-only peer">
                             <label for="package-{{ $index }}"
                                 class="block p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95
-                                      {{ $selectedPackage === $index ? 'border-orange-500 bg-gradient-to-br from-orange-50 to-purple-50 shadow-md' : 'border-gray-200 hover:border-orange-300' }}">
+                                      {{ $selectedPackage === $index ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-md' : 'border-gray-200 hover:border-blue-300' }}">
 
                                 @if ($package['bonus'] > 0)
                                     <div
                                         class="absolute -top-1 -right-1 bg-green-500 text-white text-xs font-bold px-1 py-0.5 rounded-full">
-                                        +{{ $package['bonus'] }}
+                                        +₦{{ number_format($package['bonus']) }}
                                     </div>
                                 @endif
 
                                 <div class="text-center">
                                     <div class="text-lg font-bold text-gray-900">
-                                        {{ number_format($package['credits']) }}
+                                        ₦{{ number_format($package['naira']) }}
                                     </div>
-                                    <div class="text-xs text-gray-500">Credits</div>
+                                    <div class="text-xs text-gray-500">Base Amount</div>
 
                                     @if ($package['bonus'] > 0)
                                         <div class="text-xs text-green-600 font-medium mt-1">
-                                            Total: {{ number_format($package['total_credits']) }}
+                                            Total: ₦{{ number_format($package['total_naira']) }}
                                         </div>
                                     @endif
 
-                                    <div class="mt-2 text-base font-bold text-gray-900">
-                                        ₦{{ number_format($package['amount']) }}
+                                    <div class="mt-2 text-base font-bold text-blue-600">
+                                        Pay ₦{{ number_format($package['amount']) }}
                                     </div>
                                 </div>
                             </label>
@@ -187,10 +216,10 @@
                     @endforeach
                 </div>
 
-                <!-- Purchase Button -->
+                <!-- Fund Button -->
                 <button wire:click="purchaseCredits" wire:loading.attr="disabled"
-                    class="w-full bg-gradient-to-r from-orange-500 to-purple-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">
-                    <span wire:loading.remove>Purchase Credits</span>
+                    class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">
+                    <span wire:loading.remove>Fund Wallet</span>
                     <span wire:loading class="flex items-center justify-center">
                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"

@@ -203,12 +203,22 @@ class PaystackController extends Controller
         }
 
         $minimumAmount = $this->settingService->get('minimum_amount_naira', 300.0);
-        $minimumCredits = $this->settingService->get('minimum_credits_purchase', 100);
+        $walletType = $request->input('wallet_type', 'credits');
+        $purchaseType = $request->input('purchase_type', 'credit_purchase');
         
-        $request->validate([
+        $validationRules = [
             'amount' => "required|numeric|min:{$minimumAmount}",
-            'credits' => "required|integer|min:{$minimumCredits}",
-        ]);
+            'wallet_type' => 'sometimes|string|in:credits,naira',
+            'purchase_type' => 'sometimes|string|in:credit_purchase,naira_funding',
+        ];
+        
+        // Add credits validation only for credit purchases
+        if ($walletType === 'credits') {
+            $minimumCredits = $this->settingService->get('minimum_credits_purchase', 100);
+            $validationRules['credits'] = "required|integer|min:{$minimumCredits}";
+        }
+        
+        $request->validate($validationRules);
 
         try {
             $user = Auth::user();
@@ -222,7 +232,9 @@ class PaystackController extends Controller
                     'source' => 'api',
                     'user_agent' => $request->userAgent(),
                     'ip_address' => $request->ip(),
-                ]
+                ],
+                $walletType,
+                $purchaseType
             );
 
             if ($result['success']) {

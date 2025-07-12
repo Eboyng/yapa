@@ -124,9 +124,9 @@ class ChannelShow extends Component
 
             $user = Auth::user();
             
-            // Check if user has sufficient wallet balance for wallet payment
-            if ($this->payment_method === 'wallet' && $user->wallet_balance < $this->total_amount) {
-                // Auto-switch to Paystack if insufficient wallet balance
+            // Check if user has sufficient Naira wallet balance for wallet payment
+            if ($this->payment_method === 'wallet' && $user->naira_wallet_balance < $this->total_amount) {
+                // Auto-switch to Paystack if insufficient Naira wallet balance
                 $this->payment_method = 'paystack';
             }
 
@@ -158,12 +158,14 @@ class ChannelShow extends Component
                 $transactionService = app(TransactionService::class);
                 
                 if ($this->payment_method === 'wallet') {
-                    // Deduct from wallet and create escrow
-                    $escrowTransaction = $transactionService->createChannelAdBookingEscrow(
+                    // Deduct from Naira wallet and create escrow
+                    $escrowTransaction = $transactionService->createEscrow(
                         $user,
                         $this->total_amount,
-                        $booking->id,
-                        "Escrow for channel ad booking: {$this->channelAd->title}"
+                        'naira',
+                        Transaction::CATEGORY_CHANNEL_AD_BOOKING,
+                        "Escrow for channel ad booking: {$this->channelAd->title}",
+                        $booking->id
                     );
                     
                     $booking->update([
@@ -255,7 +257,7 @@ class ChannelShow extends Component
     public function render()
     {
         return view('livewire.channel-show', [
-            'userWalletBalance' => Auth::check() ? Auth::user()->wallet_balance : 0,
+            'userNairaBalance' => Auth::check() ? Auth::user()->naira_wallet_balance : 0,
         ])->layout('layouts.app');
     }
 }

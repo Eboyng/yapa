@@ -13,9 +13,9 @@ use Carbon\Carbon;
 
 class PaystackService
 {
-    private string $secretKey;
-    private string $publicKey;
-    private string $webhookSecret;
+    private ?string $secretKey;
+    private ?string $publicKey;
+    private ?string $webhookSecret;
     private string $baseUrl;
     private TransactionService $transactionService;
     private ReferralService $referralService;
@@ -39,9 +39,9 @@ class PaystackService
     {
         $settings = $this->settingService->getPaystackSettings();
         
-        $this->secretKey = $settings['paystack_secret_key'] ?: config('services.paystack.secret_key', '');
-        $this->publicKey = $settings['paystack_public_key'] ?: config('services.paystack.public_key', '');
-        $this->webhookSecret = $settings['paystack_webhook_secret'] ?: config('services.paystack.webhook_secret', '');
+        $this->secretKey = $settings['paystack_secret_key'] ?: config('services.paystack.secret_key', '') ?: '';
+        $this->publicKey = $settings['paystack_public_key'] ?: config('services.paystack.public_key', '') ?: '';
+        $this->webhookSecret = $settings['paystack_webhook_secret'] ?: config('services.paystack.webhook_secret', '') ?: '';
         $this->baseUrl = $settings['paystack_environment'] === 'live' 
             ? 'https://api.paystack.co' 
             : 'https://api.paystack.co'; // Paystack uses same URL for both
@@ -55,37 +55,57 @@ class PaystackService
         float $amount,
         string $email,
         ?string $callbackUrl = null,
-        ?array $metadata = null
+        ?array $metadata = null,
+        string $walletType = 'credits',
+        string $purchaseType = 'credit_purchase'
     ): array {
         $user = User::findOrFail($userId);
         
-        // Calculate credits based on amount
-        $credits = $this->calculateCreditsFromAmount($amount);
-        $minimumCredits = $this->settingService->get('minimum_credits_purchase', 100);
         $minimumAmount = $this->settingService->get('minimum_amount_naira', 300.0);
         
-        if ($credits < $minimumCredits) {
-            throw new \InvalidArgumentException("Minimum purchase is {$minimumCredits} credits (NGN{$minimumAmount})");
+        if ($amount < $minimumAmount) {
+            throw new \InvalidArgumentException("Minimum payment amount is NGN{$minimumAmount}");
         }
 
-        // Get user's credits wallet
-        $creditsWallet = $user->getCreditWallet();
+        // Get appropriate wallet based on type
+        if ($walletType === 'naira') {
+            $wallet = $user->getNairaWallet();
+            $transactionAmount = $amount; // For Naira wallet, amount is in Naira
+            $transactionType = 'credit';
+            $category = Transaction::CATEGORY_NAIRA_FUNDING;
+            $description = "Naira wallet funding of NGN{$amount}";
+        } else {
+            // Legacy credit purchase logic
+            $credits = $this->calculateCreditsFromAmount($amount);
+            $minimumCredits = $this->settingService->get('minimum_credits_purchase', 100);
+            
+            if ($credits < $minimumCredits) {
+                throw new \InvalidArgumentException("Minimum purchase is {$minimumCredits} credits (NGN{$minimumAmount})");
+            }
+            
+            $wallet = $user->getCreditWallet();
+            $transactionAmount = $credits;
+            $transactionType = 'credit';
+            $category = Transaction::CATEGORY_CREDIT_PURCHASE;
+            $description = "Purchase of {$credits} credits";
+        }
 
         // Create pending transaction
         $transaction = Transaction::create([
             'user_id' => $userId,
-            'wallet_id' => $creditsWallet->id,
-            'amount' => $credits,
-            'type' => 'credit',
-            'category' => Transaction::CATEGORY_CREDIT_PURCHASE,
-            'description' => "Purchase of {$credits} credits",
+            'wallet_id' => $wallet->id,
+            'amount' => $transactionAmount,
+            'type' => $transactionType,
+            'category' => $category,
+            'description' => $description,
             'status' => Transaction::STATUS_PENDING,
             'source' => 'paystack',
             'metadata' => array_merge($metadata ?? [], [
                 'naira_amount' => $amount,
-                'credits' => $credits,
+                'wallet_type' => $walletType,
+                'purchase_type' => $purchaseType,
                 'email' => $email,
-            ]),
+            ] + ($walletType === 'credits' ? ['credits' => $credits] : [])),
         ]);
 
         try {
@@ -100,19 +120,25 @@ class PaystackService
                 'metadata' => [
                     'user_id' => $userId,
                     'transaction_id' => $transaction->id,
-                    'credits' => $credits,
-                    'custom_fields' => [
+                    'wallet_type' => $walletType,
+                    'purchase_type' => $purchaseType,
+                    'custom_fields' => array_filter([
                         [
                             'display_name' => 'User ID',
                             'variable_name' => 'user_id',
                             'value' => $userId,
                         ],
-                        [
+                        $walletType === 'credits' ? [
                             'display_name' => 'Credits',
                             'variable_name' => 'credits',
-                            'value' => $credits,
-                        ],
-                    ],
+                            'value' => $credits ?? 0,
+                        ] : null,
+                        $walletType === 'naira' ? [
+                            'display_name' => 'Wallet Type',
+                            'variable_name' => 'wallet_type',
+                            'value' => 'Naira Wallet',
+                        ] : null,
+                    ]),
                 ],
             ]);
 
@@ -132,7 +158,9 @@ class PaystackService
                     'user_id' => $userId,
                     'transaction_id' => $transaction->id,
                     'amount' => $amount,
-                    'credits' => $credits,
+                    'wallet_type' => $walletType,
+                    'purchase_type' => $purchaseType,
+                    'transaction_amount' => $transactionAmount,
                     'paystack_reference' => $data['reference'],
                 ]);
 
@@ -144,8 +172,10 @@ class PaystackService
                     'authorization_url' => $data['authorization_url'],
                     'access_code' => $data['access_code'],
                     'amount' => $amount,
-                    'credits' => $credits,
-                ];
+                    'wallet_type' => $walletType,
+                    'purchase_type' => $purchaseType,
+                ] + ($walletType === 'credits' ? ['credits' => $credits ?? 0] : []),
+            ];
             }
 
             $error = $response->json()['message'] ?? 'Payment initialization failed';
@@ -314,11 +344,20 @@ class PaystackService
         }
 
         return DB::transaction(function () use ($transaction, $data) {
+            $walletType = $transaction->metadata['wallet_type'] ?? 'credits';
+            
+            // Determine the correct wallet type for the transaction service
+            if ($walletType === 'naira') {
+                $serviceWalletType = 'naira';
+            } else {
+                $serviceWalletType = 'credits';
+            }
+            
             // Credit user's wallet
             $this->transactionService->credit(
                 $transaction->user_id,
                 $transaction->amount,
-                $transaction->type,
+                $serviceWalletType,
                 $transaction->category,
                 $transaction->description,
                 $transaction->related_id,
@@ -329,8 +368,8 @@ class PaystackService
                 ])
             );
 
-            // Process referral reward for credit purchases
-            if ($transaction->category === Transaction::CATEGORY_CREDIT_PURCHASE) {
+            // Process referral reward for credit purchases, Naira funding, and channel ad bookings
+            if (in_array($transaction->category, [Transaction::CATEGORY_CREDIT_PURCHASE, Transaction::CATEGORY_NAIRA_FUNDING, Transaction::CATEGORY_CHANNEL_AD_BOOKING])) {
                 $user = User::find($transaction->user_id);
                 $nairaAmount = $transaction->metadata['naira_amount'] ?? 0;
                 
@@ -343,6 +382,8 @@ class PaystackService
                 'transaction_id' => $transaction->id,
                 'user_id' => $transaction->user_id,
                 'amount' => $transaction->amount,
+                'wallet_type' => $walletType,
+                'category' => $transaction->category,
                 'reference' => $data['reference'],
             ]);
 
@@ -425,7 +466,7 @@ class PaystackService
      */
     private function verifyWebhookSignature(array $payload, string $signature): bool
     {
-        $webhookSecret = $this->webhookSecret ?: $this->secretKey;
+        $webhookSecret = $this->webhookSecret ?: $this->secretKey ?: '';
         $computedSignature = hash_hmac('sha512', json_encode($payload), $webhookSecret);
         return hash_equals($signature, $computedSignature);
     }
@@ -496,7 +537,7 @@ class PaystackService
      */
     public function getPublicKey(): string
     {
-        return $this->publicKey;
+        return $this->publicKey ?? '';
     }
 
     /**
@@ -739,5 +780,26 @@ class PaystackService
                 'message' => 'Transfer service error: ' . $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Initialize payment for channel ad booking.
+     */
+    public function initializeChannelAdBookingPayment(
+        int $userId,
+        float $amount,
+        string $email,
+        ?string $callbackUrl = null,
+        ?array $metadata = null
+    ): array {
+        return $this->initializePayment(
+            $userId,
+            $amount,
+            $email,
+            $callbackUrl,
+            $metadata,
+            'naira', // Use Naira wallet for channel ad bookings
+            'channel_ad_booking' // Purchase type for channel ad bookings
+        );
     }
 }

@@ -13,7 +13,7 @@ use Carbon\Carbon;
 
 class OtpService
 {
-    private string $kudismsApiKey;
+    private ?string $kudismsApiKey;
     private string $kudismsBaseUrl;
     private string $kudismsSenderId;
     private WhatsAppService $whatsAppService;
@@ -25,7 +25,7 @@ class OtpService
         $this->settingService = $settingService;
         
         // Keep SMS settings from config for fallback
-        $this->kudismsApiKey = config('services.kudisms.api_key');
+        $this->kudismsApiKey = config('services.kudisms.api_key') ?? '';
         $this->kudismsBaseUrl = config('services.kudisms.base_url', 'https://api.kudisms.net');
         $this->kudismsSenderId = config('services.kudisms.sender_id', 'YAPA');
     }

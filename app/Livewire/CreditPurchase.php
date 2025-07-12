@@ -71,7 +71,7 @@ class CreditPurchase extends Component
     {
         $paystackService = app(PaystackService::class);
         $this->pricingConfig = $paystackService->getPricingConfig();
-        $this->packages = $this->pricingConfig['packages'];
+        $this->packages = $this->generateNairaPackages();
         
         // Load withdrawal data
         $this->loadBanks();
@@ -86,7 +86,7 @@ class CreditPurchase extends Component
     public function updatedCustomAmount($value)
     {
         if ($value && $value >= 300) {
-            $this->customCredits = (int) floor($value / $this->pricingConfig['credit_price']);
+            $this->customCredits = $value; // Store as Naira amount
             $this->selectedPackage = -1; // Custom package
         }
     }
@@ -94,7 +94,7 @@ class CreditPurchase extends Component
     public function updatedCustomCredits($value)
     {
         if ($value && $value >= 100) {
-            $this->customAmount = $value * $this->pricingConfig['credit_price'];
+            $this->customAmount = $value; // For Naira wallet, credits field represents Naira amount
             $this->selectedPackage = -1; // Custom package
         }
     }
@@ -149,6 +149,8 @@ class CreditPurchase extends Component
                     'package_index' => $this->selectedPackage,
                     'is_retry' => $this->retryTransactionId ? true : false,
                     'original_transaction_id' => $this->retryTransactionId,
+                    'wallet_type' => 'naira',
+                    'purchase_type' => 'naira_funding',
                 ]
             );
 
@@ -160,7 +162,7 @@ class CreditPurchase extends Component
             }
 
         } catch (\Exception $e) {
-            Log::error('Credit purchase error', [
+            Log::error('Naira wallet funding error', [
                 'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
                 'amount' => $amount ?? null,
@@ -190,6 +192,61 @@ class CreditPurchase extends Component
             $this->retryTransactionId = null;
             session()->flash('error', 'Transaction not found or cannot be retried.');
         }
+    }
+
+    private function generateNairaPackages(): array
+    {
+        // Generate Naira funding packages
+        return [
+            [
+                'amount' => 1000,
+                'naira' => 1000,
+                'bonus' => 0,
+                'total_naira' => 1000,
+                'total_credits' => 1000,
+                'label' => '₦1,000',
+            ],
+            [
+                'amount' => 2500,
+                'naira' => 2500,
+                'bonus' => 100,
+                'total_naira' => 2600,
+                'total_credits' => 2600,
+                'label' => '₦2,500',
+            ],
+            [
+                'amount' => 5000,
+                'naira' => 5000,
+                'bonus' => 300,
+                'total_naira' => 5300,
+                'total_credits' => 5300,
+                'label' => '₦5,000',
+            ],
+            [
+                'amount' => 10000,
+                'naira' => 10000,
+                'bonus' => 750,
+                'total_naira' => 10750,
+                'total_credits' => 10750,
+                'label' => '₦10,000',
+            ],
+            [
+                'amount' => 20000,
+                'naira' => 20000,
+                'bonus' => 2000,
+                'total_naira' => 22000,
+                'total_credits' => 22000,
+                'label' => '₦20,000',
+            ],
+            [
+                'amount' => 50000,
+                'naira' => 50000,
+                'bonus' => 7500,
+                'total_naira' => 57500,
+                'total_credits' => 57500,
+                'label' => '₦50,000',
+            ],
+        ];
     }
 
     // Withdrawal Modal Methods

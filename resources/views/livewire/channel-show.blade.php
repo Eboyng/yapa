@@ -231,8 +231,8 @@
                                            class="focus:ring-orange-500 h-3 w-3 text-orange-600 border-gray-300">
                                     <div class="ml-2">
                                         <div class="text-xs text-gray-700 font-medium">Wallet</div>
-                                        <div class="text-xs text-gray-500">₦{{ number_format($userWalletBalance) }}</div>
-                                        @if($userWalletBalance < $total_amount)
+                                        <div class="text-xs text-gray-500">₦{{ number_format($userNairaBalance) }}</div>
+                                        @if($userNairaBalance < $total_amount)
                                             <div class="text-xs text-red-500">Insufficient</div>
                                         @endif
                                     </div>
@@ -374,8 +374,8 @@
                                                        value="wallet" 
                                                        class="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300">
                                                 <span class="ml-3 text-sm text-gray-700">
-                                                    Wallet (Balance: ₦{{ number_format($userWalletBalance) }})
-                                                    @if($userWalletBalance < $total_amount)
+                                                    Wallet (Balance: ₦{{ number_format($userNairaBalance) }})
+                                                    @if($userNairaBalance < $total_amount)
                                                         <span class="text-red-500 text-xs block">(Insufficient balance - will use Paystack)</span>
                                                     @endif
                                                 </span>

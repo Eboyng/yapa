@@ -76,6 +76,7 @@ class Transaction extends Model
      * Transaction categories.
      */
     const CATEGORY_CREDIT_PURCHASE = 'credit_purchase';
+    const CATEGORY_NAIRA_FUNDING = 'naira_funding';
     const CATEGORY_WHATSAPP_MESSAGE = 'whatsapp_message';
     const CATEGORY_SMS_MESSAGE = 'sms_message';
     const CATEGORY_REFUND = 'refund';
@@ -88,6 +89,7 @@ class Transaction extends Model
     const CATEGORY_AD_EARNING = 'ad_earning';
     const CATEGORY_MANUAL_ADJUSTMENT = 'manual_adjustment';
     const CATEGORY_CHANNEL_AD_ESCROW = 'channel_ad_escrow';
+    const CATEGORY_CHANNEL_AD_BOOKING = 'channel_ad_booking';
     const CATEGORY_CHANNEL_AD_PAYMENT = 'channel_ad_payment';
     const CATEGORY_CHANNEL_SALE_ESCROW = 'channel_sale_escrow';
     const CATEGORY_CHANNEL_SALE_PAYMENT = 'channel_sale_payment';
