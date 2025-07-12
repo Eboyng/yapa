@@ -169,7 +169,7 @@ class AdTask extends Component
                 $transaction = Transaction::create([
                     'user_id' => $this->adTask->user_id,
                     'wallet_id' => $earningsWallet->id,
-                    'type' => Transaction::TYPE_CREDIT,
+                    'type' => Transaction::TYPE_EARNINGS,
                     'category' => Transaction::CATEGORY_AD_EARNING,
                     'amount' => $estimatedEarnings,
                     'description' => "Ad earnings for: {$this->ad->title}",

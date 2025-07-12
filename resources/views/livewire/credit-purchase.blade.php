@@ -74,7 +74,7 @@
                     </div>
 
                     <!-- Fund Button -->
-                    <button
+                    <button wire:click="openFundModal"
                         class="w-full bg-white/20 backdrop-blur-sm text-white font-medium py-3 px-4 rounded-xl hover:bg-white/30 transition-all duration-200 active:scale-95 flex items-center justify-center group">
                         <svg class="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" fill="none"
                             stroke="currentColor" viewBox="0 0 24 24">
@@ -156,59 +156,61 @@
                 </div>
             </div>
 
-            <!-- Naira Wallet Funding Section -->
+          
+            <!-- Credit Purchase Section -->
             <div class="bg-white rounded-2xl p-5 mb-6 shadow-lg">
                 <div class="flex items-center mb-4">
                     <div
-                        class="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center mr-3">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        class="w-8 h-8 bg-gradient-to-r from-orange-500 to-purple-500 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z">
+                            </path>
                         </svg>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900">Fund Naira Wallet</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">Purchase Credits</h3>
                 </div>
 
-                <!-- Pricing Info -->
-                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <!-- Info Banner -->
+                <div class="bg-gradient-to-r from-orange-50 to-purple-50 border border-orange-200 rounded-lg p-3 mb-4">
                     <div class="text-sm text-gray-700 space-y-1">
-                        <div>💳 Secure payment via Paystack</div>
-                        <div>⚡ Instant wallet funding</div>
-                        <div class="text-blue-600 font-medium">🎁 Bonus Naira on large packages!</div>
+                        <div>💳 Use your Naira wallet balance</div>
+                        <div>⚡ Instant credit purchase</div>
+                        <div class="text-orange-600 font-medium">🎁 Bonus credits on large packages!</div>
                     </div>
                 </div>
 
-                <!-- Package Selection -->
+                <!-- Credit Package Selection -->
                 <div class="grid grid-cols-2 gap-3 mb-4">
-                    @foreach ($packages as $index => $package)
+                    @foreach ($creditPackages as $index => $package)
                         <div class="relative">
-                            <input type="radio" wire:click="selectPackage({{ $index }})" name="package"
-                                id="package-{{ $index }}" class="sr-only peer">
-                            <label for="package-{{ $index }}"
+                            <input type="radio" wire:click="selectCreditPackage({{ $index }})" name="credit_package"
+                                id="credit-package-{{ $index }}" class="sr-only peer">
+                            <label for="credit-package-{{ $index }}"
                                 class="block p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95
-                                      {{ $selectedPackage === $index ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-md' : 'border-gray-200 hover:border-blue-300' }}">
+                                      {{ $selectedCreditPackage === $index ? 'border-orange-500 bg-gradient-to-br from-orange-50 to-purple-50 shadow-md' : 'border-gray-200 hover:border-orange-300' }}">
 
                                 @if ($package['bonus'] > 0)
                                     <div
                                         class="absolute -top-1 -right-1 bg-green-500 text-white text-xs font-bold px-1 py-0.5 rounded-full">
-                                        +₦{{ number_format($package['bonus']) }}
+                                        +{{ number_format($package['bonus']) }}
                                     </div>
                                 @endif
 
                                 <div class="text-center">
                                     <div class="text-lg font-bold text-gray-900">
-                                        ₦{{ number_format($package['naira']) }}
+                                        {{ number_format($package['credits']) }}
                                     </div>
-                                    <div class="text-xs text-gray-500">Base Amount</div>
+                                    <div class="text-xs text-gray-500">Credits</div>
 
                                     @if ($package['bonus'] > 0)
                                         <div class="text-xs text-green-600 font-medium mt-1">
-                                            Total: ₦{{ number_format($package['total_naira']) }}
+                                            Total: {{ number_format($package['total_credits']) }}
                                         </div>
                                     @endif
 
-                                    <div class="mt-2 text-base font-bold text-blue-600">
-                                        Pay ₦{{ number_format($package['amount']) }}
+                                    <div class="mt-2 text-base font-bold text-orange-600">
+                                        ₦{{ number_format($package['amount']) }}
                                     </div>
                                 </div>
                             </label>
@@ -216,10 +218,26 @@
                     @endforeach
                 </div>
 
-                <!-- Fund Button -->
-                <button wire:click="purchaseCredits" wire:loading.attr="disabled"
-                    class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">
-                    <span wire:loading.remove>Fund Wallet</span>
+                <!-- Custom Amount Input -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Or enter custom amount (₦)</label>
+                    <input type="number" wire:model.live="customCreditAmount"
+                        class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                        placeholder="Minimum ₦{{ number_format($minCreditAmount) }}" min="{{ $minCreditAmount }}">
+                    @error('customCreditAmount')
+                        <span class="text-red-500 text-sm">{{ $message }}</span>
+                    @enderror
+                    @if ($customCreditAmount && $customCreditAmount >= $minCreditAmount)
+                        <div class="text-sm text-gray-600 mt-1">
+                            You'll get: {{ number_format(floor($customCreditAmount / $pricingConfig['credit_price'])) }} credits
+                        </div>
+                    @endif
+                </div>
+
+                <!-- Purchase Button -->
+                <button wire:click="purchaseCreditsWithNaira" wire:loading.attr="disabled"
+                    class="w-full bg-gradient-to-r from-orange-500 to-purple-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">
+                    <span wire:loading.remove>Purchase Credits</span>
                     <span wire:loading class="flex items-center justify-center">
                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
@@ -408,6 +426,78 @@
                                 <button wire:click="processWithdrawal" wire:loading.attr="disabled"
                                     class="flex-1 bg-gradient-to-r from-green-500 to-teal-600 text-white py-3 px-4 rounded-xl hover:shadow-lg transition-all active:scale-95 disabled:opacity-50">
                                     <span wire:loading.remove>Withdraw</span>
+                                    <span wire:loading class="flex items-center justify-center">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none"
+                                            viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10"
+                                                stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                        Processing...
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            <!-- Fund Wallet Modal -->
+            @if ($showFundModal)
+                <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                        <div class="p-6">
+                            <!-- Modal Header -->
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-xl font-bold text-gray-900">Fund Naira Wallet</h3>
+                                <button wire:click="closeFundModal"
+                                    class="text-gray-400 hover:text-gray-600 transition-colors">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Amount Field -->
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Amount (₦)</label>
+                                <input type="number" wire:model.live="fundAmount"
+                                    class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-lg py-3 px-4"
+                                    placeholder="Enter amount to fund" min="{{ $pricingConfig['minimum_amount'] ?? 100 }}">
+                                @error('fundAmount')
+                                    <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
+                                @enderror
+                                <div class="text-xs text-gray-500 mt-1">
+                                    Minimum: ₦{{ number_format($pricingConfig['minimum_amount'] ?? 100) }}
+                                </div>
+                            </div>
+
+                            <!-- Payment Info -->
+                            <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                                <div class="flex items-start">
+                                    <svg class="w-5 h-5 text-blue-500 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <div class="text-sm text-blue-700">
+                                        <p class="font-medium mb-1">Payment via Paystack</p>
+                                        <p>You will be redirected to Paystack to complete your payment securely.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Submit Buttons -->
+                            <div class="flex space-x-3">
+                                <button wire:click="closeFundModal"
+                                    class="flex-1 bg-gray-100 text-gray-800 py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors active:scale-95">
+                                    Cancel
+                                </button>
+                                <button wire:click="fundWallet" wire:loading.attr="disabled"
+                                    class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-xl hover:shadow-lg transition-all active:scale-95 disabled:opacity-50">
+                                    <span wire:loading.remove>Proceed to Payment</span>
                                     <span wire:loading class="flex items-center justify-center">
                                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none"
                                             viewBox="0 0 24 24">

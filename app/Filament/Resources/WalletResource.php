@@ -210,11 +210,19 @@ class WalletResource extends Resource
                                     $targetWallet->debit($amount);
                                 }
                                 
+                                // Determine correct transaction type based on wallet type
+                                $transactionType = match($walletType) {
+                                    Wallet::TYPE_CREDITS => $type === 'credit' ? Transaction::TYPE_CREDIT : Transaction::TYPE_DEBIT,
+                                    Wallet::TYPE_NAIRA => Transaction::TYPE_NAIRA,
+                                    Wallet::TYPE_EARNINGS => Transaction::TYPE_EARNINGS,
+                                    default => $type === 'credit' ? Transaction::TYPE_CREDIT : Transaction::TYPE_DEBIT,
+                                };
+                                
                                 // Create transaction record
                                 Transaction::create([
                                     'user_id' => $targetWallet->user_id,
                                     'wallet_id' => $targetWallet->id,
-                                    'type' => $type === 'credit' ? Transaction::TYPE_CREDIT : Transaction::TYPE_DEBIT,
+                                    'type' => $transactionType,
                                     'category' => Transaction::CATEGORY_MANUAL_ADJUSTMENT,
                                     'amount' => $amount,
                                     'balance_before' => $type === 'credit' ? $targetWallet->balance - $amount : $targetWallet->balance + $amount,

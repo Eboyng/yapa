@@ -15,13 +15,19 @@ use Illuminate\Support\Facades\DB;
 class CreditPurchase extends Component
 {
     // Credit Purchase Properties
-    public int $selectedPackage = 0;
-    public float $customAmount = 0;
-    public int $customCredits = 0;
     public bool $isProcessing = false;
     public ?int $retryTransactionId = null;
-    public array $packages = [];
     public array $pricingConfig = [];
+    
+    // Fund Wallet Modal Properties
+    public bool $showFundModal = false;
+    public float $fundAmount = 0;
+    
+    // Credit package properties
+    public $selectedCreditPackage = null;
+    public $customCreditAmount = null;
+    public $minCreditAmount = 100;
+    public $creditPackages = [];
     
     // Withdrawal Properties
     public bool $showWithdrawModal = false;
@@ -47,8 +53,8 @@ class CreditPurchase extends Component
     public const AIRTIME_FEE_PERCENTAGE = 2.0;
 
     protected $rules = [
-        'customAmount' => 'nullable|numeric|min:300',
-        'customCredits' => 'nullable|integer|min:100',
+        // Removed old validation rules - now using credit packages
+        'fundAmount' => 'required|numeric|min:300',
         'amount' => 'required|numeric|min:1000',
         'withdrawalMethod' => 'required|string|in:bank_account,palmpay,airtime',
         'accountNumber' => 'required_if:withdrawalMethod,bank_account|string|size:10',
@@ -59,8 +65,8 @@ class CreditPurchase extends Component
     ];
 
     protected $messages = [
-        'customAmount.min' => 'Minimum amount is ₦300 (100 credits)',
-        'customCredits.min' => 'Minimum purchase is 100 credits',
+        // Removed old validation messages - now using credit packages
+        'fundAmount.min' => 'Minimum funding amount is ₦300',
         'amount.min' => 'Minimum withdrawal amount is ₦1,000',
         'accountNumber.size' => 'Account number must be exactly 10 digits',
         'palmpayNumber.size' => 'PalmPay number must be exactly 11 digits',
@@ -71,11 +77,11 @@ class CreditPurchase extends Component
     {
         $paystackService = app(PaystackService::class);
         $this->pricingConfig = $paystackService->getPricingConfig();
-        $this->packages = $this->generateNairaPackages();
         
         // Load withdrawal data
         $this->loadBanks();
         $this->loadAirtimeNetworks();
+        $this->initializeCreditPackages();
         
         if ($retry) {
             $this->retryTransactionId = $retry;
@@ -83,31 +89,97 @@ class CreditPurchase extends Component
         }
     }
 
-    public function updatedCustomAmount($value)
+    public function updatedFundAmount($value)
     {
-        if ($value && $value >= 300) {
-            $this->customCredits = $value; // Store as Naira amount
-            $this->selectedPackage = -1; // Custom package
+        // Validate minimum amount
+        if ($value && $value < $this->pricingConfig['minimum_amount']) {
+            $this->addError('fundAmount', 'Minimum funding amount is ₦' . number_format($this->pricingConfig['minimum_amount']));
         }
     }
 
-    public function updatedCustomCredits($value)
+    public function updatedCustomCreditAmount($value)
     {
-        if ($value && $value >= 100) {
-            $this->customAmount = $value; // For Naira wallet, credits field represents Naira amount
-            $this->selectedPackage = -1; // Custom package
+        if ($value && $value >= $this->minCreditAmount) {
+            $this->selectedCreditPackage = null;
+            $this->resetValidation(['customCreditAmount']);
         }
     }
-
-    public function selectPackage($index)
+    
+    public function selectCreditPackage($index)
     {
-        $this->selectedPackage = $index;
-        $this->customAmount = 0;
-        $this->customCredits = 0;
+        $this->selectedCreditPackage = $index;
+        $this->customCreditAmount = null;
+        $this->resetValidation();
+    }
+    
+    private function initializeCreditPackages()
+    {
+        $creditPrice = $this->pricingConfig['credit_price'];
+        
+        $this->creditPackages = [
+            [
+                'credits' => 100,
+                'amount' => 100 * $creditPrice,
+                'bonus' => 0,
+                'total_credits' => 100,
+                'label' => 'Starter'
+            ],
+            [
+                'credits' => 500,
+                'amount' => 500 * $creditPrice,
+                'bonus' => 50,
+                'total_credits' => 550,
+                'label' => 'Basic'
+            ],
+            [
+                'credits' => 1000,
+                'amount' => 1000 * $creditPrice,
+                'bonus' => 150,
+                'total_credits' => 1150,
+                'label' => 'Standard'
+            ],
+            [
+                'credits' => 2000,
+                'amount' => 2000 * $creditPrice,
+                'bonus' => 400,
+                'total_credits' => 2400,
+                'label' => 'Premium'
+            ],
+            [
+                'credits' => 5000,
+                'amount' => 5000 * $creditPrice,
+                'bonus' => 1250,
+                'total_credits' => 6250,
+                'label' => 'Ultimate'
+            ],
+            [
+                'credits' => 10000,
+                'amount' => 10000 * $creditPrice,
+                'bonus' => 3000,
+                'total_credits' => 13000,
+                'label' => 'Enterprise'
+            ]
+        ];
+    }
+    
+
+
+    // Fund Wallet Modal Methods
+    public function openFundModal()
+    {
+        $this->showFundModal = true;
+        $this->fundAmount = 0;
         $this->resetValidation();
     }
 
-    public function purchaseCredits()
+    public function closeFundModal()
+    {
+        $this->showFundModal = false;
+        $this->fundAmount = 0;
+        $this->resetValidation();
+    }
+
+    public function fundWallet()
     {
         if ($this->isProcessing) {
             return;
@@ -116,25 +188,10 @@ class CreditPurchase extends Component
         $this->isProcessing = true;
 
         try {
-            $amount = 0;
-            $credits = 0;
+            $this->validate(['fundAmount' => 'required|numeric|min:300']);
 
-            if ($this->selectedPackage >= 0 && isset($this->packages[$this->selectedPackage])) {
-                // Predefined package
-                $package = $this->packages[$this->selectedPackage];
-                $amount = $package['amount'];
-                $credits = $package['total_credits'];
-            } elseif ($this->selectedPackage === -1) {
-                // Custom amount
-                $this->validate();
-                $amount = $this->customAmount;
-                $credits = $this->customCredits;
-            } else {
-                throw new \InvalidArgumentException('Please select a package or enter a custom amount');
-            }
-
-            if ($amount < $this->pricingConfig['minimum_amount']) {
-                throw new \InvalidArgumentException('Minimum amount is ₦' . number_format($this->pricingConfig['minimum_amount']));
+            if ($this->fundAmount < $this->pricingConfig['minimum_amount']) {
+                throw new \InvalidArgumentException('Minimum funding amount is ₦' . number_format($this->pricingConfig['minimum_amount']));
             }
 
             $paystackService = app(PaystackService::class);
@@ -142,15 +199,13 @@ class CreditPurchase extends Component
 
             $result = $paystackService->initializePayment(
                 $user->id,
-                $amount,
+                $this->fundAmount,
                 $user->email,
-                route('credits.callback'),
+                route('paystack.callback'),
                 [
-                    'package_index' => $this->selectedPackage,
-                    'is_retry' => $this->retryTransactionId ? true : false,
-                    'original_transaction_id' => $this->retryTransactionId,
                     'wallet_type' => 'naira',
                     'purchase_type' => 'naira_funding',
+                    'amount' => $this->fundAmount,
                 ]
             );
 
@@ -165,8 +220,7 @@ class CreditPurchase extends Component
             Log::error('Naira wallet funding error', [
                 'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
-                'amount' => $amount ?? null,
-                'credits' => $credits ?? null,
+                'amount' => $this->fundAmount,
             ]);
 
             session()->flash('error', 'Failed to process payment: ' . $e->getMessage());
@@ -174,6 +228,14 @@ class CreditPurchase extends Component
             $this->isProcessing = false;
         }
     }
+
+    public function purchaseCredits()
+    {
+        // This method now opens the fund wallet modal
+        $this->openFundModal();
+    }
+
+    // Removed old purchaseCreditsViaPaystack method - now using fundWallet for Paystack payments
 
     private function loadRetryTransaction()
     {
@@ -183,9 +245,9 @@ class CreditPurchase extends Component
             ->first();
 
         if ($transaction && isset($transaction->metadata['naira_amount'])) {
-            $this->customAmount = $transaction->metadata['naira_amount'];
-            $this->customCredits = $transaction->metadata['credits'] ?? $transaction->amount;
-            $this->selectedPackage = -1;
+            // For retry transactions, set custom credit amount
+            $this->customCreditAmount = $transaction->metadata['credits'] ?? $transaction->amount;
+            $this->selectedCreditPackage = null;
             
             session()->flash('info', 'Retrying failed transaction: ' . $transaction->reference);
         } else {
@@ -194,61 +256,7 @@ class CreditPurchase extends Component
         }
     }
 
-    private function generateNairaPackages(): array
-    {
-        // Generate Naira funding packages
-        return [
-            [
-                'amount' => 1000,
-                'naira' => 1000,
-                'bonus' => 0,
-                'total_naira' => 1000,
-                'total_credits' => 1000,
-                'label' => '₦1,000',
-            ],
-            [
-                'amount' => 2500,
-                'naira' => 2500,
-                'bonus' => 100,
-                'total_naira' => 2600,
-                'total_credits' => 2600,
-                'label' => '₦2,500',
-            ],
-            [
-                'amount' => 5000,
-                'naira' => 5000,
-                'bonus' => 300,
-                'total_naira' => 5300,
-                'total_credits' => 5300,
-                'label' => '₦5,000',
-            ],
-            [
-                'amount' => 10000,
-                'naira' => 10000,
-                'bonus' => 750,
-                'total_naira' => 10750,
-                'total_credits' => 10750,
-                'label' => '₦10,000',
-            ],
-            [
-                'amount' => 20000,
-                'naira' => 20000,
-                'bonus' => 2000,
-                'total_naira' => 22000,
-                'total_credits' => 22000,
-                'label' => '₦20,000',
-            ],
-            [
-                'amount' => 50000,
-                'naira' => 50000,
-                'bonus' => 7500,
-                'total_naira' => 57500,
-                'total_credits' => 57500,
-                'label' => '₦50,000',
-            ],
-        ];
-    }
-
+  
     // Withdrawal Modal Methods
     public function openWithdrawModal()
     {
@@ -546,6 +554,116 @@ class CreditPurchase extends Component
         } catch (\Exception $e) {
             Log::error('Account resolution failed: ' . $e->getMessage());
             $this->accountName = '';
+        }
+    }
+
+    public function purchaseCreditsWithNaira()
+    {
+        if ($this->isProcessing) {
+            return;
+        }
+
+        $this->isProcessing = true;
+
+        try {
+            $amount = 0;
+            $credits = 0;
+
+            if ($this->selectedCreditPackage !== null && isset($this->creditPackages[$this->selectedCreditPackage])) {
+                // Predefined credit package
+                $package = $this->creditPackages[$this->selectedCreditPackage];
+                $amount = $package['amount'];
+                $credits = $package['total_credits'];
+            } elseif ($this->customCreditAmount && $this->customCreditAmount >= $this->minCreditAmount) {
+                // Custom credit amount
+                $this->validate(['customCreditAmount' => 'required|numeric|min:' . $this->minCreditAmount]);
+                $credits = $this->customCreditAmount;
+                $amount = $credits * $this->pricingConfig['credit_price'];
+            } else {
+                throw new \InvalidArgumentException('Please select a credit package or enter a custom amount');
+            }
+
+            if ($amount < $this->pricingConfig['minimum_amount']) {
+                throw new \InvalidArgumentException('Minimum amount is ₦' . number_format($this->pricingConfig['minimum_amount']));
+            }
+
+            $user = Auth::user();
+            $nairaWallet = $user->getNairaWallet();
+            $creditsWallet = $user->getCreditWallet();
+
+            // Check if user has sufficient Naira balance
+            if ($nairaWallet->balance < $amount) {
+                session()->flash('error', 'Insufficient Naira balance. Please fund your Naira wallet first.');
+                return;
+            }
+
+            DB::beginTransaction();
+
+            try {
+                // Debit Naira wallet
+                $nairaWallet->debit($amount);
+
+                // Credit Credits wallet
+                $creditsWallet->credit($credits);
+
+                // Create transaction records
+                $transactionService = app(TransactionService::class);
+                
+                // Record Naira debit transaction
+                $transactionService->debit(
+                    $user->id,
+                    $amount,
+                    'naira',
+                    Transaction::CATEGORY_CREDIT_PURCHASE,
+                    'Credit purchase using Naira wallet',
+                    [
+                        'credits_purchased' => $credits,
+                        'package_index' => $this->selectedCreditPackage,
+                        'purchase_method' => 'naira_wallet',
+                        'credit_price' => $this->pricingConfig['credit_price'],
+                    ]
+                );
+
+                // Record Credits credit transaction
+                $transactionService->credit(
+                    $user->id,
+                    $credits,
+                    'credits',
+                    Transaction::CATEGORY_CREDIT_PURCHASE,
+                    'Credits purchased with Naira wallet',
+                    [
+                        'naira_amount' => $amount,
+                        'package_index' => $this->selectedCreditPackage,
+                        'purchase_method' => 'naira_wallet',
+                        'credit_price' => $this->pricingConfig['credit_price'],
+                    ]
+                );
+
+                DB::commit();
+
+                session()->flash('success', 'Successfully purchased ' . number_format($credits) . ' credits using ₦' . number_format($amount, 2) . ' from your Naira wallet!');
+                
+                // Reset form
+                $this->selectedCreditPackage = null;
+                $this->customCreditAmount = null;
+                $this->resetValidation();
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Naira to Credits purchase error', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'amount' => $amount ?? null,
+                'credits' => $credits ?? null,
+            ]);
+
+            session()->flash('error', 'Failed to purchase credits: ' . $e->getMessage());
+        } finally {
+            $this->isProcessing = false;
         }
     }
 

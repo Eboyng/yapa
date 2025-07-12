@@ -76,23 +76,32 @@ class PaystackController extends Controller
             // Handle payment status
             if ($paymentData['status'] === 'success') {
                 if ($transaction->isConfirmed()) {
+                    // Determine success message based on transaction type
+                    $walletType = $transaction->metadata['wallet_type'] ?? 'credits';
+                    $successMessage = $walletType === 'naira' 
+                        ? 'Payment already confirmed! ₦' . number_format($transaction->amount, 2) . ' has been added to your Naira wallet.'
+                        : 'Payment already confirmed! Credits have been added to your account.';
+                    
                     return redirect()->route('dashboard')
-                        ->with('success', 'Payment already confirmed! Credits have been added to your account.');
+                        ->with('success', $successMessage);
                 }
 
-                // Process successful payment via webhook handler
-                $webhookResult = $this->paystackService->handleWebhook([
-                    'event' => 'charge.success',
-                    'data' => $paymentData,
-                ], 'callback_verification');
+                // Process successful payment directly (bypass webhook signature verification)
+                $processResult = $this->paystackService->processCallbackPayment($transaction, $paymentData);
 
-                if ($webhookResult['success']) {
+                if ($processResult['success']) {
+                    // Determine success message based on transaction type
+                    $walletType = $transaction->metadata['wallet_type'] ?? 'credits';
+                    $successMessage = $walletType === 'naira' 
+                        ? 'Payment successful! ₦' . number_format($transaction->amount, 2) . ' has been added to your Naira wallet.'
+                        : 'Payment successful! ' . number_format($transaction->amount) . ' credits have been added to your account.';
+                    
                     return redirect()->route('dashboard')
-                        ->with('success', 'Payment successful! ' . number_format($transaction->amount) . ' credits have been added to your account.');
+                        ->with('success', $successMessage);
                 } else {
                     Log::error('Failed to process successful payment in callback', [
                         'transaction_id' => $transaction->id,
-                        'webhook_result' => $webhookResult,
+                        'process_result' => $processResult,
                     ]);
                     
                     return redirect()->route('credits.purchase')
@@ -102,10 +111,7 @@ class PaystackController extends Controller
                 // Handle failed payment
                 $failureReason = $paymentData['gateway_response'] ?? 'Payment failed';
                 
-                $webhookResult = $this->paystackService->handleWebhook([
-                    'event' => 'charge.failed',
-                    'data' => $paymentData,
-                ], 'callback_verification');
+                $this->paystackService->processFailedCallbackPayment($transaction, $paymentData);
 
                 return redirect()->route('credits.purchase')
                     ->with('error', 'Payment failed: ' . $failureReason . '. You can retry the payment from your transaction history.');

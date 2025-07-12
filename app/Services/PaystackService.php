@@ -109,10 +109,17 @@ class PaystackService
         ]);
 
         try {
-            $response = Http::withHeaders([
+            $httpClient = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->secretKey,
                 'Content-Type' => 'application/json',
-            ])->post($this->baseUrl . '/transaction/initialize', [
+            ])->timeout(30); // 30 second timeout
+            
+            // Disable SSL verification for local development
+            if (app()->environment('local')) {
+                $httpClient = $httpClient->withoutVerifying();
+            }
+            
+            $response = $httpClient->post($this->baseUrl . '/transaction/initialize', [
                 'email' => $email,
                 'amount' => $amount * 100, // Convert to kobo
                 'reference' => $transaction->reference,
@@ -209,9 +216,16 @@ class PaystackService
     public function verifyPayment(string $reference): array
     {
         try {
-            $response = Http::withHeaders([
+            $httpClient = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->secretKey,
-            ])->get($this->baseUrl . '/transaction/verify/' . $reference);
+            ])->timeout(30);
+            
+            // Disable SSL verification for local development
+            if (app()->environment('local')) {
+                $httpClient = $httpClient->withoutVerifying();
+            }
+            
+            $response = $httpClient->get($this->baseUrl . '/transaction/verify/' . $reference);
 
             if ($response->successful()) {
                 $data = $response->json()['data'];
@@ -314,6 +328,96 @@ class PaystackService
                 'message' => "Event {$event} acknowledged but not processed",
             ],
         };
+    }
+
+    /**
+     * Process callback payment (for direct callback processing without webhook signature verification).
+     */
+    public function processCallbackPayment(Transaction $transaction, array $paymentData): array
+    {
+        if ($transaction->isConfirmed()) {
+            return [
+                'success' => true,
+                'message' => 'Transaction already confirmed (idempotency check)',
+            ];
+        }
+
+        return DB::transaction(function () use ($transaction, $paymentData) {
+            $walletType = $transaction->metadata['wallet_type'] ?? 'credits';
+            
+            // Determine the correct wallet type for the transaction service
+            if ($walletType === 'naira') {
+                $serviceWalletType = 'naira';
+            } else {
+                $serviceWalletType = 'credits';
+            }
+            
+            // Credit user's wallet
+            $this->transactionService->credit(
+                $transaction->user_id,
+                $transaction->amount,
+                $serviceWalletType,
+                $transaction->category,
+                $transaction->description,
+                $transaction->related_id,
+                'paystack_callback_confirmed',
+                array_merge($transaction->metadata, [
+                    'paystack_confirmation' => $paymentData,
+                    'confirmed_at' => now(),
+                    'confirmation_source' => 'callback',
+                ])
+            );
+
+            // Process referral reward for credit purchases, Naira funding, and channel ad bookings
+            if (in_array($transaction->category, [Transaction::CATEGORY_CREDIT_PURCHASE, Transaction::CATEGORY_NAIRA_FUNDING, Transaction::CATEGORY_CHANNEL_AD_BOOKING])) {
+                $user = User::find($transaction->user_id);
+                $nairaAmount = $transaction->metadata['naira_amount'] ?? 0;
+                
+                if ($user && $nairaAmount > 0) {
+                    $this->referralService->processDepositReferral($user, $nairaAmount);
+                }
+            }
+
+            Log::info('Paystack callback payment processed', [
+                'transaction_id' => $transaction->id,
+                'user_id' => $transaction->user_id,
+                'amount' => $transaction->amount,
+                'wallet_type' => $walletType,
+                'category' => $transaction->category,
+                'reference' => $paymentData['reference'],
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Callback payment processed successfully',
+                'transaction_id' => $transaction->id,
+            ];
+        });
+    }
+
+    /**
+     * Process failed callback payment.
+     */
+    public function processFailedCallbackPayment(Transaction $transaction, array $paymentData): array
+    {
+        $failureReason = $paymentData['gateway_response'] ?? 'Payment failed';
+        $this->transactionService->handleFailure(
+            $transaction->id,
+            "Paystack callback charge failed: {$failureReason}",
+            true // Allow retry
+        );
+
+        Log::warning('Paystack callback charge failed', [
+            'transaction_id' => $transaction->id,
+            'reference' => $paymentData['reference'] ?? 'unknown',
+            'reason' => $failureReason,
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Callback charge failure processed',
+            'transaction_id' => $transaction->id,
+        ];
     }
 
     /**
@@ -555,10 +659,17 @@ class PaystackService
     public function validateBvn(string $bvn): array
     {
         try {
-            $response = Http::withHeaders([
+            $httpClient = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->secretKey,
                 'Content-Type' => 'application/json',
-            ])->post($this->baseUrl . '/bvn/match', [
+            ])->timeout(30);
+            
+            // Disable SSL verification for local development
+            if (app()->environment('local')) {
+                $httpClient = $httpClient->withoutVerifying();
+            }
+            
+            $response = $httpClient->post($this->baseUrl . '/bvn/match', [
                 'bvn' => $bvn,
                 'account_number' => '', // Optional for basic validation
                 'bank_code' => '', // Optional for basic validation
@@ -602,9 +713,16 @@ class PaystackService
     public function getBanks(): array
     {
         try {
-            $response = Http::withHeaders([
+            $httpClient = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->secretKey,
-            ])->get($this->baseUrl . '/bank');
+            ])->timeout(30);
+            
+            // Disable SSL verification for local development
+            if (app()->environment('local')) {
+                $httpClient = $httpClient->withoutVerifying();
+            }
+            
+            $response = $httpClient->get($this->baseUrl . '/bank');
 
             if ($response->successful()) {
                 $data = $response->json()['data'] ?? [];
@@ -639,9 +757,16 @@ class PaystackService
     public function resolveAccountNumber(string $accountNumber, string $bankCode): array
     {
         try {
-            $response = Http::withHeaders([
+            $httpClient = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->secretKey,
-            ])->get($this->baseUrl . '/bank/resolve', [
+            ]);
+            
+            // Disable SSL verification for local development
+            if (app()->environment('local')) {
+                $httpClient = $httpClient->withoutVerifying();
+            }
+            
+            $response = $httpClient->get($this->baseUrl . '/bank/resolve', [
                 'account_number' => $accountNumber,
                 'bank_code' => $bankCode,
             ]);
@@ -686,10 +811,17 @@ class PaystackService
     public function createTransferRecipient(string $accountNumber, string $bankCode, string $name): array
     {
         try {
-            $response = Http::withHeaders([
+            $httpClient = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->secretKey,
                 'Content-Type' => 'application/json',
-            ])->post($this->baseUrl . '/transferrecipient', [
+            ]);
+            
+            // Disable SSL verification for local development
+            if (app()->environment('local')) {
+                $httpClient = $httpClient->withoutVerifying();
+            }
+            
+            $response = $httpClient->post($this->baseUrl . '/transferrecipient', [
                 'type' => 'nuban',
                 'name' => $name,
                 'account_number' => $accountNumber,
@@ -737,10 +869,17 @@ class PaystackService
     public function initiateTransfer(string $recipientCode, float $amount, string $reason = 'Withdrawal'): array
     {
         try {
-            $response = Http::withHeaders([
+            $httpClient = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->secretKey,
                 'Content-Type' => 'application/json',
-            ])->post($this->baseUrl . '/transfer', [
+            ]);
+            
+            // Disable SSL verification for local development
+            if (app()->environment('local')) {
+                $httpClient = $httpClient->withoutVerifying();
+            }
+            
+            $response = $httpClient->post($this->baseUrl . '/transfer', [
                 'source' => 'balance',
                 'amount' => $amount * 100, // Convert to kobo
                 'recipient' => $recipientCode,

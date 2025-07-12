@@ -232,7 +232,7 @@ class AdTaskResource extends Resource
                                  Transaction::create([
                                      'user_id' => $record->user_id,
                                      'wallet_id' => $wallet->id,
-                                     'type' => Transaction::TYPE_CREDIT,
+                                     'type' => Transaction::TYPE_EARNINGS,
                                      'category' => Transaction::CATEGORY_AD_EARNING,
                                      'amount' => $earnings,
                                      'status' => Transaction::STATUS_COMPLETED,
