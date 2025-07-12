@@ -76,25 +76,22 @@ class PaystackController extends Controller
             // Handle payment status
             if ($paymentData['status'] === 'success') {
                 if ($transaction->isConfirmed()) {
-                    // Determine success message based on transaction type
-                    $walletType = $transaction->metadata['wallet_type'] ?? 'credits';
+                    $walletType = $transaction->metadata['wallet_type'] ?? 'naira';
                     $successMessage = $walletType === 'naira' 
-                        ? 'Payment already confirmed! ₦' . number_format($transaction->amount, 2) . ' has been added to your Naira wallet.'
-                        : 'Payment already confirmed! Credits have been added to your account.';
+                        ? 'Payment already confirmed! ₦' . number_format($transaction->amount, 2) . ' has been added to your wallet.'
+                        : 'Payment already confirmed! Funds have been added to your wallet.';
                     
                     return redirect()->route('dashboard')
                         ->with('success', $successMessage);
                 }
 
-                // Process successful payment directly (bypass webhook signature verification)
                 $processResult = $this->paystackService->processCallbackPayment($transaction, $paymentData);
 
                 if ($processResult['success']) {
-                    // Determine success message based on transaction type
-                    $walletType = $transaction->metadata['wallet_type'] ?? 'credits';
+                    $walletType = $transaction->metadata['wallet_type'] ?? 'naira';
                     $successMessage = $walletType === 'naira' 
-                        ? 'Payment successful! ₦' . number_format($transaction->amount, 2) . ' has been added to your Naira wallet.'
-                        : 'Payment successful! ' . number_format($transaction->amount) . ' credits have been added to your account.';
+                        ? 'Payment successful! ₦' . number_format($transaction->amount, 2) . ' has been added to your wallet.'
+                        : 'Payment successful! ' . number_format($transaction->amount) . ' has been added to your wallet.';
                     
                     return redirect()->route('dashboard')
                         ->with('success', $successMessage);
@@ -108,7 +105,6 @@ class PaystackController extends Controller
                         ->with('error', 'Payment was successful but failed to process. Please contact support.');
                 }
             } else {
-                // Handle failed payment
                 $failureReason = $paymentData['gateway_response'] ?? 'Payment failed';
                 
                 $this->paystackService->processFailedCallbackPayment($transaction, $paymentData);
@@ -135,7 +131,6 @@ class PaystackController extends Controller
     public function webhook(Request $request)
     {
         try {
-            // Get the payload and signature
             $payload = $request->all();
             $signature = $request->header('X-Paystack-Signature');
 
@@ -148,7 +143,6 @@ class PaystackController extends Controller
                 return response()->json(['error' => 'Missing signature'], 400);
             }
 
-            // Process the webhook
             $result = $this->paystackService->handleWebhook($payload, $signature);
 
             if ($result['success']) {
@@ -208,22 +202,16 @@ class PaystackController extends Controller
             ], 503);
         }
 
-        $minimumAmount = $this->settingService->get('minimum_amount_naira', 300.0);
-        $walletType = $request->input('wallet_type', 'credits');
-        $purchaseType = $request->input('purchase_type', 'credit_purchase');
+        $minimumAmount = $this->settingService->get('minimum_amount_naira', 1000.0);
+        $walletType = $request->input('wallet_type', 'naira');
+        $purchaseType = $request->input('purchase_type', 'naira_purchase');
         
         $validationRules = [
             'amount' => "required|numeric|min:{$minimumAmount}",
-            'wallet_type' => 'sometimes|string|in:credits,naira',
-            'purchase_type' => 'sometimes|string|in:credit_purchase,naira_funding',
+            'wallet_type' => 'sometimes|string|in:naira',
+            'purchase_type' => 'sometimes|string|in:naira_funding',
         ];
-        
-        // Add credits validation only for credit purchases
-        if ($walletType === 'credits') {
-            $minimumCredits = $this->settingService->get('minimum_credits_purchase', 100);
-            $validationRules['credits'] = "required|integer|min:{$minimumCredits}";
-        }
-        
+
         $request->validate($validationRules);
 
         try {

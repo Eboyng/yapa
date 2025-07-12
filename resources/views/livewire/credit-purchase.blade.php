@@ -75,13 +75,15 @@
 
                     <!-- Fund Button -->
                     <button wire:click="openFundModal"
-                        class="w-full bg-white/20 backdrop-blur-sm text-white font-medium py-3 px-4 rounded-xl hover:bg-white/30 transition-all duration-200 active:scale-95 flex items-center justify-center group">
+                        class="w-full bg-white/20 backdrop-blur-sm text-white font-medium py-3 px-4 rounded-xl hover:bg-white/30 transition-all duration-200 active:scale-95 flex items-center justify-center group"
+                        wire:loading.attr="disabled">
                         <svg class="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" fill="none"
                             stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
-                        Fund Wallet
+                        <span wire:loading.remove wire:target="openFundModal">Fund Wallet</span>
+                        <span wire:loading wire:target="openFundModal">Loading...</span>
                     </button>
                 </div>
 
@@ -144,19 +146,20 @@
 
                     <!-- Withdraw Button -->
                     <button wire:click="openWithdrawModal"
-                        class="w-full bg-white/20 backdrop-blur-sm text-white font-medium py-3 px-4 rounded-xl hover:bg-white/30 transition-all duration-200 active:scale-95 flex items-center justify-center group">
+                        class="w-full bg-white/20 backdrop-blur-sm text-white font-medium py-3 px-4 rounded-xl hover:bg-white/30 transition-all duration-200 active:scale-95 flex items-center justify-center group"
+                        wire:loading.attr="disabled">
                         <svg class="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" fill="none"
                             stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1">
                             </path>
                         </svg>
-                        Withdraw
+                        <span wire:loading.remove wire:target="openWithdrawModal">Withdraw</span>
+                        <span wire:loading wire:target="openWithdrawModal">Loading...</span>
                     </button>
                 </div>
             </div>
 
-          
             <!-- Credit Purchase Section -->
             <div class="bg-white rounded-2xl p-5 mb-6 shadow-lg">
                 <div class="flex items-center mb-4">
@@ -220,16 +223,16 @@
 
                 <!-- Custom Amount Input -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Or enter custom amount (₦)</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Or enter custom amount (Credits)</label>
                     <input type="number" wire:model.live="customCreditAmount"
                         class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-                        placeholder="Minimum ₦{{ number_format($minCreditAmount) }}" min="{{ $minCreditAmount }}">
+                        placeholder="Minimum {{ number_format($minCreditAmount) }} credits" min="{{ $minCreditAmount }}">
                     @error('customCreditAmount')
                         <span class="text-red-500 text-sm">{{ $message }}</span>
                     @enderror
                     @if ($customCreditAmount && $customCreditAmount >= $minCreditAmount)
                         <div class="text-sm text-gray-600 mt-1">
-                            You'll get: {{ number_format(floor($customCreditAmount / $pricingConfig['credit_price'])) }} credits
+                            Cost: ₦{{ number_format($customCreditAmount * ($pricingConfig['credit_price'] ?? 1), 2) }}
                         </div>
                     @endif
                 </div>
@@ -237,8 +240,8 @@
                 <!-- Purchase Button -->
                 <button wire:click="purchaseCreditsWithNaira" wire:loading.attr="disabled"
                     class="w-full bg-gradient-to-r from-orange-500 to-purple-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">
-                    <span wire:loading.remove>Purchase Credits</span>
-                    <span wire:loading class="flex items-center justify-center">
+                    <span wire:loading.remove wire:target="purchaseCreditsWithNaira">Purchase Credits</span>
+                    <span wire:loading wire:target="purchaseCreditsWithNaira" class="flex items-center justify-center">
                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                                 stroke-width="4"></circle>
@@ -340,7 +343,7 @@
                                             Number</label>
                                         <input type="text" wire:model.live="accountNumber"
                                             class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                            placeholder="Enter account number">
+                                            placeholder="Enter account number" maxlength="10">
                                         @error('accountNumber')
                                             <span class="text-red-500 text-sm">{{ $message }}</span>
                                         @enderror
@@ -358,7 +361,7 @@
                                             Number</label>
                                         <input type="tel" wire:model.live="palmpayNumber"
                                             class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                            placeholder="Enter PalmPay phone number">
+                                            placeholder="Enter PalmPay phone number" maxlength="11">
                                         @error('palmpayNumber')
                                             <span class="text-red-500 text-sm">{{ $message }}</span>
                                         @enderror
@@ -371,7 +374,7 @@
                                             Number</label>
                                         <input type="tel" wire:model.live="airtimeNumber"
                                             class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                            placeholder="Enter phone number">
+                                            placeholder="Enter phone number" maxlength="11">
                                         @error('airtimeNumber')
                                             <span class="text-red-500 text-sm">{{ $message }}</span>
                                         @enderror
@@ -425,8 +428,8 @@
                                 </button>
                                 <button wire:click="processWithdrawal" wire:loading.attr="disabled"
                                     class="flex-1 bg-gradient-to-r from-green-500 to-teal-600 text-white py-3 px-4 rounded-xl hover:shadow-lg transition-all active:scale-95 disabled:opacity-50">
-                                    <span wire:loading.remove>Withdraw</span>
-                                    <span wire:loading class="flex items-center justify-center">
+                                    <span wire:loading.remove wire:target="processWithdrawal">Withdraw</span>
+                                    <span wire:loading wire:target="processWithdrawal" class="flex items-center justify-center">
                                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none"
                                             viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10"
@@ -497,8 +500,8 @@
                                 </button>
                                 <button wire:click="fundWallet" wire:loading.attr="disabled"
                                     class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-xl hover:shadow-lg transition-all active:scale-95 disabled:opacity-50">
-                                    <span wire:loading.remove>Proceed to Payment</span>
-                                    <span wire:loading class="flex items-center justify-center">
+                                    <span wire:loading.remove wire:target="fundWallet">Proceed to Payment</span>
+                                    <span wire:loading wire:target="fundWallet" class="flex items-center justify-center">
                                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none"
                                             viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10"
@@ -515,267 +518,124 @@
                     </div>
                 </div>
             @endif
-
-            <!-- Recent Transactions -->
-            <div class="bg-white rounded-2xl shadow-lg p-5">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-bold text-gray-900">Recent Activity</h2>
-                    <button class="text-sm text-gray-500 hover:text-gray-700">View All</button>
-                </div>
-
-                <div class="space-y-3">
-                    @forelse($user->transactions()->latest()->take(5)->get() as $transaction)
-                        <div
-                            class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                            <div class="flex items-center">
-                                <div
-                                    class="w-8 h-8 rounded-full flex items-center justify-center mr-3 {{ $transaction->type == 'credit' ? 'bg-green-100' : 'bg-orange-100' }}">
-                                    @if ($transaction->type == 'credit')
-                                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                        </svg>
-                                    @else
-                                        <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M20 12H4"></path>
-                                        </svg>
-                                    @endif
-                                </div>
-                                <div>
-                                    <div class="font-medium text-gray-900 text-sm">{{ ucfirst($transaction->type) }}
-                                        {{ ucfirst($transaction->method ?? 'Transaction') }}</div>
-                                    <div class="text-xs text-gray-500">
-                                        {{ $transaction->created_at->format('M j, g:i A') }}</div>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <div
-                                    class="font-semibold text-sm {{ $transaction->type == 'credit' ? 'text-green-600' : 'text-orange-600' }}">
-                                    {{ $transaction->type == 'credit' ? '+' : '-' }}₦{{ number_format($transaction->amount, 2) }}
-                                </div>
-                                <div class="text-xs text-gray-500 capitalize">{{ $transaction->status }}</div>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="text-center py-8">
-                            <div
-                                class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
-                                    </path>
-                                </svg>
-                            </div>
-                            <p class="text-gray-500 text-sm">No transactions yet</p>
-                        </div>
-                    @endforelse
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- Skeleton Loader Component -->
-    <div wire:loading class="fixed inset-0 bg-white z-50 flex items-center justify-center">
-        <div class="max-w-md mx-auto px-4 w-full">
-            <div class="space-y-4 mb-6">
-                <!-- Skeleton Credit Card -->
-                <div class="bg-gray-200 rounded-2xl p-5 animate-pulse">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 bg-gray-300 rounded-lg mr-2"></div>
-                            <div class="h-4 bg-gray-300 rounded w-16"></div>
-                        </div>
-                        <div class="h-3 bg-gray-300 rounded w-12"></div>
-                    </div>
-                    <div class="mb-4">
-                        <div class="h-8 bg-gray-300 rounded w-24 mb-2"></div>
-                        <div class="h-4 bg-gray-300 rounded w-20"></div>
-                    </div>
-                    <div class="h-10 bg-gray-300 rounded-xl"></div>
-                </div>
-
-                <!-- Skeleton Earnings Card -->
-                <div class="bg-gray-200 rounded-2xl p-5 animate-pulse">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 bg-gray-300 rounded-lg mr-2"></div>
-                            <div class="h-4 bg-gray-300 rounded w-16"></div>
-                        </div>
-                        <div class="h-3 bg-gray-300 rounded w-16"></div>
-                    </div>
-                    <div class="mb-4">
-                        <div class="h-8 bg-gray-300 rounded w-24 mb-2"></div>
-                        <div class="h-4 bg-gray-300 rounded w-20"></div>
-                    </div>
-                    <div class="h-10 bg-gray-300 rounded-xl"></div>
-                </div>
-            </div>
-
-            <!-- Skeleton Purchase Section -->
-            <div class="bg-gray-200 rounded-2xl p-5 mb-6 animate-pulse">
-                <div class="flex items-center mb-4">
-                    <div class="w-8 h-8 bg-gray-300 rounded-lg mr-3"></div>
-                    <div class="h-5 bg-gray-300 rounded w-24"></div>
-                </div>
-                <div class="h-16 bg-gray-300 rounded-lg mb-4"></div>
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div class="h-20 bg-gray-300 rounded-lg"></div>
-                    <div class="h-20 bg-gray-300 rounded-lg"></div>
-                    <div class="h-20 bg-gray-300 rounded-lg"></div>
-                    <div class="h-20 bg-gray-300 rounded-lg"></div>
-                </div>
-                <div class="h-12 bg-gray-300 rounded-xl"></div>
-            </div>
-
-            <!-- Skeleton Transactions -->
-            <div class="bg-gray-200 rounded-2xl p-5 animate-pulse">
-                <div class="h-5 bg-gray-300 rounded w-32 mb-4"></div>
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between p-3 bg-gray-300 rounded-lg">
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 bg-gray-400 rounded-full mr-3"></div>
-                            <div>
-                                <div class="h-4 bg-gray-400 rounded w-24 mb-1"></div>
-                                <div class="h-3 bg-gray-400 rounded w-16"></div>
-                            </div>
-                        </div>
-                        <div class="h-4 bg-gray-400 rounded w-16"></div>
-                    </div>
-                    <div class="flex items-center justify-between p-3 bg-gray-300 rounded-lg">
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 bg-gray-400 rounded-full mr-3"></div>
-                            <div>
-                                <div class="h-4 bg-gray-400 rounded w-24 mb-1"></div>
-                                <div class="h-3 bg-gray-400 rounded w-16"></div>
-                            </div>
-                        </div>
-                        <div class="h-4 bg-gray-400 rounded w-16"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        @push('styles')
-            <style>
-                @keyframes slideDown {
-                    from {
-                        opacity: 0;
-                        transform: translateY(-10px);
-                    }
-
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
+    @push('styles')
+        <style>
+            @keyframes slideDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
                 }
 
-                @keyframes slideUp {
-                    from {
-                        opacity: 0;
-                        transform: translateY(20px);
-                    }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
 
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
+            @keyframes slideUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
                 }
 
-                @keyframes fadeIn {
-                    from {
-                        opacity: 0;
-                    }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
 
-                    to {
-                        opacity: 1;
-                    }
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
                 }
 
-                .animate-slideDown {
-                    animation: slideDown 0.3s ease-out;
+                to {
+                    opacity: 1;
                 }
+            }
 
-                .animate-slideUp {
-                    animation: slideUp 0.3s ease-out;
-                }
+            .animate-slideDown {
+                animation: slideDown 0.3s ease-out;
+            }
 
-                .animate-fadeIn {
-                    animation: fadeIn 0.3s ease-out;
-                }
+            .animate-slideUp {
+                animation: slideUp 0.3s ease-out;
+            }
 
-                /* Smooth transitions for interactive elements */
-                button,
-                input,
-                select {
-                    transition: all 0.2s ease;
-                }
+            .animate-fadeIn {
+                animation: fadeIn 0.3s ease-out;
+            }
 
-                /* Custom scrollbar for mobile */
-                .overflow-y-auto::-webkit-scrollbar {
-                    width: 4px;
-                }
+            /* Smooth transitions for interactive elements */
+            button,
+            input,
+            select {
+                transition: all 0.2s ease;
+            }
 
-                .overflow-y-auto::-webkit-scrollbar-track {
-                    background: #f1f1f1;
-                }
+            /* Custom scrollbar for mobile */
+            .overflow-y-auto::-webkit-scrollbar {
+                width: 4px;
+            }
 
-                .overflow-y-auto::-webkit-scrollbar-thumb {
-                    background: #c1c1c1;
-                    border-radius: 2px;
-                }
+            .overflow-y-auto::-webkit-scrollbar-track {
+                background: #f1f1f1;
+            }
 
-                .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-                    background: #a1a1a1;
-                }
-            </style>
-        @endpush
+            .overflow-y-auto::-webkit-scrollbar-thumb {
+                background: #c1c1c1;
+                border-radius: 2px;
+            }
 
-        @push('scripts')
-            <script src="https://js.paystack.co/v1/inline.js"></script>
-            <script>
-                document.addEventListener('livewire:init', () => {
-                    Livewire.on('initiate-paystack-payment', (event) => {
-                        const handler = PaystackPop.setup({
-                            key: '{{ $paystackPublicKey }}',
-                            email: '{{ $user->email }}',
-                            amount: event.amount * 100,
-                            currency: 'NGN',
-                            ref: event.reference,
-                            metadata: {
-                                custom_fields: [{
-                                    display_name: "Transaction Type",
-                                    variable_name: "transaction_type",
-                                    value: "credit_purchase"
-                                }]
-                            },
-                            callback: function(response) {
-                                Livewire.dispatch('payment-successful', {
-                                    reference: response.reference,
-                                    transaction: response.transaction
-                                });
-                            },
-                            onClose: function() {
-                                Livewire.dispatch('payment-cancelled');
-                            }
-                        });
-                        handler.openIframe();
+            .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+                background: #a1a1a1;
+            }
+        </style>
+    @endpush
+
+    @push('scripts')
+        <script src="https://js.paystack.co/v1/inline.js"></script>
+        <script>
+            document.addEventListener('livewire:init', () => {
+                Livewire.on('initiate-paystack-payment', (event) => {
+                    const handler = PaystackPop.setup({
+                        key: '{{ $paystackPublicKey }}',
+                        email: '{{ $user->email }}',
+                        amount: event.amount * 100,
+                        currency: 'NGN',
+                        ref: event.reference,
+                        metadata: {
+                            custom_fields: [{
+                                display_name: "Transaction Type",
+                                variable_name: "transaction_type",
+                                value: "{{ $nairaFundingCategory }}"
+                            }]
+                        },
+                        callback: function(response) {
+                            Livewire.dispatch('payment-successful', {
+                                reference: response.reference,
+                                transaction: response.transaction
+                            });
+                        },
+                        onClose: function() {
+                            Livewire.dispatch('payment-cancelled');
+                        }
                     });
-
-                    // Add haptic feedback for mobile devices
-                    if ('vibrate' in navigator) {
-                        document.addEventListener('click', function(e) {
-                            if (e.target.closest('button')) {
-                                navigator.vibrate(50);
-                            }
-                        });
-                    }
+                    handler.openIframe();
                 });
-            </script>
-        @endpush
-    </div>
 
+                // Add haptic feedback for mobile devices
+                if ('vibrate' in navigator) {
+                    document.addEventListener('click', function(e) {
+                        if (e.target.closest('button')) {
+                            navigator.vibrate(50);
+                        }
+                    });
+                }
+            });
+        </script>
+    @endpush
 </div>

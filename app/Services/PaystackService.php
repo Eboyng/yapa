@@ -449,18 +449,19 @@ class PaystackService
         return DB::transaction(function () use ($transaction, $data) {
             $walletType = $transaction->metadata['wallet_type'] ?? 'credits';
             
-            // Determine the correct wallet type for the transaction service
-            if ($walletType === 'naira') {
-                $serviceWalletType = 'naira';
-            } else {
-                $serviceWalletType = 'credits';
+            // Determine the correct transaction type based on wallet type and category
+            $transactionType = 'naira'; // Default to naira for wallet funding
+            
+            // For credit purchases, use credits type
+            if ($transaction->category === Transaction::CATEGORY_CREDIT_PURCHASE) {
+                $transactionType = 'credits';
             }
             
             // Credit user's wallet
             $this->transactionService->credit(
                 $transaction->user_id,
                 $transaction->amount,
-                $serviceWalletType,
+                $transactionType,
                 $transaction->category,
                 $transaction->description,
                 $transaction->related_id,
