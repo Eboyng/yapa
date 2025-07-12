@@ -174,8 +174,7 @@ class PaystackService
                     'amount' => $amount,
                     'wallet_type' => $walletType,
                     'purchase_type' => $purchaseType,
-                ] + ($walletType === 'credits' ? ['credits' => $credits ?? 0] : []),
-            ];
+                ] + ($walletType === 'credits' ? ['credits' => $credits ?? 0] : []);
             }
 
             $error = $response->json()['message'] ?? 'Payment initialization failed';

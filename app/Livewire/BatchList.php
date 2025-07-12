@@ -58,6 +58,9 @@ class BatchList extends Component
         
         // Handle referral tracking from shared batch links
         $this->handleReferralFromUrl();
+        
+        // Handle batch_id parameter from shared links
+        $this->handleBatchIdFromUrl();
     }
     
     /**
@@ -73,6 +76,25 @@ class BatchList extends Component
             
             Log::info('Batch referral captured from URL', [
                 'referrer_id' => $referrerId,
+                'visitor_ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+        }
+    }
+    
+    /**
+     * Handle batch_id parameter from shared batch links
+     */
+    private function handleBatchIdFromUrl()
+    {
+        $batchId = request()->get('batch_id');
+        
+        if ($batchId && is_numeric($batchId)) {
+            // Store batch ID in session to highlight or focus on this batch
+            session(['highlighted_batch_id' => $batchId]);
+            
+            Log::info('Batch ID captured from shared URL', [
+                'batch_id' => $batchId,
                 'visitor_ip' => request()->ip(),
                 'user_agent' => request()->userAgent()
             ]);
@@ -222,8 +244,8 @@ class BatchList extends Component
                 ]
             );
 
-            // Generate sharing URL with user ID as referral
-            $shareUrl = url("/?ref={$user->id}");
+            // Generate sharing URL with batch ID and user ID as referral
+            $shareUrl = route('batch.share', ['batch' => $batch->id]) . "?ref={$user->id}";
 
             // Dispatch event with sharing data
             $this->dispatch('batchShared', [

@@ -202,6 +202,20 @@ Route::prefix('tips')->name('tips.')->group(function () {
 });
 
 // Batch Routes
+// Shared batch link route (public access for sharing)
+Route::get('/batch/{batch}', function(\App\Models\Batch $batch) {
+    // Extract referral code from query parameter
+    $referralCode = request()->query('ref');
+    
+    // Redirect to home page with batch ID and referral code
+    $params = ['batch_id' => $batch->id];
+    if ($referralCode) {
+        $params['ref'] = $referralCode;
+    }
+    
+    return redirect()->route('home', $params);
+})->name('batch.share');
+
 Route::middleware(['auth', 'verified.otp'])->group(function () {
     // Batch download route (handled by BatchList component)
     Route::get('/batches/{batch}/download', function() {
