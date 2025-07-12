@@ -489,10 +489,16 @@ class NotificationService
         $relatedModel = null,
         ?array $metadata = null
     ): NotificationLog {
+        // Determine the preferred channel and recipient
+        $channel = $this->shouldSendWhatsApp($user) ? NotificationLog::CHANNEL_WHATSAPP : NotificationLog::CHANNEL_EMAIL;
+        $recipient = $channel === NotificationLog::CHANNEL_WHATSAPP ? $user->phone : $user->email;
+        
         // Create notification log
         $notificationLog = NotificationLog::create([
             'user_id' => $user->id,
             'type' => $type,
+            'channel' => $channel,
+            'recipient' => $recipient,
             'subject' => $subject,
             'message' => $message,
             'status' => NotificationLog::STATUS_PENDING,
@@ -519,11 +525,11 @@ class NotificationService
             return;
         }
 
-        // Try WhatsApp first if enabled and user has WhatsApp notifications enabled
-        if ($this->shouldSendWhatsApp($user)) {
+        // Use the channel specified in the notification log
+        if ($notificationLog->channel === NotificationLog::CHANNEL_WHATSAPP) {
             try {
                 $this->whatsAppService->send(
-                    $user->phone,
+                    $notificationLog->recipient,
                     $notificationLog->message,
                     $notificationLog
                 );
@@ -533,19 +539,25 @@ class NotificationService
                     'notification_id' => $notificationLog->id,
                     'error' => $e->getMessage()
                 ]);
+                
+                // Update channel to email for fallback
+                $notificationLog->update([
+                    'channel' => NotificationLog::CHANNEL_EMAIL,
+                    'recipient' => $user->email
+                ]);
             }
         }
 
-        // Fallback to email
+        // Send via email (either as primary channel or fallback)
         try {
             $this->emailService->send(
-                $user->email,
+                $notificationLog->recipient,
                 $notificationLog->subject,
                 $notificationLog->message,
                 $notificationLog
             );
         } catch (\Exception $e) {
-            $notificationLog->markAsFailed('Both WhatsApp and email failed: ' . $e->getMessage());
+            $notificationLog->markAsFailed('Email notification failed: ' . $e->getMessage());
         }
     }
 

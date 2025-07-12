@@ -73,6 +73,7 @@ class CleanupTrialBatches extends Command
                     // Log the closure
                     NotificationLog::create([
                         'type' => 'batch_trial_expired',
+                        'channel' => NotificationLog::CHANNEL_EMAIL,
                         'recipient' => $batch->creator->email ?? 'system',
                         'message' => "Trial batch '{$batch->name}' has been closed due to trial expiration.",
                         'user_id' => $batch->creator_id,

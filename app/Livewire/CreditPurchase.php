@@ -607,24 +607,11 @@ class CreditPurchase extends Component
             [$amount, $credits] = $this->calculatePurchaseAmount();
 
             $user = Auth::user();
-            $nairaWallet = $user->getNairaWallet();
-            $creditsWallet = $user->getCreditWallet();
-
-            if ($nairaWallet->balance < $amount) {
-                session()->flash('error', 'Insufficient Naira balance. Please fund your Naira wallet first.');
-                return;
-            }
 
             DB::beginTransaction();
 
             try {
-                // Debit Naira wallet
-                $nairaWallet->debit($amount);
-
-                // Credit Credits wallet
-                $creditsWallet->credit($credits);
-
-                // Create transaction records
+                // Create transaction records (this will handle wallet operations)
                 $this->createPurchaseTransactions($user, $amount, $credits);
 
                 DB::commit();
@@ -639,6 +626,8 @@ class CreditPurchase extends Component
                 DB::rollBack();
                 throw $e;
             }
+        } catch (\App\Exceptions\InsufficientBalanceException $e) {
+            session()->flash('error', 'Insufficient Naira balance. Please fund your Naira wallet first.');
         } catch (\Exception $e) {
             Log::error('Naira to Credits purchase error', [
                 'user_id' => Auth::id(),
@@ -681,6 +670,8 @@ class CreditPurchase extends Component
             'naira',
             Transaction::CATEGORY_CREDIT_PURCHASE,
             'Credit purchase using Naira wallet',
+            null, // relatedId
+            'naira_wallet', // source
             [
                 'credits_purchased' => $credits,
                 'package_index' => $this->selectedCreditPackage,
@@ -696,6 +687,8 @@ class CreditPurchase extends Component
             'credits',
             Transaction::CATEGORY_CREDIT_PURCHASE,
             'Credits purchased with Naira wallet',
+            null, // relatedId
+            'naira_wallet', // source
             [
                 'naira_amount' => $amount,
                 'package_index' => $this->selectedCreditPackage,

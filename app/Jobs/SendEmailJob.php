@@ -50,6 +50,7 @@ class SendEmailJob implements ShouldQueue
             // Log successful delivery
             NotificationLog::create([
                 'type' => 'email',
+                'channel' => NotificationLog::CHANNEL_EMAIL,
                 'recipient' => $this->email,
                 'subject' => $this->subject,
                 'message' => $this->message,
@@ -112,6 +113,7 @@ class SendEmailJob implements ShouldQueue
         // Create notification log entry
         NotificationLog::create([
             'type' => 'email',
+            'channel' => NotificationLog::CHANNEL_EMAIL,
             'recipient' => $this->email,
             'subject' => $this->subject,
             'message' => $this->message,

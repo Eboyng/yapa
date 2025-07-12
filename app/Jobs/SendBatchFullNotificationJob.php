@@ -66,6 +66,7 @@ class SendBatchFullNotificationJob implements ShouldQueue
                         if ($result['success']) {
                             NotificationLog::create([
                                 'type' => 'batch_full_whatsapp',
+                                'channel' => NotificationLog::CHANNEL_WHATSAPP,
                                 'recipient' => $user->phone_number,
                                 'message' => $message,
                                 'user_id' => $user->id,
@@ -99,6 +100,7 @@ class SendBatchFullNotificationJob implements ShouldQueue
                         
                         NotificationLog::create([
                             'type' => 'batch_full_email',
+                            'channel' => NotificationLog::CHANNEL_EMAIL,
                             'recipient' => $user->email,
                             'subject' => 'Batch Full - Ready to Start!',
                             'message' => $message,

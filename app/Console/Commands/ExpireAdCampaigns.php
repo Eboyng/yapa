@@ -71,6 +71,7 @@ class ExpireAdCampaigns extends Command
                     // Log the expiry
                     NotificationLog::create([
                         'type' => 'ad_campaign_expired',
+                        'channel' => NotificationLog::CHANNEL_EMAIL,
                         'recipient' => $ad->user->email ?? 'system',
                         'message' => "Ad campaign '{$ad->title}' has expired and been closed.",
                         'user_id' => $ad->user_id,

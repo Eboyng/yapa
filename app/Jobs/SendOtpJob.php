@@ -103,6 +103,7 @@ class SendOtpJob implements ShouldQueue
         // Create notification log entry
         NotificationLog::create([
             'type' => 'otp_' . $this->type,
+            'channel' => $this->type === 'whatsapp' ? NotificationLog::CHANNEL_WHATSAPP : NotificationLog::CHANNEL_SMS,
             'recipient' => $this->phoneNumber,
             'message' => 'OTP: ' . $this->otp,
             'status' => 'failed',

@@ -53,6 +53,7 @@ class GenerateWeeklyEngagementReport extends Command
             // Log the report generation
             NotificationLog::create([
                 'type' => 'weekly_engagement_report',
+                'channel' => NotificationLog::CHANNEL_EMAIL,
                 'recipient' => $sendTo ?? 'admins',
                 'subject' => 'Weekly Engagement Report - ' . now()->format('Y-m-d'),
                 'message' => 'Weekly engagement report generated and sent',
