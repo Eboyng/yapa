@@ -35,6 +35,13 @@ class ChannelAd extends Model
         'created_by_admin_id',
         'instructions',
         'requirements',
+        // Marketplace fields
+        'channel_name',
+        'owner_id',
+        'price_per_ad',
+        'subscriber_count',
+        'niche',
+        'location',
     ];
 
     /**
@@ -78,11 +85,19 @@ class ChannelAd extends Model
     }
 
     /**
-     * Get the admin user who created this channel ad.
+     * Get the admin user who created this ad.
      */
     public function adminUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_admin_id');
+    }
+
+    /**
+     * Get the channel owner (for marketplace ads).
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_id');
     }
 
     /**

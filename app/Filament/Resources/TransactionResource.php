@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TransactionResource\Pages;
 use App\Models\Transaction;
+use App\Models\Wallet;
 use App\Models\AuditLog;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -119,7 +120,7 @@ class TransactionResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'credits' => 'primary',
-                        'naira' => 'success',
+                        Wallet::TYPE_NAIRA => 'success',
                         'earnings' => 'warning',
                         default => 'gray',
                     }),

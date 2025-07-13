@@ -80,6 +80,17 @@ Route::prefix('channel-ads')->name('channel-ads.')->group(function () {
     });
 });
 
+// Marketplace Dashboard Routes
+Route::prefix('dashboard')->name('dashboard.')->middleware(['auth', 'verified'])->group(function () {
+    // User dashboard for managing ad bookings
+    Route::get('/my-ads', \App\Livewire\UserDashboard::class)
+        ->name('my-ads');
+    
+    // Channel owner dashboard for managing incoming bookings
+    Route::get('/incoming-bookings', \App\Livewire\ChannelAdminDashboard::class)
+        ->name('incoming-bookings');
+});
+
 // Channel Bookings Routes
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/channel-bookings', \App\Livewire\ChannelBookings::class)

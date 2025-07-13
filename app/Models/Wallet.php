@@ -228,7 +228,7 @@ class Wallet extends Model
         );
 
         // Create naira wallet
-        $wallets['naira'] = static::firstOrCreate(
+        $wallets[self::TYPE_NAIRA] = static::firstOrCreate(
             ['user_id' => $user->id, 'type' => self::TYPE_NAIRA],
             [
                 'balance' => 0,

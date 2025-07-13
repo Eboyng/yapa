@@ -681,4 +681,143 @@ class TransactionService
             ],
         ];
     }
+
+    /**
+     * Book an ad - validate wallet balance and create escrow transaction.
+     */
+    public function bookAd(\App\Models\ChannelAdApplication $application): Transaction
+    {
+        return DB::transaction(function () use ($application) {
+            $advertiser = $application->advertiser;
+            $amount = $application->amount;
+            
+            // Validate advertiser wallet balance
+            $nairaWallet = $advertiser->getNairaWallet();
+            if ($nairaWallet->balance < $amount) {
+                throw new InsufficientBalanceException(
+                    "Insufficient wallet balance. Required: ₦{$amount}, Available: ₦{$nairaWallet->balance}"
+                );
+            }
+            
+            // Debit advertiser wallet and create escrow transaction
+            $escrowTransaction = $this->debit(
+                $advertiser->id,
+                $amount,
+                Transaction::TYPE_NAIRA,
+                Transaction::CATEGORY_CHANNEL_AD_BOOKING,
+                "Channel ad booking escrow for application #{$application->id}",
+                $application->id,
+                'wallet',
+                [
+                    'channel_ad_application_id' => $application->id,
+                    'channel_ad_id' => $application->channel_ad_id,
+                    'channel_id' => $application->channel_id,
+                    'escrow_status' => 'held',
+                ]
+            );
+            
+            // Update application with escrow details
+            $application->update([
+                'escrow_transaction_id' => $escrowTransaction->id,
+                'payment_status' => 'held',
+                'escrow_status' => 'held',
+            ]);
+            
+            Log::info('Channel ad booking escrow created', [
+                'application_id' => $application->id,
+                'advertiser_id' => $advertiser->id,
+                'amount' => $amount,
+                'escrow_transaction_id' => $escrowTransaction->id,
+            ]);
+            
+            return $escrowTransaction;
+        });
+    }
+
+    /**
+     * Release ad funds to channel owner with admin fee deduction.
+     */
+    public function releaseAdFunds(\App\Models\ChannelAdApplication $application): array
+    {
+        return DB::transaction(function () use ($application) {
+            if (!$application->escrow_transaction_id) {
+                throw new \InvalidArgumentException('No escrow transaction found for this application');
+            }
+            
+            if ($application->payment_status !== 'held') {
+                throw new \InvalidArgumentException('Application payment is not in held status');
+            }
+            
+            $channelOwner = $application->channelAd->owner ?? $application->channelAd->adminUser;
+            $adminFeePercentage = 10.0; // 10% admin fee
+            
+            // Release escrow to channel owner
+            $releaseResult = $this->releaseEscrow(
+                $application->escrow_transaction_id,
+                $channelOwner,
+                "Channel ad revenue for application #{$application->id}",
+                $adminFeePercentage
+            );
+            
+            // Update application status
+            $application->update([
+                'payment_status' => 'released',
+                'booking_status' => 'completed',
+                'escrow_status' => 'released',
+                'escrow_released_at' => now(),
+            ]);
+            
+            Log::info('Channel ad funds released', [
+                'application_id' => $application->id,
+                'channel_owner_id' => $channelOwner->id,
+                'total_amount' => $releaseResult['total_amount'],
+                'channel_owner_amount' => $releaseResult['channel_owner_amount'],
+                'admin_fee' => $releaseResult['admin_fee'],
+            ]);
+            
+            return $releaseResult;
+        });
+    }
+
+    /**
+     * Refund ad payment to advertiser.
+     */
+    public function refundAd(\App\Models\ChannelAdApplication $application, string $reason = 'Application rejected'): Transaction
+    {
+        return DB::transaction(function () use ($application, $reason) {
+            if (!$application->escrow_transaction_id) {
+                throw new \InvalidArgumentException('No escrow transaction found for this application');
+            }
+            
+            if (!in_array($application->payment_status, ['held', 'pending'])) {
+                throw new \InvalidArgumentException('Application payment cannot be refunded in current status');
+            }
+            
+            // Refund escrow to advertiser
+            $refundTransaction = $this->refundEscrow(
+                $application->escrow_transaction_id,
+                $reason
+            );
+            
+            // Update application status
+            $application->update([
+                'payment_status' => 'refunded',
+                'booking_status' => 'canceled',
+                'escrow_status' => 'refunded',
+                'status' => 'rejected',
+                'rejected_at' => now(),
+                'rejection_reason' => $reason,
+            ]);
+            
+            Log::info('Channel ad payment refunded', [
+                'application_id' => $application->id,
+                'advertiser_id' => $application->advertiser_id,
+                'amount' => $refundTransaction->amount,
+                'reason' => $reason,
+                'refund_transaction_id' => $refundTransaction->id,
+            ]);
+            
+            return $refundTransaction;
+        });
+    }
 }

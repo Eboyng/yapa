@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Transaction;
+use App\Models\Wallet;
 use App\Models\WebhookLog;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
@@ -346,8 +347,8 @@ class PaystackService
             $walletType = $transaction->metadata['wallet_type'] ?? 'credits';
             
             // Determine the correct wallet type for the transaction service
-            if ($walletType === 'naira') {
-                $serviceWalletType = 'naira';
+            if ($walletType === Wallet::TYPE_NAIRA) {
+                $serviceWalletType = Wallet::TYPE_NAIRA;
             } else {
                 $serviceWalletType = 'credits';
             }
@@ -450,7 +451,7 @@ class PaystackService
             $walletType = $transaction->metadata['wallet_type'] ?? 'credits';
             
             // Determine the correct transaction type based on wallet type and category
-            $transactionType = 'naira'; // Default to naira for wallet funding
+            $transactionType = Wallet::TYPE_NAIRA; // Default to naira for wallet funding
             
             // For credit purchases, use credits type
             if ($transaction->category === Transaction::CATEGORY_CREDIT_PURCHASE) {
@@ -937,7 +938,7 @@ class PaystackService
             $email,
             $callbackUrl,
             $metadata,
-            'naira', // Use Naira wallet for channel ad bookings
+            Wallet::TYPE_NAIRA, // Use Naira wallet for channel ad bookings
             'channel_ad_booking' // Purchase type for channel ad bookings
         );
     }

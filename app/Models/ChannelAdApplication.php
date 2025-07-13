@@ -33,12 +33,19 @@ class ChannelAdApplication extends Model
         'proof_approved_at',
         'escrow_amount',
         'escrow_status',
-        'escrow_transaction_id',
         'escrow_released_at',
         'dispute_reason',
         'dispute_status',
         'dispute_resolved_at',
         'dispute_resolution',
+        'escrow_transaction_id',
+        // Marketplace fields
+        'advertiser_id',
+        'booking_status',
+        'start_date',
+        'end_date',
+        'payment_status',
+        'amount',
     ];
 
     /**
@@ -120,6 +127,14 @@ class ChannelAdApplication extends Model
     public function channelAd(): BelongsTo
     {
         return $this->belongsTo(ChannelAd::class);
+    }
+
+    /**
+     * Get the advertiser (user who applied for the ad).
+     */
+    public function advertiser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'advertiser_id');
     }
 
     /**

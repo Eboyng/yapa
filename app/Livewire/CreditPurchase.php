@@ -7,6 +7,7 @@ use App\Services\TransactionService;
 use App\Services\AirtimeService;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Wallet;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -667,7 +668,7 @@ class CreditPurchase extends Component
         $transactionService->debit(
             $user->id,
             $amount,
-            'naira',
+            Wallet::TYPE_NAIRA,
             Transaction::CATEGORY_CREDIT_PURCHASE,
             'Credit purchase using Naira wallet',
             null, // relatedId

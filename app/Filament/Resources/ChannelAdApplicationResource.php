@@ -9,6 +9,8 @@ use App\Models\Channel;
 use App\Models\Transaction;
 use App\Models\AuditLog;
 use App\Services\TransactionService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -31,11 +33,15 @@ class ChannelAdApplicationResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?string $navigationGroup = 'Channel Management';
+    protected static ?string $navigationGroup = 'Channel Ads';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
-    protected static ?string $navigationLabel = 'Ad Applications';
+    protected static ?string $navigationLabel = 'Channel Ad Applications';
+
+    protected static ?string $modelLabel = 'Channel Ad Application';
+
+    protected static ?string $pluralModelLabel = 'Channel Ad Applications';
 
     public static function form(Form $form): Form
     {
@@ -43,35 +49,67 @@ class ChannelAdApplicationResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Application Information')
                     ->schema([
-                        Forms\Components\Select::make('channel_id')
-                            ->relationship('channel', 'name')
-                            ->required()
-                            ->searchable()
-                            ->preload(),
                         Forms\Components\Select::make('channel_ad_id')
-                            ->relationship('channelAd', 'title')
+                            ->label('Channel Ad')
+                            ->relationship('channelAd', 'channel_name')
                             ->required()
                             ->searchable()
                             ->preload(),
+                        
+                        Forms\Components\Select::make('advertiser_id')
+                            ->label('Advertiser')
+                            ->relationship('advertiser', 'name')
+                            ->required()
+                            ->searchable()
+                            ->preload(),
+                        
                         Forms\Components\Textarea::make('application_message')
                             ->maxLength(1000)
                             ->rows(3)
                             ->label('Application Message'),
-                    ])->columns(1),
+                    ])->columns(2),
+                
+                Forms\Components\Section::make('Booking Details')
+                    ->schema([
+                        Forms\Components\DatePicker::make('start_date')
+                            ->label('Start Date')
+                            ->required(),
+                        
+                        Forms\Components\DatePicker::make('end_date')
+                            ->label('End Date')
+                            ->required()
+                            ->after('start_date'),
+                        
+                        Forms\Components\TextInput::make('amount')
+                            ->label('Amount')
+                            ->numeric()
+                            ->prefix('₦')
+                            ->required(),
+                    ])->columns(3),
                 
                 Forms\Components\Section::make('Status & Proof')
                     ->schema([
-                        Forms\Components\Select::make('status')
+                        Forms\Components\Select::make('booking_status')
+                            ->label('Booking Status')
                             ->required()
                             ->options([
-                                ChannelAdApplication::STATUS_PENDING => 'Pending',
-                                ChannelAdApplication::STATUS_APPROVED => 'Approved',
-                                ChannelAdApplication::STATUS_REJECTED => 'Rejected',
-                                ChannelAdApplication::STATUS_PROOF_SUBMITTED => 'Proof Submitted',
-                                ChannelAdApplication::STATUS_COMPLETED => 'Completed',
-                                ChannelAdApplication::STATUS_DISPUTED => 'Disputed',
+                                'pending' => 'Pending',
+                                'confirmed' => 'Confirmed',
+                                'completed' => 'Completed',
+                                'canceled' => 'Canceled',
                             ])
-                            ->default(ChannelAdApplication::STATUS_PENDING),
+                            ->default('pending'),
+                        
+                        Forms\Components\Select::make('payment_status')
+                            ->label('Payment Status')
+                            ->required()
+                            ->options([
+                                'pending' => 'Pending',
+                                'held' => 'Held',
+                                'released' => 'Released',
+                                'refunded' => 'Refunded',
+                            ])
+                            ->default('pending'),
                         Forms\Components\FileUpload::make('proof_screenshot')
                             ->image()
                             ->maxSize(5120)
@@ -128,68 +166,117 @@ class ChannelAdApplicationResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('channel.name')
+                Tables\Columns\TextColumn::make('id')
+                    ->label('ID')
+                    ->sortable()
+                    ->searchable(),
+                
+                Tables\Columns\TextColumn::make('channelAd.channel_name')
+                    ->label('Channel')
+                    ->sortable()
                     ->searchable()
+                    ->limit(30),
+                
+                Tables\Columns\TextColumn::make('advertiser.name')
+                    ->label('Advertiser')
                     ->sortable()
-                    ->limit(20),
-                Tables\Columns\TextColumn::make('channelAd.title')
                     ->searchable()
-                    ->sortable()
-                    ->limit(25)
-                    ->label('Ad Title'),
-                Tables\Columns\TextColumn::make('channelAd.payment_per_channel')
-                    ->money('NGN')
-                    ->sortable()
-                    ->label('Payment'),
-                Tables\Columns\TextColumn::make('escrow_amount')
-                    ->label('Escrow')
+                    ->limit(25),
+                
+                Tables\Columns\TextColumn::make('start_date')
+                    ->label('Start Date')
+                    ->date()
+                    ->sortable(),
+                
+                Tables\Columns\TextColumn::make('end_date')
+                    ->label('End Date')
+                    ->date()
+                    ->sortable(),
+                
+                Tables\Columns\TextColumn::make('amount')
+                    ->label('Amount')
                     ->money('NGN')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('escrow_transaction_id')
-                    ->label('Escrow TX ID')
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('status')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        ChannelAdApplication::STATUS_PENDING => 'warning',
-                        ChannelAdApplication::STATUS_APPROVED => 'success',
-                        ChannelAdApplication::STATUS_REJECTED => 'danger',
-                        ChannelAdApplication::STATUS_PROOF_SUBMITTED => 'info',
-                        ChannelAdApplication::STATUS_COMPLETED => 'success',
-                        ChannelAdApplication::STATUS_DISPUTED => 'danger',
-                        default => 'gray',
-                    })
+                
+                Tables\Columns\BadgeColumn::make('booking_status')
+                    ->label('Booking Status')
+                    ->colors([
+                        'warning' => 'pending',
+                        'primary' => 'confirmed',
+                        'success' => 'completed',
+                        'danger' => 'canceled',
+                    ])
                     ->sortable(),
+                
+                Tables\Columns\BadgeColumn::make('payment_status')
+                    ->label('Payment Status')
+                    ->colors([
+                        'warning' => 'pending',
+                        'primary' => 'held',
+                        'success' => 'released',
+                        'danger' => 'refunded',
+                    ])
+                    ->sortable(),
+                
+                Tables\Columns\TextColumn::make('escrowTransaction.reference')
+                    ->label('Escrow Txn')
+                    ->limit(15)
+                    ->tooltip(function (ChannelAdApplication $record): ?string {
+                        return $record->escrowTransaction?->reference;
+                    }),
+                
                 Tables\Columns\IconColumn::make('proof_screenshot')
                     ->boolean()
-                    ->label('Has Proof'),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->label('Applied At'),
-                Tables\Columns\TextColumn::make('approved_at')
-                    ->dateTime()
-                    ->sortable()
+                    ->label('Has Proof')
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('completed_at')
+                
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Applied At')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
+                Tables\Filters\SelectFilter::make('booking_status')
+                    ->label('Booking Status')
                     ->options([
-                        ChannelAdApplication::STATUS_PENDING => 'Pending',
-                        ChannelAdApplication::STATUS_APPROVED => 'Approved',
-                        ChannelAdApplication::STATUS_REJECTED => 'Rejected',
-                        ChannelAdApplication::STATUS_PROOF_SUBMITTED => 'Proof Submitted',
-                        ChannelAdApplication::STATUS_COMPLETED => 'Completed',
-                        ChannelAdApplication::STATUS_DISPUTED => 'Disputed',
+                        'pending' => 'Pending',
+                        'confirmed' => 'Confirmed',
+                        'completed' => 'Completed',
+                        'canceled' => 'Canceled',
                     ]),
+                
+                Tables\Filters\SelectFilter::make('payment_status')
+                    ->label('Payment Status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'held' => 'Held',
+                        'released' => 'Released',
+                        'refunded' => 'Refunded',
+                    ]),
+                
+                Tables\Filters\Filter::make('created_at')
+                    ->form([
+                        Forms\Components\DatePicker::make('created_from')
+                            ->label('Applied From'),
+                        Forms\Components\DatePicker::make('created_until')
+                            ->label('Applied Until'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['created_from'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['created_until'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                            );
+                    }),
+                
                 Tables\Filters\Filter::make('has_proof')
                     ->query(fn (Builder $query): Builder => $query->whereNotNull('proof_screenshot')),
-                Tables\Filters\Filter::make('disputed')
-                    ->query(fn (Builder $query): Builder => $query->where('status', ChannelAdApplication::STATUS_DISPUTED)),
+                
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
@@ -197,71 +284,132 @@ class ChannelAdApplicationResource extends Resource
                 Tables\Actions\EditAction::make(),
                 
                 Action::make('approve')
-                    ->icon('heroicon-o-check')
+                    ->label('Approve')
+                    ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->visible(fn (ChannelAdApplication $record): bool => $record->status === ChannelAdApplication::STATUS_PENDING)
-                    ->form([
-                        Textarea::make('admin_notes')
-                            ->label('Admin Notes (Optional)')
-                            ->maxLength(500),
-                    ])
-                    ->action(function (ChannelAdApplication $record, array $data): void {
-                        $record->approve($data['admin_notes'] ?? null);
-                        
-                        Notification::make()
-                            ->title('Application Approved')
-                            ->body("Application for '{$record->channelAd->title}' has been approved.")
-                            ->success()
-                            ->send();
+                    ->visible(fn (ChannelAdApplication $record): bool => 
+                        $record->booking_status === 'pending' && $record->payment_status === 'held'
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading('Approve Application')
+                    ->modalDescription('Are you sure you want to approve this application? This will release the funds to the channel owner.')
+                    ->action(function (ChannelAdApplication $record) {
+                        try {
+                            DB::transaction(function () use ($record) {
+                                // Update application status
+                                $record->update([
+                                    'booking_status' => 'confirmed',
+                                    'approved_at' => now(),
+                                ]);
+
+                                // Release funds through TransactionService
+                                $transactionService = app(TransactionService::class);
+                                $transactionService->releaseAdFunds($record);
+                            });
+
+                            Notification::make()
+                                ->title('Application Approved')
+                                ->body('The application has been approved and funds have been released.')
+                                ->success()
+                                ->send();
+
+                        } catch (\Exception $e) {
+                            Log::error('Admin approval error', [
+                                'application_id' => $record->id,
+                                'error' => $e->getMessage(),
+                            ]);
+
+                            Notification::make()
+                                ->title('Approval Failed')
+                                ->body('Failed to approve application: ' . $e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
                     }),
                 
                 Action::make('reject')
-                    ->icon('heroicon-o-x-mark')
+                    ->label('Reject')
+                    ->icon('heroicon-o-x-circle')
                     ->color('danger')
-                    ->visible(fn (ChannelAdApplication $record): bool => $record->status === ChannelAdApplication::STATUS_PENDING)
+                    ->visible(fn (ChannelAdApplication $record): bool => 
+                        $record->booking_status === 'pending'
+                    )
                     ->form([
                         Textarea::make('rejection_reason')
                             ->label('Rejection Reason')
                             ->required()
-                            ->maxLength(500),
-                        Textarea::make('admin_notes')
-                            ->label('Admin Notes (Optional)')
-                            ->maxLength(500),
+                            ->rows(3)
+                            ->placeholder('Please provide a reason for rejecting this application...'),
                     ])
-                    ->action(function (ChannelAdApplication $record, array $data): void {
-                        $record->reject($data['rejection_reason'], $data['admin_notes'] ?? null);
-                        
-                        Notification::make()
-                            ->title('Application Rejected')
-                            ->body("Application for '{$record->channelAd->title}' has been rejected.")
-                            ->warning()
-                            ->send();
-                    }),
-                
-                Action::make('complete')
-                    ->label('Complete & Release Payment')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->visible(fn (ChannelAdApplication $record): bool => $record->status === ChannelAdApplication::STATUS_PROOF_SUBMITTED)
-                    ->requiresConfirmation()
-                    ->modalHeading('Complete Application & Release Payment')
-                    ->modalDescription('This will release the escrow payment to the channel owner (90%) and admin fee (10%). Are you sure the proof is satisfactory?')
-                    ->action(function (ChannelAdApplication $record): void {
+                    ->action(function (ChannelAdApplication $record, array $data) {
                         try {
-                            $record->approveProofAndReleaseEscrow();
-                            
-                            $channelOwnerAmount = $record->escrow_amount * 0.9;
-                            $adminFee = $record->escrow_amount * 0.1;
-                            
+                            DB::transaction(function () use ($record, $data) {
+                                // Update application with rejection details
+                                $record->update([
+                                    'booking_status' => 'canceled',
+                                    'rejection_reason' => $data['rejection_reason'],
+                                    'rejected_at' => now(),
+                                ]);
+
+                                // Process refund through TransactionService
+                                $transactionService = app(TransactionService::class);
+                                $transactionService->refundAd($record);
+                            });
+
                             Notification::make()
-                                ->title('Application Completed')
-                                ->body("Payment released: ₦{$channelOwnerAmount} to channel owner, ₦{$adminFee} admin fee.")
+                                ->title('Application Rejected')
+                                ->body('The application has been rejected and refund has been processed.')
                                 ->success()
                                 ->send();
+
                         } catch (\Exception $e) {
+                            Log::error('Admin rejection error', [
+                                'application_id' => $record->id,
+                                'error' => $e->getMessage(),
+                            ]);
+
                             Notification::make()
-                                ->title('Error')
-                                ->body('Failed to complete application: ' . $e->getMessage())
+                                ->title('Rejection Failed')
+                                ->body('Failed to reject application: ' . $e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+                
+                Action::make('refund')
+                    ->label('Refund')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('warning')
+                    ->visible(fn (ChannelAdApplication $record): bool => 
+                        in_array($record->booking_status, ['confirmed', 'completed']) && 
+                        $record->payment_status === 'released'
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading('Process Refund')
+                    ->modalDescription('Are you sure you want to process a refund for this application? This action cannot be undone.')
+                    ->action(function (ChannelAdApplication $record) {
+                        try {
+                            DB::transaction(function () use ($record) {
+                                // Process refund through TransactionService
+                                $transactionService = app(TransactionService::class);
+                                $transactionService->refundAd($record);
+                            });
+
+                            Notification::make()
+                                ->title('Refund Processed')
+                                ->body('The refund has been processed successfully.')
+                                ->success()
+                                ->send();
+
+                        } catch (\Exception $e) {
+                            Log::error('Admin refund error', [
+                                'application_id' => $record->id,
+                                'error' => $e->getMessage(),
+                            ]);
+
+                            Notification::make()
+                                ->title('Refund Failed')
+                                ->body('Failed to process refund: ' . $e->getMessage())
                                 ->danger()
                                 ->send();
                         }
@@ -385,7 +533,7 @@ class ChannelAdApplicationResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::where('status', ChannelAdApplication::STATUS_PENDING)->count();
+        return static::getModel()::where('booking_status', 'pending')->count();
     }
 
     public static function getNavigationBadgeColor(): string|array|null

@@ -2,9 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Models\Channel;
 use App\Models\ChannelAd;
 use App\Models\ChannelAdBooking;
 use App\Models\Transaction;
+use App\Models\Wallet;
 use App\Services\TransactionService;
 use App\Services\PaystackService;
 use App\Services\NotificationService;
@@ -33,6 +35,8 @@ class ChannelShow extends Component
     // Calculated fields
     public float $total_amount = 0;
     public bool $isSubmitting = false;
+    public $selected_channel_id = null;
+    public $available_channels = [];
     
     protected $rules = [
         'duration_hours' => 'required|integer|min:24|max:720', // 24 hours to 30 days
@@ -41,6 +45,7 @@ class ChannelShow extends Component
         'url' => 'nullable|url|max:255',
         'images.*' => 'nullable|image|max:2048', // 2MB max per image
         'payment_method' => 'required|in:wallet,paystack',
+        'selected_channel_id' => 'required|exists:channels,id',
     ];
 
     protected $messages = [
@@ -87,6 +92,23 @@ class ChannelShow extends Component
             return redirect()->route('login');
         }
 
+        // Load available channels that match the ad's criteria
+        $this->available_channels = Channel::where('status', 'approved')
+            ->where('user_id', '!=', Auth::id()) // Exclude user's own channels
+            ->get()
+            ->filter(function ($channel) {
+                return $this->channelAd->canChannelApply($channel);
+            })
+            ->map(function ($channel) {
+                return [
+                    'id' => $channel->id,
+                    'name' => $channel->name,
+                    'follower_count' => $channel->follower_count,
+                    'niche' => $channel->niche,
+                ];
+            })
+            ->toArray();
+
         $this->showBookingModal = true;
     }
 
@@ -104,6 +126,8 @@ class ChannelShow extends Component
         $this->images = [];
         $this->duration_hours = 24;
         $this->payment_method = 'wallet';
+        $this->selected_channel_id = null;
+        $this->available_channels = [];
         $this->calculateAmount();
     }
 
@@ -125,7 +149,7 @@ class ChannelShow extends Component
             $user = Auth::user();
             
             // Check if user has sufficient Naira wallet balance for wallet payment
-            if ($this->payment_method === 'wallet' && $user->naira_wallet_balance < $this->total_amount) {
+            if ($this->payment_method === 'wallet' && $user->getNairaWallet()->balance < $this->total_amount) {
                 // Auto-switch to Paystack if insufficient Naira wallet balance
                 $this->payment_method = 'paystack';
             }
@@ -140,10 +164,24 @@ class ChannelShow extends Component
                     }
                 }
 
+                // Validate that the selected channel is still available and matches criteria
+                $selectedChannel = Channel::where('id', $this->selected_channel_id)
+                    ->where('status', 'approved')
+                    ->where('user_id', '!=', $user->id)
+                    ->first();
+
+                if (!$selectedChannel) {
+                    throw new \Exception('Selected channel is no longer available.');
+                }
+
+                if (!$this->channelAd->canChannelApply($selectedChannel)) {
+                    throw new \Exception('Selected channel does not meet the ad requirements.');
+                }
+
                 // Create the booking
                 $booking = ChannelAdBooking::create([
                     'user_id' => $user->id,
-                    'channel_ad_id' => $this->channelAd->id,
+                    'channel_id' => $selectedChannel->id,
                     'title' => $this->title ?: null,
                     'description' => $this->description ?: null,
                     'url' => $this->url ?: null,
@@ -162,7 +200,7 @@ class ChannelShow extends Component
                     $escrowTransaction = $transactionService->createEscrow(
                         $user,
                         $this->total_amount,
-                        'naira',
+                        Wallet::TYPE_NAIRA,
                         Transaction::CATEGORY_CHANNEL_AD_BOOKING,
                         "Escrow for channel ad booking: {$this->channelAd->title}",
                         $booking->id
@@ -257,7 +295,7 @@ class ChannelShow extends Component
     public function render()
     {
         return view('livewire.channel-show', [
-            'userNairaBalance' => Auth::check() ? Auth::user()->naira_wallet_balance : 0,
+            'userNairaBalance' => Auth::check() ? Auth::user()->getNairaWallet()->balance : 0,
         ])->layout('layouts.app');
     }
 }

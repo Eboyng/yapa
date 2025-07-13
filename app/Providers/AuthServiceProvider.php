@@ -2,8 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\ChannelAd;
+use App\Models\ChannelAdApplication;
 use App\Models\ChannelPurchase;
 use App\Models\ChannelSale;
+use App\Policies\ChannelAdApplicationPolicy;
+use App\Policies\ChannelAdPolicy;
 use App\Policies\ChannelPurchasePolicy;
 use App\Policies\ChannelSalePolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
@@ -17,6 +21,8 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
+        ChannelAd::class => ChannelAdPolicy::class,
+        ChannelAdApplication::class => ChannelAdApplicationPolicy::class,
         ChannelSale::class => ChannelSalePolicy::class,
         ChannelPurchase::class => ChannelPurchasePolicy::class,
     ];

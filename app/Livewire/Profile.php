@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Interest;
 use App\Models\User;
+use App\Models\Wallet;
 use App\Models\BatchMember;
 use App\Models\Batch;
 use App\Services\OtpService;
@@ -510,7 +511,7 @@ class Profile extends Component
 
     public function getNairaBalanceProperty()
     {
-        return $this->user->getWallet('naira')->balance ?? 0;
+        return $this->user->getWallet(Wallet::TYPE_NAIRA)->balance ?? 0;
     }
 
     public function getEarningsBalanceProperty()

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\PaystackService;
 use App\Services\SettingService;
 use App\Models\Transaction;
+use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -76,8 +77,8 @@ class PaystackController extends Controller
             // Handle payment status
             if ($paymentData['status'] === 'success') {
                 if ($transaction->isConfirmed()) {
-                    $walletType = $transaction->metadata['wallet_type'] ?? 'naira';
-                    $successMessage = $walletType === 'naira' 
+                    $walletType = $transaction->metadata['wallet_type'] ?? Wallet::TYPE_NAIRA;
+                $successMessage = $walletType === Wallet::TYPE_NAIRA 
                         ? 'Payment already confirmed! ₦' . number_format($transaction->amount, 2) . ' has been added to your wallet.'
                         : 'Payment already confirmed! Funds have been added to your wallet.';
                     
@@ -88,8 +89,8 @@ class PaystackController extends Controller
                 $processResult = $this->paystackService->processCallbackPayment($transaction, $paymentData);
 
                 if ($processResult['success']) {
-                    $walletType = $transaction->metadata['wallet_type'] ?? 'naira';
-                    $successMessage = $walletType === 'naira' 
+                    $walletType = $transaction->metadata['wallet_type'] ?? Wallet::TYPE_NAIRA;
+                $successMessage = $walletType === Wallet::TYPE_NAIRA 
                         ? 'Payment successful! ₦' . number_format($transaction->amount, 2) . ' has been added to your wallet.'
                         : 'Payment successful! ' . number_format($transaction->amount) . ' has been added to your wallet.';
                     
@@ -203,7 +204,7 @@ class PaystackController extends Controller
         }
 
         $minimumAmount = $this->settingService->get('minimum_amount_naira', 1000.0);
-        $walletType = $request->input('wallet_type', 'naira');
+        $walletType = $request->input('wallet_type', Wallet::TYPE_NAIRA);
         $purchaseType = $request->input('purchase_type', 'naira_purchase');
         
         $validationRules = [

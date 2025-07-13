@@ -4,6 +4,7 @@ namespace App\Livewire\Partials;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Wallet;
 
 class Header extends Component
 {
@@ -20,7 +21,7 @@ class Header extends Component
         if (!Auth::check()) {
             return 0;
         }
-        return Auth::user()->getWallet('naira')->balance ?? 0;
+        return Auth::user()->getWallet(Wallet::TYPE_NAIRA)->balance ?? 0;
     }
 
     public function getEarningsBalanceProperty()
