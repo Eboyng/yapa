@@ -226,7 +226,7 @@ class CreditPurchase extends Component
                     'user_agent' => request()->userAgent(),
                     'ip_address' => request()->ip(),
                 ],
-                'naira', // <- this is the fix: target Naira wallet
+                Wallet::TYPE_NAIRA, // <- this is the fix: target Naira wallet
                 Transaction::CATEGORY_NAIRA_FUNDING
             );
 

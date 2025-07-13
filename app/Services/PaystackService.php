@@ -68,7 +68,7 @@ class PaystackService
         }
 
         // Get appropriate wallet based on type
-        if ($walletType === 'naira') {
+        if ($walletType === Wallet::TYPE_NAIRA) {
             $wallet = $user->getNairaWallet();
             $transactionAmount = $amount; // For Naira wallet, amount is in Naira
             $transactionType = 'credit';
@@ -140,7 +140,7 @@ class PaystackService
                             'variable_name' => 'credits',
                             'value' => $credits ?? 0,
                         ] : null,
-                        $walletType === 'naira' ? [
+                        $walletType === Wallet::TYPE_NAIRA ? [
                             'display_name' => 'Wallet Type',
                             'variable_name' => 'wallet_type',
                             'value' => 'Naira Wallet',

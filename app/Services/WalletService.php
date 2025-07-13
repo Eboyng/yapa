@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use App\Models\AuditLog;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,7 @@ class WalletService
             $adminUser = $adminUser ?? Auth::user();
             
             // Validate wallet type
-            if (!in_array($walletType, ['credits', 'naira', 'earnings'])) {
+            if (!in_array($walletType, ['credits', Wallet::TYPE_NAIRA, 'earnings'])) {
                 throw new Exception('Invalid wallet type');
             }
             
@@ -84,7 +85,7 @@ class WalletService
             $adminUser = $adminUser ?? Auth::user();
             
             // Validate wallet type
-            if (!in_array($walletType, ['credits', 'naira', 'earnings'])) {
+            if (!in_array($walletType, ['credits', Wallet::TYPE_NAIRA, 'earnings'])) {
                 throw new Exception('Invalid wallet type');
             }
             
