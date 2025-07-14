@@ -49,54 +49,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('transactions.index');
 });
 
-// Channel Routes
-Route::prefix('channels')->name('channels.')->group(function () {
-    // Redirect to channel ads (since channel list is redundant)
-    Route::get('/', function() {
-        return redirect()->route('channel-ads.index');
-    })->name('index');
-    
-    // Channel show page (public access for viewing and booking)
-    Route::get('/{channelAd}', \App\Livewire\ChannelShow::class)
-        ->name('show');
-    
-    // Protected channel routes
-    Route::middleware(['auth', 'verified'])->group(function () {
-        Route::get('/create', ChannelCreate::class)
-            ->name('create');
-    });
-});
-
-// Channel Ads Routes
-Route::prefix('channel-ads')->name('channel-ads.')->group(function () {
-    // Public channel ads listing (no auth required)
-    Route::get('/', ChannelAdList::class)
-        ->name('index');
-    
-    // Protected channel ads routes
-    Route::middleware(['auth', 'verified'])->group(function () {
-        Route::get('/my-applications', MyChannelApplications::class)
-            ->name('my-applications');
-    });
-});
-
-// Marketplace Dashboard Routes
-Route::prefix('dashboard')->name('dashboard.')->middleware(['auth', 'verified'])->group(function () {
-    // User dashboard for managing ad bookings
-    Route::get('/my-ads', \App\Livewire\UserDashboard::class)
-        ->name('my-ads');
-    
-    // Channel owner dashboard for managing incoming bookings
-    Route::get('/incoming-bookings', \App\Livewire\ChannelAdminDashboard::class)
-        ->name('incoming-bookings');
-});
-
-// Channel Bookings Routes
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/channel-bookings', \App\Livewire\ChannelBookings::class)
-        ->name('channel-bookings.index');
-});
-
 // Channel Sale Marketplace Routes
 Route::prefix('channel-sale')->name('channel-sale.')->group(function () {
     // Public browse page (no auth required)

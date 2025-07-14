@@ -54,7 +54,7 @@
                             </svg>
                             <span>Batches</span>
                         </a>
-                        <a href="{{ route('channels.index') }}"
+                        <a href="{{ route('channel-sale.browse') }}"
                             class="flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-orange-50 {{ request()->routeIs('channels.*') ? 'text-orange-600 bg-orange-50' : 'text-gray-700 hover:text-orange-600' }}">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                                 <path
@@ -78,7 +78,7 @@
                                     d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z">
                                 </path>
                             </svg>
-                            <span>Credits</span>
+                            <span>Wallet</span>
                         </a>
                     @endauth
                 </nav>
@@ -276,7 +276,7 @@
                                                     d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z">
                                                 </path>
                                             </svg>
-                                            Credits
+                                            Wallet
                                         </a>
                                         <a href="{{ route('referrals') }}"
                                             class="flex items-center px-4 py-2 text-sm  transition-colors {{ request()->routeIs('referrals') ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-600' }}">

@@ -19,7 +19,7 @@
         </a>
 
         <!-- Channels -->
-        <a href="{{ route('channels.index') }}" 
+        <a href="{{ route('channel-sale.browse') }}" 
            class="nav-item {{ request()->routeIs('channels.*') ? 'active' : '' }} flex flex-col items-center py-2.5 px-3 rounded-2xl transition-all duration-300 min-w-0 relative overflow-hidden group">
             <div class="relative z-10">
                 <!-- Channels Icon (TV/Broadcast) -->
