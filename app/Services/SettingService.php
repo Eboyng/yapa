@@ -96,7 +96,7 @@ class SettingService
         // Banner Settings
         'banner_enabled' => true,
         'banner_auto_slide' => true,
-        'banner_slide_interval' => 5000,
+        'banner_slide_interval' => 5,
         'banner_guest_title' => 'Connect & Share Contacts',
         'banner_guest_subtitle' => 'Join Yapa to connect with like-minded people and build meaningful networks',
         'banner_guest_description' => 'Discover new connections, share your contacts, and grow your network with people who share your interests and location.',
@@ -411,10 +411,21 @@ class SettingService
      */
     public function getNotificationSettings(): array
     {
-        return $this->getMultiple([
+        $settings = $this->getMultiple([
             'whatsapp_notifications_enabled',
             'email_notifications_enabled',
         ]);
+        
+        // Default to enabled if not set in database
+        if (!isset($settings['whatsapp_notifications_enabled']) || $settings['whatsapp_notifications_enabled'] === null) {
+            $settings['whatsapp_notifications_enabled'] = config('services.kudisms.whatsapp_enabled', true);
+        }
+        
+        if (!isset($settings['email_notifications_enabled']) || $settings['email_notifications_enabled'] === null) {
+            $settings['email_notifications_enabled'] = true;
+        }
+        
+        return $settings;
     }
 
     /**
@@ -422,7 +433,7 @@ class SettingService
      */
     public function getKudismsSettings(): array
     {
-        return $this->getMultiple([
+        $settings = $this->getMultiple([
             'kudisms_api_key',
             'kudisms_whatsapp_template_code',
             'kudisms_sender_id',
@@ -432,6 +443,23 @@ class SettingService
             'kudisms_sms_url',
             'kudisms_balance_url',
         ]);
+        
+        // Fallback to config values if database values are empty
+        $configFallbacks = [
+            'kudisms_api_key' => config('services.kudisms.api_key'),
+            'kudisms_sender_id' => config('services.kudisms.sender_id'),
+            'kudisms_whatsapp_url' => config('services.kudisms.whatsapp_url'),
+            'kudisms_sms_url' => config('services.kudisms.base_url'),
+            'kudisms_whatsapp_template_code' => config('services.kudisms.whatsapp_template_code'),
+        ];
+        
+        foreach ($configFallbacks as $key => $fallback) {
+            if (empty($settings[$key]) && !empty($fallback)) {
+                $settings[$key] = $fallback;
+            }
+        }
+        
+        return $settings;
     }
 
     /**
@@ -450,7 +478,7 @@ class SettingService
      */
     public function getSmsSettings(): array
     {
-        return $this->getMultiple([
+        $settings = $this->getMultiple([
             'kudisms_api_key',
             'kudisms_sender_id',
             'kudisms_sms_template_code',
@@ -458,6 +486,21 @@ class SettingService
             'kudisms_sms_url',
             'kudisms_balance_url',
         ]);
+        
+        // Fallback to config values if database values are empty
+        $configFallbacks = [
+            'kudisms_api_key' => config('services.kudisms.api_key'),
+            'kudisms_sender_id' => config('services.kudisms.sender_id'),
+            'kudisms_sms_url' => config('services.kudisms.base_url'),
+        ];
+        
+        foreach ($configFallbacks as $key => $fallback) {
+            if (empty($settings[$key]) && !empty($fallback)) {
+                $settings[$key] = $fallback;
+            }
+        }
+        
+        return $settings;
     }
 
     /**

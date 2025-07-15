@@ -34,7 +34,6 @@ class Dashboard extends BaseDashboard
             KudismsBalanceWidget::class,
             
             // Secondary Stats Row (2x2 Grid)
-            ChannelAdStatsWidget::class,
             WithdrawalStatsWidget::class,
             CreditUsageStatsWidget::class,
             WalletOverviewWidget::class,
@@ -57,15 +56,15 @@ class Dashboard extends BaseDashboard
         ];
     }
     
-    public function getColumns(): int | string | array
-    {
-        return [
-            'default' => 2,
-            'sm' => 2,
-            'md' => 3,
-            'lg' => 4,
-            'xl' => 4,
-            '2xl' => 4,
-        ];
-    }
+    // public function getColumns(): int | string | array
+    // {
+    //     return [
+    //         'default' => 2,
+    //         'sm' => 2,
+    //         'md' => 3,
+    //         'lg' => 4,
+    //         'xl' => 4,
+    //         '2xl' => 4,
+    //     ];
+    // }
 }

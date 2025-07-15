@@ -32,11 +32,9 @@ new #[Layout('layouts.guest')] class extends Component
         // Check if this is for a pending user registration
         $registrationData = Session::get('registration_data');
         
-        if ($registrationData && isset($registrationData['whatsapp_number'])) {
+        if ($registrationData && isset($registrationData['pending_user_id'])) {
             // This is a pending user registration
-            $this->pendingUser = PendingUser::where('whatsapp_number', $registrationData['whatsapp_number'])
-                ->where('expires_at', '>', now())
-                ->first();
+            $this->pendingUser = PendingUser::find($registrationData['pending_user_id']);
                 
             if ($this->pendingUser) {
                 $this->userType = 'pending';
@@ -203,7 +201,15 @@ new #[Layout('layouts.guest')] class extends Component
         }
         
         DB::transaction(function () {
-            $emailVerificationEnabled = Session::get('registration_data.email_verification_enabled', false);
+            $registrationData = Session::get('registration_data', []);
+            $emailVerificationEnabled = $registrationData['email_verification_enabled'] ?? false;
+            $referralCode = $registrationData['referral_code'] ?? null;
+            
+            // Find referrer if referral code provided
+            $referrer = null;
+            if (!empty($referralCode)) {
+                $referrer = User::withReferralCode($referralCode)->first();
+            }
             
             // Create the actual user
             $user = User::create([
@@ -212,9 +218,8 @@ new #[Layout('layouts.guest')] class extends Component
                 'whatsapp_number' => $this->pendingUser->whatsapp_number,
                 'password' => $this->pendingUser->password, // Already hashed
                 'whatsapp_verified_at' => now(),
-                'referral_code' => $this->pendingUser->referral_code,
-                'referred_by' => $this->pendingUser->referred_by,
-                'referred_at' => $this->pendingUser->referred_by ? now() : null,
+                'referred_by' => $referrer?->id,
+                'referred_at' => $referrer ? now() : null,
                 'email_verification_enabled' => $emailVerificationEnabled,
             ]);
             
@@ -222,7 +227,7 @@ new #[Layout('layouts.guest')] class extends Component
             // No need to manually credit registration bonus
             
             // Process referral if applicable
-            if ($this->pendingUser->referred_by) {
+            if ($referrer) {
                 $referralService = app(ReferralService::class);
                 $referralService->processReferral($user, 'registration');
             }

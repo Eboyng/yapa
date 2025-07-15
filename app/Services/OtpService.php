@@ -350,6 +350,7 @@ class OtpService
         try {
             // Check if WhatsApp notifications are enabled
             if (!$this->settingService->isFeatureEnabled('whatsapp_notifications')) {
+                Log::warning('WhatsApp notifications are disabled in settings');
                 return [
                     'success' => false,
                     'message' => 'WhatsApp notifications are disabled',
@@ -362,7 +363,12 @@ class OtpService
                 'channel' => NotificationLog::CHANNEL_WHATSAPP,
                 'recipient' => $this->formatPhoneNumber($whatsappNumber),
                 'status' => 'pending',
-                'content' => $message,
+                'message' => $message,
+            ]);
+            
+            Log::info('Attempting to send WhatsApp OTP', [
+                'phone' => $whatsappNumber,
+                'notification_id' => $notificationLog->id,
             ]);
             
             // Use WhatsAppService to send message
@@ -382,6 +388,7 @@ class OtpService
             Log::error('WhatsApp OTP send failed', [
                 'phone' => $whatsappNumber,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
             
             return [
@@ -400,18 +407,50 @@ class OtpService
             // Get SMS settings from SettingService
             $smsSettings = $this->settingService->getSmsSettings();
             
+            Log::info('SMS settings retrieved', [
+                'settings' => array_map(function($value) {
+                    return $value ? (strlen($value) > 10 ? substr($value, 0, 10) . '...' : $value) : 'NULL';
+                }, $smsSettings)
+            ]);
+            
+            // Validate required settings
+            if (empty($smsSettings['kudisms_api_key'])) {
+                Log::error('Kudisms API key is missing from settings');
+                return [
+                    'success' => false,
+                    'message' => 'SMS API key not configured',
+                ];
+            }
+            
+            if (empty($smsSettings['kudisms_sms_url'])) {
+                Log::error('Kudisms SMS URL is missing from settings');
+                return [
+                    'success' => false,
+                    'message' => 'SMS API URL not configured',
+                ];
+            }
+            
             // Create notification log for tracking
             $notificationLog = NotificationLog::create([
                 'type' => 'otp_sms',
                 'channel' => NotificationLog::CHANNEL_SMS,
                 'recipient' => $this->formatPhoneNumberForSms($phoneNumber),
                 'status' => 'pending',
-                'content' => $message,
+                'message' => $message,
+            ]);
+            
+            Log::info('Attempting to send SMS OTP', [
+                'phone' => $phoneNumber,
+                'notification_id' => $notificationLog->id,
+                'api_url' => $smsSettings['kudisms_sms_url'],
             ]);
             
             $response = Http::timeout(30)
                 ->withHeaders([
                     'Content-Type' => 'application/json',
+                ])
+                ->withOptions([
+                    'verify' => false, // Disable SSL verification for development
                 ])
                 ->post($smsSettings['kudisms_sms_url'], [
                     'token' => $smsSettings['kudisms_api_key'],

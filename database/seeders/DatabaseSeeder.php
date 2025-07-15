@@ -19,7 +19,6 @@ class DatabaseSeeder extends Seeder
             InterestSeeder::class,
             RolePermissionSeeder::class,
             BatchSeeder::class,
-            ChannelAdSeeder::class,
             AdSeeder::class,
             TipSeeder::class,
             ChannelSaleSeeder::class,

@@ -19,8 +19,11 @@ new #[Layout('layouts.guest')] class extends Component {
     #[Validate('required|string|lowercase|email|max:255')]
     public string $email = '';
     
-    #[Validate('required|string|regex:/^\+?[1-9]\d{1,14}$/')]
-    public string $whatsapp_number = '';
+    #[Validate('required|string|regex:/^\+?[1-9]\d{1,14}$/')]  
+    public string $whatsapp_number = '+234';
+    
+    public string $country_code = '+234';
+    public string $phone_number = '';
     
     #[Validate('required|string|confirmed')]
     public string $password = '';
@@ -52,11 +55,14 @@ new #[Layout('layouts.guest')] class extends Component {
         $this->isRegistering = true;
         
         try {
+            // Clear any previous errors
+            $this->resetErrorBag();
+            
             // Validate all fields
             $validated = $this->validate([
                 'name' => ['required', 'string', 'max:255'],
-                'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class.',email', 'unique:pending_users,email'],
-                'whatsapp_number' => ['required', 'string', 'regex:/^\+?[1-9]\d{1,14}$/', 'unique:'.User::class.',whatsapp_number', 'unique:pending_users,whatsapp_number'],
+                'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class.',email'],
+                'whatsapp_number' => ['required', 'string', 'regex:/^\+?[1-9]\d{1,14}$/', 'unique:'.User::class.',whatsapp_number'],
                 'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
                 'referral_code' => ['nullable', 'string', 'max:20'],
                 'email_verification_enabled' => ['boolean'],
@@ -74,13 +80,38 @@ new #[Layout('layouts.guest')] class extends Component {
                 }
             }
 
-            // Create pending user
-            $pendingUser = PendingUser::create([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'whatsapp_number' => $validated['whatsapp_number'],
-                'password' => Hash::make($validated['password']),
-            ]);
+            // Check for existing pending user
+            $pendingUser = PendingUser::where('email', $validated['email'])
+                ->orWhere('whatsapp_number', $validated['whatsapp_number'])
+                ->first();
+
+            if ($pendingUser) {
+                // If exists and recent (e.g., within 24 hours), reuse it
+                if ($pendingUser->created_at->greaterThan(now()->subDay())) {
+                    // Update details if needed
+                    $pendingUser->update([
+                        'name' => $validated['name'],
+                        'password' => Hash::make($validated['password']),
+                    ]);
+                } else {
+                    // If old, delete and create new
+                    $pendingUser->delete();
+                    $pendingUser = PendingUser::create([
+                        'name' => $validated['name'],
+                        'email' => $validated['email'],
+                        'whatsapp_number' => $validated['whatsapp_number'],
+                        'password' => Hash::make($validated['password']),
+                    ]);
+                }
+            } else {
+                // Create new
+                $pendingUser = PendingUser::create([
+                    'name' => $validated['name'],
+                    'email' => $validated['email'],
+                    'whatsapp_number' => $validated['whatsapp_number'],
+                    'password' => Hash::make($validated['password']),
+                ]);
+            }
 
             // Send OTP
             $otpService = app(OtpService::class);
@@ -96,27 +127,54 @@ new #[Layout('layouts.guest')] class extends Component {
             if ($result['success']) {
                 // Store registration data in session for OTP verification
                 session([
-                    'pending_registration' => [
+                    'registration_data' => [
                         'pending_user_id' => $pendingUser->id,
+                        'whatsapp_number' => $validated['whatsapp_number'],
                         'referral_code' => $validated['referral_code'],
                         'email_verification_enabled' => $validated['email_verification_enabled'],
                     ]
                 ]);
                 
-                $this->registrationStep = 'otp_verification';
-                $this->otpMessage = 'OTP sent successfully via ' . ucfirst($result['method']);
-                $this->otpMethod = $result['method'];
+                $this->redirect(route('verify-otp'), navigate: true);
             } else {
                 // Store failure reason and allow retry
-                $pendingUser->update([
-                    'failure_reason' => $result['message']
-                ]);
+                try {
+                    $pendingUser->update([
+                        'failure_reason' => $result['message']
+                    ]);
+                } catch (\Exception $updateException) {
+                    \Log::error('Failed to update pending user failure reason: ' . $updateException->getMessage());
+                }
                 
                 session()->flash('error', 'Failed to send OTP: ' . $result['message'] . '. Please try again or contact support.');
             }
             
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Re-throw validation exceptions to show field-specific errors
+            throw $e;
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Log::error('Database error during registration: ' . $e->getMessage());
+            
+            // Check for specific database errors
+            if (str_contains($e->getMessage(), 'Duplicate entry')) {
+                if (str_contains($e->getMessage(), 'email')) {
+                    $this->addError('email', 'This email address is already registered.');
+                } elseif (str_contains($e->getMessage(), 'whatsapp_number')) {
+                    $this->addError('whatsapp_number', 'This WhatsApp number is already registered.');
+                } else {
+                    session()->flash('error', 'This account information is already registered. Please use different details.');
+                }
+            } else {
+                session()->flash('error', 'Database error occurred. Please try again later.');
+            }
         } catch (\Exception $e) {
-            session()->flash('error', 'Registration failed. Please try again.');
+            \Log::error('Registration error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            session()->flash('error', 'Registration failed due to an unexpected error. Please try again or contact support if the problem persists.');
         } finally {
             $this->isRegistering = false;
         }
@@ -127,15 +185,29 @@ new #[Layout('layouts.guest')] class extends Component {
      */
     private function formatWhatsAppNumber(string $number): string
     {
-        // Remove all non-numeric characters
-        $number = preg_replace('/[^0-9]/', '', $number);
-        
-        // Add + prefix if not present
-        if (!str_starts_with($number, '+')) {
-            $number = '+' . $number;
+        try {
+            // Remove all non-numeric characters except +
+            $number = preg_replace('/[^0-9+]/', '', $number);
+            
+            // Remove any + that's not at the beginning
+            $number = preg_replace('/(?<!^)\+/', '', $number);
+            
+            // Add + prefix if not present
+            if (!str_starts_with($number, '+')) {
+                $number = '+' . $number;
+            }
+            
+            // Validate the formatted number
+            if (!preg_match('/^\+[1-9]\d{1,14}$/', $number)) {
+                throw new \InvalidArgumentException('Invalid phone number format');
+            }
+            
+            return $number;
+        } catch (\Exception $e) {
+            \Log::warning('WhatsApp number formatting failed: ' . $e->getMessage(), ['number' => $number]);
+            // Return the original number if formatting fails
+            return $number;
         }
-        
-        return $number;
     }
 };
 

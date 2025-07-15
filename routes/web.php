@@ -15,7 +15,9 @@ use App\Livewire\Profile;
 use App\Livewire\MyBatches;
 
 // Homepage - Batch List (protected by auth and verified.otp middleware)
-Route::get('/', BatchList::class)->name('home');
+Route::get('/', BatchList::class)
+    ->middleware(['auth', 'verified.otp'])
+    ->name('home');
 
 // Redirect unauthenticated users to login
 Route::redirect('/welcome', '/login');

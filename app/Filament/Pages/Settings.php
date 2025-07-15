@@ -821,9 +821,9 @@ class Settings extends Page
                                             ->helperText('Text for the primary action button'),
                                         Forms\Components\TextInput::make('banner_guest_button_url')
                                             ->label('Primary Button URL')
-                                            ->url()
+                                            ->rules(['regex:/^(https?:\/\/|\/).*/'])
                                             ->default('/register')
-                                            ->helperText('URL for the primary action button'),
+                                            ->helperText('URL for the primary action button (can be relative like /register or absolute like https://example.com)'),
                                         Forms\Components\TextInput::make('banner_guest_secondary_button_text')
                                             ->label('Secondary Button Text')
                                             ->maxLength(50)
@@ -831,9 +831,9 @@ class Settings extends Page
                                             ->helperText('Text for the secondary action button'),
                                         Forms\Components\TextInput::make('banner_guest_secondary_button_url')
                                             ->label('Secondary Button URL')
-                                            ->url()
+                                            ->rules(['regex:/^(https?:\/\/|\/).*/'])
                                             ->default('/login')
-                                            ->helperText('URL for the secondary action button'),
+                                            ->helperText('URL for the secondary action button (can be relative like /login or absolute like https://example.com)'),
                                         Forms\Components\FileUpload::make('banner_guest_background_image')
                                             ->label('Background Image')
                                             ->image()
@@ -915,7 +915,8 @@ class Settings extends Page
         return [
             Action::make('save')
                 ->label('Save Settings')
-                ->submit('save'),
+                ->action('save')
+                ->requiresConfirmation(false),
             Action::make('reset')
                 ->label('Reset to Defaults')
                 ->color('gray')
@@ -927,24 +928,52 @@ class Settings extends Page
     public function save(): void
     {
         try {
+            // Debug: Log that save method was called
+            \Log::info('Settings save method called');
+            
+            // Validate the form first
+            $this->form->validate();
+            \Log::info('Form validation passed');
+            
             if (!$this->settingService) {
                 $this->settingService = app(SettingService::class);
             }
             
             $data = $this->form->getState();
+            \Log::info('Form data retrieved', ['data_count' => count($data)]);
             
+            // Test database connection
+            $dbTest = \DB::table('settings')->count();
+            \Log::info('Database connection test', ['settings_count' => $dbTest]);
+            
+            $savedCount = 0;
             foreach ($data as $key => $value) {
                 $type = $this->getSettingType($key, $value);
-                $this->settingService->set($key, $value, $type);
+                $result = $this->settingService->set($key, $value, $type);
+                if ($result) {
+                    $savedCount++;
+                }
+                \Log::info('Setting saved', ['key' => $key, 'type' => $type, 'result' => $result]);
             }
+            
+            \Log::info('Settings save completed', ['total_saved' => $savedCount, 'total_data' => count($data)]);
             
             Notification::make()
                 ->title('Settings saved successfully')
+                ->body("Saved {$savedCount} out of " . count($data) . " settings")
                 ->success()
                 ->send();
                 
         } catch (Halt $exception) {
+            \Log::info('Settings save halted');
             return;
+        } catch (\Exception $e) {
+            \Log::error('Settings save failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            Notification::make()
+                ->title('Failed to save settings')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
         }
     }
 

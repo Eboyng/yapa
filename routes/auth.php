@@ -19,6 +19,10 @@ Route::middleware('guest')->group(function () {
         ->name('password.reset');
 });
 
+// OTP verification route - accessible by both guests and authenticated users
+Volt::route('verify-otp', 'pages.auth.verify-otp')
+    ->name('verify-otp');
+
 Route::middleware('auth')->group(function () {
     Volt::route('verify-email', 'pages.auth.verify-email')
         ->name('verification.notice');
@@ -26,9 +30,6 @@ Route::middleware('auth')->group(function () {
     Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
         ->middleware(['signed', 'throttle:6,1'])
         ->name('verification.verify');
-
-    Volt::route('verify-otp', 'pages.auth.verify-otp')
-        ->name('verify-otp');
 
     Volt::route('confirm-password', 'pages.auth.confirm-password')
         ->name('password.confirm');
