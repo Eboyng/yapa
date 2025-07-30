@@ -23,8 +23,14 @@ class CreditPurchase extends Component
     public ?int $retryTransactionId = null;
     public array $pricingConfig = [];
 
-    // Fund Wallet Modal Properties
+    // Modal Properties
     public bool $showFundModal = false;
+    public bool $showCreditModal = false;
+    public bool $showAirtimeModal = false;
+    public bool $showDataModal = false;
+    public bool $showWithdrawModal = false;
+
+    // Fund Wallet Properties
     public float $fundAmount = 0;
 
     // Credit package properties
@@ -50,7 +56,6 @@ class CreditPurchase extends Component
     public array $availableDataPlans = [];
 
     // Withdrawal Properties
-    public bool $showWithdrawModal = false;
     public string $withdrawalMethod = '';
     public float $amount = 0;
     public string $accountNumber = '';
@@ -162,7 +167,96 @@ class CreditPurchase extends Component
         }
     }
 
-    // Network detection methods
+    // ==============================================
+    // MODAL MANAGEMENT METHODS
+    // ==============================================
+    
+    // Fund Wallet Modal Methods
+    public function openFundModal(): void
+    {
+        $this->showFundModal = true;
+        $this->fundAmount = 0;
+        $this->resetValidation();
+    }
+
+    public function closeFundModal(): void
+    {
+        $this->showFundModal = false;
+        $this->fundAmount = 0;
+        $this->resetValidation();
+    }
+
+    // Credit Modal Methods
+    public function openCreditModal(): void
+    {
+        $this->showCreditModal = true;
+        $this->selectedCreditPackage = null;
+        $this->customCreditAmount = null;
+        $this->resetValidation();
+    }
+
+    public function closeCreditModal(): void
+    {
+        $this->showCreditModal = false;
+        $this->selectedCreditPackage = null;
+        $this->customCreditAmount = null;
+        $this->resetValidation();
+    }
+
+    // Airtime Modal Methods
+    public function openAirtimeModal(): void
+    {
+        $this->showAirtimeModal = true;
+        $this->resetAirtimeForm();
+    }
+
+    public function closeAirtimeModal(): void
+    {
+        $this->showAirtimeModal = false;
+        $this->resetAirtimeForm();
+    }
+
+    // Data Modal Methods
+    public function openDataModal(): void
+    {
+        $this->showDataModal = true;
+        $this->resetDataForm();
+    }
+
+    public function closeDataModal(): void
+    {
+        $this->showDataModal = false;
+        $this->resetDataForm();
+    }
+
+    // Withdrawal Modal Methods
+    public function openWithdrawModal(): void
+    {
+        $this->showWithdrawModal = true;
+        $this->resetWithdrawalForm();
+    }
+
+    public function closeWithdrawModal(): void
+    {
+        $this->showWithdrawModal = false;
+        $this->resetWithdrawalForm();
+    }
+
+    // Close all modals (for escape key functionality)
+    public function closeAllModals(): void
+    {
+        $this->showFundModal = false;
+        $this->showCreditModal = false;
+        $this->showAirtimeModal = false;
+        $this->showDataModal = false;
+        $this->showWithdrawModal = false;
+        $this->resetValidation();
+    }
+
+    // ==============================================
+    // NETWORK DETECTION METHODS
+    // ==============================================
+
     public function updatedAirtimePhoneNumber($value): void
     {
         if (strlen($value) === 10) {
@@ -264,7 +358,66 @@ class CreditPurchase extends Component
         }
     }
 
-    // Purchase methods
+    // ==============================================
+    // PURCHASE METHODS
+    // ==============================================
+
+    public function fundWallet()
+    {
+        if ($this->isProcessing) {
+            return;
+        }
+
+        $this->isProcessing = true;
+
+        try {
+            $this->validate(['fundAmount' => 'required|numeric|min:300']);
+
+            $minimumAmount = $this->pricingConfig['minimum_amount'] ?? 300;
+            if ($this->fundAmount < $minimumAmount) {
+                throw new ValidationException(
+                    validator([], []),
+                    ['fundAmount' => 'Minimum funding amount is ₦' . number_format($minimumAmount)]
+                );
+            }
+
+            $paystackService = app(PaystackService::class);
+            $user = Auth::user();
+
+            $result = $paystackService->initializePayment(
+                $user->id,
+                $this->fundAmount,
+                $user->email,
+                route('paystack.callback'),
+                [
+                    'source' => 'fund_wallet_modal',
+                    'user_agent' => request()->userAgent(),
+                    'ip_address' => request()->ip(),
+                ],
+                Wallet::TYPE_NAIRA,
+                Transaction::CATEGORY_NAIRA_FUNDING
+            );
+
+            if ($result['success']) {
+                return redirect()->away($result['authorization_url']);
+            } else {
+                session()->flash('error', $result['message'] ?? 'Failed to initialize payment');
+            }
+        } catch (ValidationException $e) {
+            $this->setErrorBag($e->validator->errors());
+        } catch (\Exception $e) {
+            Log::error('Naira wallet funding error', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'amount' => $this->fundAmount,
+            ]);
+
+            session()->flash('error', 'Failed to process payment: ' . $e->getMessage());
+        } finally {
+            $this->isProcessing = false;
+        }
+    }
+
     public function purchaseCredits(): void
     {
         if ($this->creditPaymentMethod === 'naira') {
@@ -317,7 +470,7 @@ class CreditPurchase extends Component
 
                     DB::commit();
                     session()->flash('success', 'Airtime purchase successful! Transaction ID: ' . $result['data']['transaction_id']);
-                    $this->resetAirtimeForm();
+                    $this->closeAirtimeModal();
                 } else {
                     DB::rollBack();
                     session()->flash('error', $result['message']);
@@ -393,7 +546,7 @@ class CreditPurchase extends Component
 
                     DB::commit();
                     session()->flash('success', 'Data purchase successful! Transaction ID: ' . $result['data']['transaction_id']);
-                    $this->resetDataForm();
+                    $this->closeDataModal();
                 } else {
                     DB::rollBack();
                     session()->flash('error', $result['message']);
@@ -417,6 +570,10 @@ class CreditPurchase extends Component
             $this->isProcessing = false;
         }
     }
+
+    // ==============================================
+    // API INTEGRATION METHODS
+    // ==============================================
 
     private function purchaseAirtimeViaAPI(): array
     {
@@ -531,7 +688,10 @@ class CreditPurchase extends Component
         $this->resetValidation();
     }
 
-    // Existing methods remain the same...
+    // ==============================================
+    // CREDIT PURCHASE METHODS
+    // ==============================================
+
     public function updatedFundAmount($value): void
     {
         if ($value && $value < ($this->pricingConfig['minimum_amount'] ?? 300)) {
@@ -608,77 +768,6 @@ class CreditPurchase extends Component
         ];
     }
 
-    // Fund Wallet Modal Methods
-    public function openFundModal(): void
-    {
-        $this->showFundModal = true;
-        $this->fundAmount = 0;
-        $this->resetValidation();
-    }
-
-    public function closeFundModal(): void
-    {
-        $this->showFundModal = false;
-        $this->fundAmount = 0;
-        $this->resetValidation();
-    }
-
-    public function fundWallet()
-    {
-        if ($this->isProcessing) {
-            return;
-        }
-
-        $this->isProcessing = true;
-
-        try {
-            $this->validate(['fundAmount' => 'required|numeric|min:300']);
-
-            $minimumAmount = $this->pricingConfig['minimum_amount'] ?? 300;
-            if ($this->fundAmount < $minimumAmount) {
-                throw new ValidationException(
-                    validator([], []),
-                    ['fundAmount' => 'Minimum funding amount is ₦' . number_format($minimumAmount)]
-                );
-            }
-
-            $paystackService = app(PaystackService::class);
-            $user = Auth::user();
-
-            $result = $paystackService->initializePayment(
-                $user->id,
-                $this->fundAmount,
-                $user->email,
-                route('paystack.callback'),
-                [
-                    'source' => 'fund_wallet_modal',
-                    'user_agent' => request()->userAgent(),
-                    'ip_address' => request()->ip(),
-                ],
-                Wallet::TYPE_NAIRA,
-                Transaction::CATEGORY_NAIRA_FUNDING
-            );
-
-            if ($result['success']) {
-                return redirect()->away($result['authorization_url']);
-            } else {
-                session()->flash('error', $result['message'] ?? 'Failed to initialize payment');
-            }
-        } catch (ValidationException $e) {
-            $this->setErrorBag($e->validator->errors());
-        } catch (\Exception $e) {
-            Log::error('Naira wallet funding error', [
-                'user_id' => Auth::id(),
-                'error' => $e->getMessage(),
-                'amount' => $this->fundAmount,
-            ]);
-
-            session()->flash('error', 'Failed to process payment: ' . $e->getMessage());
-        } finally {
-            $this->isProcessing = false;
-        }
-    }
-
     public function purchaseCreditsWithNaira()
     {
         if ($this->isProcessing) {
@@ -701,9 +790,7 @@ class CreditPurchase extends Component
 
                 session()->flash('success', 'Successfully purchased ' . number_format($credits) . ' credits using ₦' . number_format($amount, 2) . ' from your Naira wallet!');
 
-                $this->selectedCreditPackage = null;
-                $this->customCreditAmount = null;
-                $this->resetValidation();
+                $this->closeCreditModal();
             } catch (\Exception $e) {
                 DB::rollBack();
                 throw $e;
@@ -746,9 +833,7 @@ class CreditPurchase extends Component
 
                 session()->flash('success', 'Successfully purchased ' . number_format($credits) . ' credits using ₦' . number_format($amount, 2) . ' from your earnings!');
 
-                $this->selectedCreditPackage = null;
-                $this->customCreditAmount = null;
-                $this->resetValidation();
+                $this->closeCreditModal();
             } catch (\Exception $e) {
                 DB::rollBack();
                 throw $e;
@@ -855,18 +940,9 @@ class CreditPurchase extends Component
         }
     }
 
-    // Withdrawal Modal Methods
-    public function openWithdrawModal(): void
-    {
-        $this->showWithdrawModal = true;
-        $this->resetWithdrawalForm();
-    }
-
-    public function closeWithdrawModal(): void
-    {
-        $this->showWithdrawModal = false;
-        $this->resetWithdrawalForm();
-    }
+    // ==============================================
+    // WITHDRAWAL METHODS
+    // ==============================================
 
     private function resetWithdrawalForm(): void
     {
@@ -1105,8 +1181,6 @@ class CreditPurchase extends Component
             $this->airtimeApiEnabled = false;
         }
     }
-
-   
 
     private function resetNetworkDetection(): void
     {
