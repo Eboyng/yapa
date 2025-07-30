@@ -57,7 +57,7 @@
                                 </svg>
                             </div>
                             <div>
-                                <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 mb-1">My Wallet</h1>
+                                <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 mb-1">  ₦{{ number_format($user->getNairaWallet()->balance, 2) }}</h1>
                                 <p class="text-xs sm:text-sm text-gray-500">Available Balance</p>
                             </div>
                         </div>
@@ -68,14 +68,6 @@
                             <span class="text-sm sm:text-base" wire:loading.remove wire:target="openFundModal">Add Money</span>
                             <span class="text-sm sm:text-base" wire:loading wire:target="openFundModal">Loading...</span>
                         </button>
-                    </div>
-                    
-                    <!-- Balance Display -->
-                    <div class="text-center sm:text-left mb-6 sm:mb-8">
-                        <div class="text-3xl sm:text-4xl lg:text-6xl font-bold text-gray-800 mb-2 balance-animate">
-                            ₦{{ number_format($user->getNairaWallet()->balance, 2) }}
-                        </div>
-                        <div class="text-xs sm:text-sm text-gray-500">Nigerian Naira</div>
                     </div>
                     
                     <!-- Other Wallets Grid -->
