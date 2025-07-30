@@ -222,7 +222,7 @@
                             </div>
 
                             <!-- Batch Details -->
-                            <div class="space-y-2">
+                            <div class="space-y-3">
                                 <!-- Location and Interests on same line -->
                                 @if ($batch->location || $batch->interests->count() > 0)
                                     <div class="flex items-center text-xs sm:text-sm text-gray-600">
@@ -257,6 +257,7 @@
                                     </div>
                                 @endif
 
+                                <!-- Batch Type and Cost -->
                                 <div class="flex items-center text-xs sm:text-sm">
                                     @if ($batch->type === 'regular')
                                         <svg class="w-4 h-4 mr-2 text-orange-500" fill="currentColor"

@@ -40,7 +40,7 @@
                 @endif
 
                 <!-- Unified Wallet Balance Card -->
-                <div class="bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-xl border border-white/10">
+                <div class="bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-lg border border-white/10">
                     <!-- Main Balance -->
                     <div class="flex items-center justify-between mb-6">
                         <div class="flex items-center">
@@ -54,13 +54,12 @@
                                 <span class="text-white/70 text-xs">Naira Wallet</span>
                             </div>
                         </div>
-                        <button wire:click="openFundModal" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-semibold transition-all transform hover:scale-105 active:scale-95 border border-white/20" wire:loading.attr="disabled">
+                        <button id="fundWalletBtn" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-semibold transition-all transform hover:scale-105 active:scale-95 border border-white/20">
                             <span class="flex items-center">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                 </svg>
-                                <span wire:loading.remove wire:target="openFundModal">Add Money</span>
-                                <span wire:loading wire:target="openFundModal">Loading...</span>
+                                <span>Add Money</span>
                             </span>
                         </button>
                     </div>
@@ -80,7 +79,7 @@
                                 <span class="text-white/80 text-xs font-medium">Credits</span>
                             </div>
                             <div class="text-lg font-bold text-white">{{ number_format($user->getCreditWallet()->balance) }}</div>
-                            <button @click="showCreditModal = true" class="text-amber-300 text-xs hover:text-amber-200 transition-colors mt-1">
+                            <button id="buyCreditBtn" class="text-amber-300 text-xs hover:text-amber-200 transition-colors mt-1">
                                 Buy Credits →
                             </button>
                         </div>
@@ -96,7 +95,7 @@
                                 <span class="text-white/80 text-xs font-medium">Earnings</span>
                             </div>
                             <div class="text-lg font-bold text-white">₦{{ number_format($user->getEarningsWallet()->balance, 2) }}</div>
-                            <button wire:click="openWithdrawModal" class="text-green-300 text-xs hover:text-green-200 transition-colors mt-1" wire:loading.attr="disabled">
+                            <button id="withdrawBtn" class="text-green-300 text-xs hover:text-green-200 transition-colors mt-1">
                                 Withdraw →
                             </button>
                         </div>
@@ -108,11 +107,11 @@
         <!-- Main Content -->
         <div class="max-w-lg mx-auto px-4 -mt-2">
             <!-- Quick Actions Grid -->
-            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 mb-6 border border-white/20">
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm p-6 mb-6 border border-white/20">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
                 <div class="grid grid-cols-3 gap-4">
                     <!-- Airtime -->
-                    <button @click="showAirtimeModal = true" class="flex flex-col items-center p-4 rounded-xl hover:bg-gradient-to-br hover:from-purple-50 hover:to-indigo-50 transition-all group border border-transparent hover:border-purple-200 hover:shadow-md">
+                    <button id="airtimeBtn" class="flex flex-col items-center p-4 rounded-xl hover:bg-gradient-to-br hover:from-purple-50 hover:to-indigo-50 transition-all group border border-transparent hover:border-purple-200 hover:shadow-sm">
                         <div class="w-12 h-12 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm">
                             <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
@@ -122,7 +121,7 @@
                     </button>
 
                     <!-- Data -->
-                    <button @click="showDataModal = true" class="flex flex-col items-center p-4 rounded-xl hover:bg-gradient-to-br hover:from-indigo-50 hover:to-blue-50 transition-all group border border-transparent hover:border-indigo-200 hover:shadow-md">
+                    <button id="dataBtn" class="flex flex-col items-center p-4 rounded-xl hover:bg-gradient-to-br hover:from-indigo-50 hover:to-blue-50 transition-all group border border-transparent hover:border-indigo-200 hover:shadow-sm">
                         <div class="w-12 h-12 bg-gradient-to-br from-indigo-100 to-blue-100 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm">
                             <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
@@ -132,7 +131,7 @@
                     </button>
 
                     <!-- Bills -->
-                    <button class="flex flex-col items-center p-4 rounded-xl hover:bg-gradient-to-br hover:from-green-50 hover:to-emerald-50 transition-all group border border-transparent hover:border-green-200 hover:shadow-md">
+                    <button class="flex flex-col items-center p-4 rounded-xl hover:bg-gradient-to-br hover:from-green-50 hover:to-emerald-50 transition-all group border border-transparent hover:border-green-200 hover:shadow-sm">
                         <div class="w-12 h-12 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm">
                             <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -145,12 +144,12 @@
         </div>
 
         <!-- Credit Purchase Modal -->
-        <div x-show="showCreditModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-1" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" @click.self="showCreditModal = false">
-            <div x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-1 transform scale-100" class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div id="creditModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden opacity-0 transition-all duration-300">
+            <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-lg scale-95 transition-all duration-300">
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-100">
                     <h3 class="text-xl font-bold text-gray-900">Purchase Credits</h3>
-                    <button @click="showCreditModal = false" class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full">
+                    <button id="closeCreditModal" class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -184,7 +183,7 @@
                             @foreach ($creditPackages as $index => $package)
                                 <div class="relative">
                                     <input type="radio" wire:click="selectCreditPackage({{ $index }})" name="credit_package" id="credit-package-{{ $index }}" class="sr-only peer">
-                                    <label for="credit-package-{{ $index }}" class="block p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 {{ $selectedCreditPackage === $index ? 'border-orange-500 bg-gradient-to-br from-orange-50 to-purple-50 shadow-lg' : 'border-gray-200 hover:border-orange-300 hover:shadow-md' }}">
+                                    <label for="credit-package-{{ $index }}" class="block p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 {{ $selectedCreditPackage === $index ? 'border-orange-500 bg-gradient-to-br from-orange-50 to-purple-50 shadow-md' : 'border-gray-200 hover:border-orange-300 hover:shadow-sm' }}">
                                         @if ($package['bonus'] > 0)
                                             <div class="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
                                                 +{{ number_format($package['bonus']) }}
@@ -218,7 +217,7 @@
 
                     <!-- Purchase Button -->
                     <div class="flex space-x-3">
-                        <button @click="showCreditModal = false" class="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors">
+                        <button id="cancelCreditPurchase" class="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors">
                             Cancel
                         </button>
                         <button wire:click="purchaseCredits" wire:loading.attr="disabled" class="flex-1 bg-gradient-to-r from-orange-500 to-purple-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">
@@ -226,7 +225,7 @@
                             <span wire:loading wire:target="purchaseCredits" class="flex items-center justify-center">
                                 <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                                 Processing...
                             </span>
@@ -237,12 +236,12 @@
         </div>
 
         <!-- Airtime Purchase Modal -->
-        <div x-show="showAirtimeModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-1" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" @click.self="showAirtimeModal = false">
-            <div x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-1 transform scale-100" class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div id="airtimeModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden opacity-0 transition-all duration-300">
+            <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-lg scale-95 transition-all duration-300">
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-100">
                     <h3 class="text-xl font-bold text-gray-900">Buy Airtime</h3>
-                    <button @click="showAirtimeModal = false" class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full">
+                    <button id="closeAirtimeModal" class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -304,7 +303,7 @@
 
                     <!-- Purchase Button -->
                     <div class="flex space-x-3">
-                        <button @click="showAirtimeModal = false" class="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors">
+                        <button id="cancelAirtimePurchase" class="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors">
                             Cancel
                         </button>
                         <button wire:click="purchaseAirtime" wire:loading.attr="disabled" class="flex-1 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">
@@ -312,7 +311,7 @@
                             <span wire:loading wire:target="purchaseAirtime" class="flex items-center justify-center">
                                 <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                                 Processing...
                             </span>
@@ -323,12 +322,12 @@
         </div>
 
         <!-- Data Purchase Modal -->
-        <div x-show="showDataModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-1" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" @click.self="showDataModal = false">
-            <div x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-1 transform scale-100" class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div id="dataModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden opacity-0 transition-all duration-300">
+            <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-lg scale-95 transition-all duration-300">
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-100">
                     <h3 class="text-xl font-bold text-gray-900">Buy Data</h3>
-                    <button @click="showDataModal = false" class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full">
+                    <button id="closeDataModal" class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -391,7 +390,7 @@
 
                     <!-- Purchase Button -->
                     <div class="flex space-x-3">
-                        <button @click="showDataModal = false" class="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors">
+                        <button id="cancelDataPurchase" class="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors">
                             Cancel
                         </button>
                         <button wire:click="purchaseData" wire:loading.attr="disabled" class="flex-1 bg-gradient-to-r from-indigo-500 to-blue-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">
@@ -409,13 +408,13 @@
             </div>
         </div>
 
-        <!-- Fund Wallet Modal (Keep existing) -->
-        <div x-show="$wire.showFundModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-1" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" @click.self="$wire.closeFundModal()">
-            <div x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-1 transform scale-100" class="bg-white rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto shadow-2xl">
+        <!-- Fund Wallet Modal -->
+        <div id="fundModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden opacity-0 transition-all duration-300">
+            <div class="bg-white rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto shadow-lg scale-95 transition-all duration-300">
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-100">
                     <h3 class="text-xl font-bold text-gray-900">Fund Naira Wallet</h3>
-                    <button wire:click="closeFundModal" class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full">
+                    <button id="closeFundModal" class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -451,7 +450,7 @@
 
                     <!-- Submit Buttons -->
                     <div class="flex space-x-3">
-                        <button wire:click="closeFundModal" class="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors">
+                        <button id="cancelFundWallet" class="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors">
                             Cancel
                         </button>
                         <button wire:click="fundWallet" wire:loading.attr="disabled" class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 disabled:opacity-50">
@@ -459,7 +458,7 @@
                             <span wire:loading wire:target="fundWallet" class="flex items-center justify-center">
                                 <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                                 Processing...
                             </span>
@@ -469,9 +468,9 @@
             </div>
         </div>
 
-        <!-- Withdrawal Modal (Keep existing with updated styling) -->
+        <!-- Withdrawal Modal (Keep existing Livewire functionality) -->
         <div x-show="$wire.showWithdrawModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-1" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" @click.self="$wire.closeWithdrawModal()">
-            <div x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-1 transform scale-100" class="bg-white rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto shadow-2xl">
+            <div x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-1 transform scale-100" class="bg-white rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto shadow-lg">
                 <!-- Modal Header -->
                 <div class="flex justify-between items-center p-6 border-b border-gray-100">
                     <h3 class="text-xl font-bold text-gray-900">Withdraw Earnings</h3>
@@ -686,6 +685,16 @@
                 background-color: rgba(255, 255, 255, 0.2);
             }
 
+            /* Modal show/hide classes */
+            .modal-show {
+                display: flex !important;
+                opacity: 1 !important;
+            }
+            
+            .modal-show > div {
+                transform: scale(1) !important;
+            }
+
             /* Mobile responsive enhancements */
             @media (max-width: 640px) {
                 .text-3xl {
@@ -723,14 +732,158 @@
     @push('scripts')
         <script src="https://js.paystack.co/v1/inline.js"></script>
         <script>
+            // Pure JavaScript Modal Management
+            class ModalManager {
+                constructor() {
+                    this.init();
+                }
+
+                init() {
+                    // Modal elements
+                    this.modals = {
+                        credit: document.getElementById('creditModal'),
+                        airtime: document.getElementById('airtimeModal'),
+                        data: document.getElementById('dataModal'),
+                        fund: document.getElementById('fundModal')
+                    };
+
+                    // Button elements
+                    this.buttons = {
+                        buyCredit: document.getElementById('buyCreditBtn'),
+                        airtime: document.getElementById('airtimeBtn'),
+                        data: document.getElementById('dataBtn'),
+                        fundWallet: document.getElementById('fundWalletBtn'),
+                        withdraw: document.getElementById('withdrawBtn')
+                    };
+
+                    // Close button elements
+                    this.closeButtons = {
+                        credit: document.getElementById('closeCreditModal'),
+                        airtime: document.getElementById('closeAirtimeModal'),
+                        data: document.getElementById('closeDataModal'),
+                        fund: document.getElementById('closeFundModal')
+                    };
+
+                    // Cancel button elements
+                    this.cancelButtons = {
+                        credit: document.getElementById('cancelCreditPurchase'),
+                        airtime: document.getElementById('cancelAirtimePurchase'),
+                        data: document.getElementById('cancelDataPurchase'),
+                        fund: document.getElementById('cancelFundWallet')
+                    };
+
+                    this.setupEventListeners();
+                }
+
+                setupEventListeners() {
+                    // Open modal buttons
+                    if (this.buttons.buyCredit) {
+                        this.buttons.buyCredit.addEventListener('click', () => this.openModal('credit'));
+                    }
+                    
+                    if (this.buttons.airtime) {
+                        this.buttons.airtime.addEventListener('click', () => this.openModal('airtime'));
+                    }
+                    
+                    if (this.buttons.data) {
+                        this.buttons.data.addEventListener('click', () => this.openModal('data'));
+                    }
+                    
+                    if (this.buttons.fundWallet) {
+                        this.buttons.fundWallet.addEventListener('click', () => this.openModal('fund'));
+                    }
+
+                    // Withdraw button triggers Livewire (separate from modal system)
+                    if (this.buttons.withdraw) {
+                        this.buttons.withdraw.addEventListener('click', () => {
+                            window.Livewire.dispatch('openWithdrawModal');
+                        });
+                    }
+
+                    // Close button events
+                    Object.keys(this.closeButtons).forEach(modalType => {
+                        if (this.closeButtons[modalType]) {
+                            this.closeButtons[modalType].addEventListener('click', () => this.closeModal(modalType));
+                        }
+                    });
+
+                    // Cancel button events
+                    Object.keys(this.cancelButtons).forEach(modalType => {
+                        if (this.cancelButtons[modalType]) {
+                            this.cancelButtons[modalType].addEventListener('click', () => this.closeModal(modalType));
+                        }
+                    });
+
+                    // Click outside to close
+                    Object.keys(this.modals).forEach(modalType => {
+                        if (this.modals[modalType]) {
+                            this.modals[modalType].addEventListener('click', (e) => {
+                                if (e.target === this.modals[modalType]) {
+                                    this.closeModal(modalType);
+                                }
+                            });
+                        }
+                    });
+
+                    // Escape key to close modals
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape') {
+                            this.closeAllModals();
+                        }
+                    });
+                }
+
+                openModal(type) {
+                    const modal = this.modals[type];
+                    if (modal) {
+                        // Close any open modals first
+                        this.closeAllModals();
+                        
+                        // Show modal
+                        modal.classList.remove('hidden');
+                        
+                        // Trigger animation
+                        setTimeout(() => {
+                            modal.classList.add('modal-show');
+                        }, 10);
+
+                        // Add haptic feedback for mobile
+                        if ('vibrate' in navigator) {
+                            navigator.vibrate(30);
+                        }
+
+                        // Prevent body scroll
+                        document.body.style.overflow = 'hidden';
+                    }
+                }
+
+                closeModal(type) {
+                    const modal = this.modals[type];
+                    if (modal) {
+                        modal.classList.remove('modal-show');
+                        
+                        setTimeout(() => {
+                            modal.classList.add('hidden');
+                            document.body.style.overflow = '';
+                        }, 300);
+                    }
+                }
+
+                closeAllModals() {
+                    Object.keys(this.modals).forEach(modalType => {
+                        this.closeModal(modalType);
+                    });
+                }
+            }
+
             function walletApp() {
                 return {
                     showFlash: true,
-                    showCreditModal: false,
-                    showAirtimeModal: false,
-                    showDataModal: false,
                     
                     init() {
+                        // Initialize modal manager
+                        new ModalManager();
+                        
                         // Auto-hide flash messages after 5 seconds
                         if (this.showFlash) {
                             setTimeout(() => {
@@ -746,15 +899,6 @@
                                 }
                             });
                         }
-                        
-                        // Handle escape key to close modals
-                        document.addEventListener('keydown', (e) => {
-                            if (e.key === 'Escape') {
-                                this.showCreditModal = false;
-                                this.showAirtimeModal = false;
-                                this.showDataModal = false;
-                            }
-                        });
                     }
                 }
             }
