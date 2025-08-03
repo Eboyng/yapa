@@ -291,7 +291,7 @@
                             <div class="flex items-center space-x-4">
                                 @if($user->hasVerifiedEmail())
                                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                         </svg>
                                         Verified
@@ -331,7 +331,17 @@
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
                             <div>
                                 <h4 class="text-sm sm:text-base font-medium text-gray-800">Current WhatsApp Number</h4>
-                                <p class="text-xs sm:text-sm text-gray-600 mt-1">{{ $user->whatsapp_number ?: 'Not set' }}</p>
+                                <p class="text-xs sm:text-sm text-gray-600 mt-1">
+                                    {{ $user->whatsapp_number ? '+' . $user->whatsapp_number : 'Not set' }}
+                                    @if($user->whatsapp_number)
+                                        <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                            </svg>
+                                            Verified
+                                        </span>
+                                    @endif
+                                </p>
                             </div>
                             <div class="flex items-center space-x-4">
                                 <label class="relative inline-flex items-center cursor-pointer">
@@ -352,58 +362,132 @@
                             </span>
                         </div>
                         
-                        @if(!$otpSent)
-                            <form wire:submit.prevent="initiateNumberChange">
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div class="space-y-2">
-                                        <label for="newWhatsappNumber" class="block text-xs sm:text-sm font-medium text-gray-700">New WhatsApp Number</label>
-                                        <input type="text" id="newWhatsappNumber" wire:model="newWhatsappNumber" 
-                                               placeholder="+234XXXXXXXXXX"
-                                               class="w-full px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base rounded-lg border border-gray-200 focus:border-green-400 focus:ring-2 focus:ring-green-100 transition-all duration-200">
-                                        @error('newWhatsappNumber') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
-                                    </div>
-
-                                    <div class="space-y-2">
-                                        <label for="password" class="block text-xs sm:text-sm font-medium text-gray-700">Confirm Password</label>
-                                        <input type="password" id="password" wire:model="password" 
-                                               class="w-full px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base rounded-lg border border-gray-200 focus:border-green-400 focus:ring-2 focus:ring-green-100 transition-all duration-200">
-                                        @error('password') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
-                                    </div>
-                                </div>
-
-                                <div class="mt-4">
-                                    <button type="submit" 
-                                            class="w-full sm:w-auto bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-2 px-6 sm:py-3 sm:px-8 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 text-sm sm:text-base"
-                                            wire:loading.attr="disabled">
-                                        <span wire:loading.remove wire:target="initiateNumberChange">Send OTP</span>
-                                        <span wire:loading wire:target="initiateNumberChange">Sending...</span>
-                                    </button>
-                                </div>
-                            </form>
+                        @if(!$isChangingWhatsapp)
+                            <!-- Show change button -->
+                            <button type="button" 
+                                    wire:click="startWhatsAppChange"
+                                    class="w-full sm:w-auto bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-2 px-6 sm:py-3 sm:px-8 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 text-sm sm:text-base">
+                                <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                </svg>
+                                Change WhatsApp Number
+                            </button>
                         @else
-                            <form wire:submit.prevent="verifyNumberChange">
-                                <div class="mb-4 space-y-2">
-                                    <label for="otp" class="block text-xs sm:text-sm font-medium text-gray-700">Enter OTP</label>
-                                    <input type="text" id="otp" wire:model="otp" 
-                                           placeholder="6-digit OTP"
-                                           class="w-full sm:w-1/3 px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base rounded-lg border border-gray-200 focus:border-green-400 focus:ring-2 focus:ring-green-100 transition-all duration-200">
-                                    @error('otp') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
+                            <!-- WhatsApp number change form -->
+                            @if($whatsappChangeStep === 'password')
+                                <!-- Step 1: Password confirmation and new number -->
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                    <div class="flex items-center">
+                                        <svg class="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span class="text-sm text-blue-800 font-medium">Changing your WhatsApp number will cost 100 credits</span>
+                                    </div>
                                 </div>
 
-                                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-                                    <button type="submit" 
-                                            class="w-full sm:w-auto bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-2 px-6 sm:py-3 sm:px-8 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 text-sm sm:text-base"
-                                            wire:loading.attr="disabled">
-                                        <span wire:loading.remove wire:target="verifyNumberChange">Verify & Update</span>
-                                        <span wire:loading wire:target="verifyNumberChange">Verifying...</span>
-                                    </button>
-                                    
-                                    <button type="button" wire:click="resetNumberChangeForm" 
-                                            class="w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 sm:py-3 sm:px-8 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 text-sm sm:text-base">
-                                        Cancel
-                                    </button>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">New WhatsApp Number</label>
+                                        <div class="flex space-x-2">
+                                            <select wire:model="whatsappCountryCode" 
+                                                    class="w-24 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                                <option value="+234">🇳🇬 +234</option>
+                                                <!-- Future: Add more African countries -->
+                                            </select>
+                                            <input type="text" 
+                                                   wire:model="whatsappNumberWithoutCode" 
+                                                   placeholder="8012345678"
+                                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                                                   maxlength="11">
+                                        </div>
+                                        @error('whatsappNumberWithoutCode') 
+                                            <span class="text-red-500 text-xs mt-1">{{ $message }}</span> 
+                                        @enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                                        <input type="password" 
+                                               wire:model="password" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                        @error('password') 
+                                            <span class="text-red-500 text-xs mt-1">{{ $message }}</span> 
+                                        @enderror
+                                    </div>
+
+                                    <div class="flex space-x-3">
+                                        <button type="button" 
+                                                wire:click="confirmPasswordForWhatsApp"
+                                                class="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150"
+                                                wire:loading.attr="disabled">
+                                            <span wire:loading.remove wire:target="confirmPasswordForWhatsApp">Continue</span>
+                                            <span wire:loading wire:target="confirmPasswordForWhatsApp">Validating...</span>
+                                        </button>
+                                        <button type="button" 
+                                                wire:click="cancelWhatsAppChange"
+                                                class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150">
+                                            Cancel
+                                        </button>
+                                    </div>
                                 </div>
-                            </form>
+                            @elseif($whatsappChangeStep === 'otp')
+                                <!-- Step 2: OTP verification -->
+                                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                                    <div class="flex items-center">
+                                        <svg class="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span class="text-sm text-green-800 font-medium">New number: {{ $whatsappCountryCode }}{{ $whatsappNumberWithoutCode }}</span>
+                                    </div>
+                                </div>
+
+                                @if(!$otpSent)
+                                    <button type="button" 
+                                            wire:click="sendWhatsAppOtp"
+                                            class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150"
+                                            wire:loading.attr="disabled">
+                                        <span wire:loading.remove wire:target="sendWhatsAppOtp">Send OTP to New Number</span>
+                                        <span wire:loading wire:target="sendWhatsAppOtp">Sending OTP...</span>
+                                    </button>
+                                @else
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Enter OTP Code</label>
+                                            <input type="text" 
+                                                   wire:model="whatsappOtpCode" 
+                                                   placeholder="123456"
+                                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-center text-lg tracking-widest"
+                                                   maxlength="6">
+                                            @error('whatsappOtpCode') 
+                                                <span class="text-red-500 text-xs mt-1">{{ $message }}</span> 
+                                            @enderror
+                                        </div>
+
+                                        <div class="flex space-x-3">
+                                            <button type="button" 
+                                                    wire:click="verifyWhatsAppOtp"
+                                                    class="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150"
+                                                    wire:loading.attr="disabled">
+                                                <span wire:loading.remove wire:target="verifyWhatsAppOtp">Verify & Change Number</span>
+                                                <span wire:loading wire:target="verifyWhatsAppOtp">Verifying...</span>
+                                            </button>
+                                            <button type="button" 
+                                                    wire:click="sendWhatsAppOtp"
+                                                    class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150"
+                                                    wire:loading.attr="disabled">
+                                                <span wire:loading.remove wire:target="sendWhatsAppOtp">Resend OTP</span>
+                                                <span wire:loading wire:target="sendWhatsAppOtp">Sending...</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                <button type="button" 
+                                        wire:click="cancelWhatsAppChange"
+                                        class="w-full mt-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150">
+                                    Cancel
+                                </button>
+                            @endif
                         @endif
                     </div>
                 </div>

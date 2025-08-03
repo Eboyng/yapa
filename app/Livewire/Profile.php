@@ -39,7 +39,12 @@ class Profile extends Component
     public $emailVerificationEnabled;
     
     // WhatsApp number change
-    public $newWhatsappNumber;
+    public $newWhatsappNumber = '';
+    public $whatsappChangeStep = 'password'; // password, otp
+    public $whatsappOtpCode = '';
+    public $isChangingWhatsapp = false;
+    public $whatsappCountryCode = '+234'; // Default to Nigeria
+    public $whatsappNumberWithoutCode = '';
     public $password;
     public $otp;
     public $otpSent = false;
@@ -116,6 +121,12 @@ class Profile extends Component
         
         $this->notifyWhatsapp = $this->user->whatsapp_notifications_enabled;
         $this->emailVerificationEnabled = $this->user->email_verification_enabled;
+        
+        // Initialize WhatsApp number fields
+        if ($this->user->whatsapp_number) {
+            $this->initializeWhatsAppFields();
+        }
+        
         $this->googleConnected = !empty($this->user->google_access_token);
     }
 
@@ -535,6 +546,266 @@ class Profile extends Component
         if (!$this->editingInterests) {
             // If canceling edit, reload the current interests
             $this->selectedInterests = $this->user->interests()->pluck('interests.id')->toArray();
+        }
+    }
+
+    /**
+     * Initialize WhatsApp number fields from current user data
+     */
+    private function initializeWhatsAppFields()
+    {
+        $whatsappNumber = $this->user->whatsapp_number;
+        
+        if ($whatsappNumber) {
+            // Remove any non-digit characters
+            $cleaned = preg_replace('/[^0-9]/', '', $whatsappNumber);
+            
+            // Check if it starts with 234 (Nigeria)
+            if (str_starts_with($cleaned, '234')) {
+                $this->whatsappCountryCode = '+234';
+                $this->whatsappNumberWithoutCode = substr($cleaned, 3);
+            } else {
+                // Default to +234 if no country code detected
+                $this->whatsappCountryCode = '+234';
+                $this->whatsappNumberWithoutCode = $cleaned;
+            }
+        }
+    }
+
+    /**
+     * Start WhatsApp number change process
+     */
+    public function startWhatsAppChange()
+    {
+        $this->whatsappChangeStep = 'password';
+        $this->password = '';
+        $this->newWhatsappNumber = '';
+        $this->whatsappOtpCode = '';
+        $this->otpSent = false;
+        $this->isChangingWhatsapp = true;
+    }
+
+    /**
+     * Cancel WhatsApp number change process
+     */
+    public function cancelWhatsAppChange()
+    {
+        $this->whatsappChangeStep = 'password';
+        $this->password = '';
+        $this->newWhatsappNumber = '';
+        $this->whatsappOtpCode = '';
+        $this->otpSent = false;
+        $this->isChangingWhatsapp = false;
+        $this->whatsappCountryCode = '+234';
+        $this->whatsappNumberWithoutCode = '';
+        
+        // Reinitialize from current user data
+        if ($this->user->whatsapp_number) {
+            $this->initializeWhatsAppFields();
+        }
+    }
+
+    /**
+     * Confirm password and proceed to OTP step
+     */
+    public function confirmPasswordForWhatsApp()
+    {
+        try {
+            // Validate password
+            $this->validate([
+                'password' => 'required|string',
+                'whatsappCountryCode' => 'required|string',
+                'whatsappNumberWithoutCode' => 'required|string|min:10|max:11',
+            ], [
+                'password.required' => 'Password is required to change WhatsApp number.',
+                'whatsappNumberWithoutCode.required' => 'WhatsApp number is required.',
+                'whatsappNumberWithoutCode.min' => 'WhatsApp number must be at least 10 digits.',
+                'whatsappNumberWithoutCode.max' => 'WhatsApp number must not exceed 11 digits.',
+            ]);
+
+            // Check password
+            if (!Hash::check($this->password, $this->user->password)) {
+                $this->addError('password', 'Invalid password.');
+                return;
+            }
+
+            // Format the new WhatsApp number
+            $countryCode = str_replace('+', '', $this->whatsappCountryCode);
+            $this->newWhatsappNumber = $countryCode . $this->whatsappNumberWithoutCode;
+
+            // Check if the new number is different from current
+            if ($this->newWhatsappNumber === $this->user->whatsapp_number) {
+                $this->addError('whatsappNumberWithoutCode', 'This is already your current WhatsApp number.');
+                return;
+            }
+
+            // Check if number is already taken by another user
+            $existingUser = User::where('whatsapp_number', $this->newWhatsappNumber)
+                ->where('id', '!=', $this->user->id)
+                ->first();
+
+            if ($existingUser) {
+                $this->addError('whatsappNumberWithoutCode', 'This WhatsApp number is already registered to another user.');
+                return;
+            }
+
+            // Check if user has sufficient credits (100 credits required)
+            $creditWallet = $this->user->getWallet('credits');
+            if ($creditWallet->balance < 100) {
+                $this->addError('whatsappNumberWithoutCode', 'Insufficient credits. You need 100 credits to change your WhatsApp number.');
+                return;
+            }
+
+            // Proceed to OTP step
+            $this->whatsappChangeStep = 'otp';
+            $this->password = ''; // Clear password for security
+            
+            Log::info('WhatsApp number change password confirmed', [
+                'user_id' => $this->user->id,
+                'old_number' => $this->user->whatsapp_number,
+                'new_number' => $this->newWhatsappNumber,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('WhatsApp number change password confirmation failed', [
+                'user_id' => $this->user->id,
+                'error' => $e->getMessage(),
+            ]);
+            
+            $this->addError('password', 'An error occurred. Please try again.');
+        }
+    }
+
+    /**
+     * Send OTP to new WhatsApp number
+     */
+    public function sendWhatsAppOtp()
+    {
+        try {
+            if (!$this->newWhatsappNumber) {
+                $this->addError('whatsappOtpCode', 'Invalid WhatsApp number.');
+                return;
+            }
+
+            $otpService = app(\App\Services\OtpService::class);
+            $templates = $otpService->getMessageTemplates();
+            $message = $templates['whatsapp_change'];
+
+            Log::info('Sending WhatsApp change OTP', [
+                'user_id' => $this->user->id,
+                'new_number' => $this->newWhatsappNumber,
+            ]);
+
+            // Send OTP via text message
+            $result = $otpService->sendOtp(
+                $this->newWhatsappNumber,
+                $message,
+                $this->user->email,
+                false // Not registration
+            );
+
+            if ($result['success']) {
+                $this->otpSent = true;
+                
+                Log::info('WhatsApp change OTP sent successfully', [
+                    'user_id' => $this->user->id,
+                    'new_number' => $this->newWhatsappNumber,
+                    'method' => $result['method'],
+                ]);
+                
+                session()->flash('success', 'OTP sent to your new WhatsApp number via ' . $result['method'] . '. Please check your messages.');
+            } else {
+                Log::error('WhatsApp change OTP sending failed', [
+                    'user_id' => $this->user->id,
+                    'new_number' => $this->newWhatsappNumber,
+                    'error' => $result['message'],
+                ]);
+                
+                $this->addError('whatsappOtpCode', 'Failed to send OTP: ' . $result['message']);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('WhatsApp change OTP sending exception', [
+                'user_id' => $this->user->id,
+                'new_number' => $this->newWhatsappNumber,
+                'error' => $e->getMessage(),
+            ]);
+            
+            $this->addError('whatsappOtpCode', 'Failed to send OTP. Please try again.');
+        }
+    }
+
+    /**
+     * Verify OTP and complete WhatsApp number change
+     */
+    public function verifyWhatsAppOtp()
+    {
+        try {
+            // Validate OTP code
+            $this->validate([
+                'whatsappOtpCode' => 'required|string|size:6',
+            ], [
+                'whatsappOtpCode.required' => 'OTP code is required.',
+                'whatsappOtpCode.size' => 'OTP code must be 6 digits.',
+            ]);
+
+            $otpService = app(\App\Services\OtpService::class);
+            $walletService = app(\App\Services\WalletService::class);
+
+            // Verify OTP
+            $otpResult = $otpService->verifyOtp(
+                $this->newWhatsappNumber,
+                $this->whatsappOtpCode,
+                'whatsapp_change'
+            );
+
+            if (!$otpResult['success']) {
+                $this->addError('whatsappOtpCode', $otpResult['message']);
+                return;
+            }
+
+            // Start database transaction
+            DB::transaction(function () use ($walletService) {
+                // Deduct 100 credits from user's wallet
+                $walletService->deductWallet(
+                    $this->user,
+                    'credits',
+                    100,
+                    'WhatsApp number change fee',
+                    $this->user // Self-initiated transaction
+                );
+
+                // Update user's WhatsApp number
+                $oldNumber = $this->user->whatsapp_number;
+                $this->user->update([
+                    'whatsapp_number' => $this->newWhatsappNumber,
+                ]);
+
+                Log::info('WhatsApp number changed successfully', [
+                    'user_id' => $this->user->id,
+                    'old_number' => $oldNumber,
+                    'new_number' => $this->newWhatsappNumber,
+                    'credits_deducted' => 100,
+                ]);
+            });
+
+            // Reset form state
+            $this->cancelWhatsAppChange();
+            
+            // Refresh user model
+            $this->user = $this->user->fresh();
+            $this->initializeWhatsAppFields();
+
+            session()->flash('success', 'WhatsApp number changed successfully! 100 credits have been deducted from your account.');
+
+        } catch (\Exception $e) {
+            Log::error('WhatsApp number change verification failed', [
+                'user_id' => $this->user->id,
+                'new_number' => $this->newWhatsappNumber,
+                'error' => $e->getMessage(),
+            ]);
+            
+            $this->addError('whatsappOtpCode', 'Verification failed. Please try again.');
         }
     }
 

@@ -529,14 +529,16 @@ class BatchList extends Component
                 // No manual filters, but user has selected interests - prioritize matching batches
                 $userInterestIds = $user->interests()->pluck('interests.id')->toArray();
                 
-                // Use a subquery to prioritize batches with matching interests
-                $query->leftJoin('batch_interests', 'batches.id', '=', 'batch_interests.batch_id')
-                      ->leftJoin('interests', 'batch_interests.interest_id', '=', 'interests.id')
-                      ->selectRaw('batches.*, 
-                          CASE WHEN interests.id IN (' . implode(',', $userInterestIds) . ') 
-                          THEN 1 ELSE 0 END as has_matching_interest')
-                      ->groupBy('batches.id')
-                      ->orderByDesc('has_matching_interest');
+                // Use a subquery to add interest matching score without GROUP BY issues
+                $query->addSelect([
+                    'batches.*',
+                    DB::raw('(
+                        SELECT COUNT(*) > 0
+                        FROM batch_interests bi 
+                        WHERE bi.batch_id = batches.id 
+                        AND bi.interest_id IN (' . implode(',', $userInterestIds) . ')
+                    ) as has_matching_interest')
+                ])->orderByDesc('has_matching_interest');
             }
 
             if ($this->filters['type'] !== 'all') {

@@ -206,15 +206,17 @@ class OtpService
         string $otpCode,
         string $context = 'login'
     ): array {
-        // First check database for OTP
+        // For WhatsApp number change, check cache first since the new number doesn't exist in DB yet
+        if ($context === 'whatsapp_change') {
+            return $this->verifyOtpFromCache($whatsappNumber, $otpCode, $context);
+        }
+        
+        // For other contexts, check database for OTP
         $user = User::where('whatsapp_number', $whatsappNumber)->first();
         
         if (!$user || !$user->otp_code || !$user->otp_expires_at) {
-            return [
-                'success' => false,
-                'message' => 'OTP has expired or not found',
-                'can_retry' => true,
-            ];
+            // Fallback to cache for backward compatibility
+            return $this->verifyOtpFromCache($whatsappNumber, $otpCode, $context);
         }
 
         // Check if OTP has expired
@@ -534,6 +536,79 @@ class OtpService
     private function generateOtp(): string
     {
         return str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Verify OTP from cache (used for WhatsApp number changes).
+     */
+    private function verifyOtpFromCache(string $whatsappNumber, string $otpCode, string $context): array
+    {
+        $cacheKey = $this->getOtpCacheKey($whatsappNumber, $context);
+        $cachedOtp = Cache::get($cacheKey);
+        
+        if (!$cachedOtp) {
+            return [
+                'success' => false,
+                'message' => 'OTP has expired or not found',
+                'can_retry' => true,
+            ];
+        }
+        
+        // Check if OTP has expired (5 minutes)
+        if (isset($cachedOtp['created_at']) && $cachedOtp['created_at']->addMinutes(5)->isPast()) {
+            Cache::forget($cacheKey);
+            return [
+                'success' => false,
+                'message' => 'OTP has expired',
+                'can_retry' => true,
+            ];
+        }
+        
+        // Check attempts
+        $attempts = $cachedOtp['attempts'] ?? 0;
+        if ($attempts >= 3) {
+            Cache::forget($cacheKey);
+            return [
+                'success' => false,
+                'message' => 'Maximum OTP attempts exceeded',
+                'can_retry' => false,
+            ];
+        }
+        
+        // Increment attempts
+        $cachedOtp['attempts'] = $attempts + 1;
+        Cache::put($cacheKey, $cachedOtp, 300); // 5 minutes
+        
+        // Verify OTP
+        if (Hash::check($otpCode, $cachedOtp['otp'])) {
+            // Clear cache after successful verification
+            Cache::forget($cacheKey);
+            
+            Log::info('OTP verified successfully from cache', [
+                'whatsapp_number' => $whatsappNumber,
+                'context' => $context,
+                'attempts' => $cachedOtp['attempts'],
+            ]);
+            
+            return [
+                'success' => true,
+                'message' => 'OTP verified successfully',
+                'can_retry' => false,
+            ];
+        }
+        
+        Log::warning('Invalid OTP attempt from cache', [
+            'whatsapp_number' => $whatsappNumber,
+            'context' => $context,
+            'attempts' => $cachedOtp['attempts'],
+        ]);
+        
+        return [
+            'success' => false,
+            'message' => 'Invalid OTP code',
+            'can_retry' => $cachedOtp['attempts'] < 3,
+            'attempts_remaining' => 3 - $cachedOtp['attempts'],
+        ];
     }
 
     /**
