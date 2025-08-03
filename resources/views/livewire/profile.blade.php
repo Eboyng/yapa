@@ -162,27 +162,59 @@
                             </div>
                         </div>
 
+                        <!-- Interests Section -->
                         <div class="mt-6">
-                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-3">Interests (Max 5)</label>
-                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                                @php
-                                    $availableInterests = [
-                                        'Technology', 'Sports', 'Music', 'Movies', 'Travel', 'Food', 'Fashion', 'Health',
-                                        'Business', 'Education', 'Gaming', 'Art', 'Photography', 'Books', 'Fitness',
-                                        'Politics', 'Science', 'Nature', 'Cars', 'Real Estate'
-                                    ];
-                                @endphp
-                                @foreach($availableInterests as $interest)
-                                    <label class="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
-                                        <input type="checkbox" value="{{ $interest }}" 
-                                               @if(in_array($interest, $selectedInterests)) checked @endif
-                                               class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 focus:ring-2"
-                                               onchange="updateInterests()">
-                                        <span class="ml-2 text-xs sm:text-sm text-gray-700">{{ $interest }}</span>
-                                    </label>
-                                @endforeach
+                            <div class="flex items-center justify-between mb-3">
+                                <label class="block text-xs sm:text-sm font-medium text-gray-700">Interests (Max 5)</label>
+                                @if(!$editingInterests && count($this->userInterests) > 0)
+                                    <button type="button" wire:click="toggleInterestEdit" 
+                                            class="text-xs sm:text-sm text-orange-600 hover:text-orange-700 font-medium">
+                                        Edit Interests
+                                    </button>
+                                @endif
                             </div>
-                            @error('selectedInterests') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
+                            
+                            @if($editingInterests)
+                                <!-- Interest Selection Form -->
+                                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
+                                    @foreach($availableInterests as $interest)
+                                        <label class="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                                            <input type="checkbox" 
+                                                   wire:model="selectedInterests" 
+                                                   value="{{ $interest->id }}" 
+                                                   class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 focus:ring-2">
+                                            <span class="ml-2 text-xs sm:text-sm text-gray-700">{{ $interest->display_name }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                
+                                <div class="flex items-center space-x-3">
+                                    <button type="button" wire:click="toggleInterestEdit" 
+                                            class="text-xs sm:text-sm text-gray-600 hover:text-gray-700 font-medium">
+                                        Cancel
+                                    </button>
+                                    <span class="text-xs text-gray-500">|
+                                    <span class="ml-2 text-xs text-gray-500">{{ count($selectedInterests) }}/5 selected</span>
+                                </div>
+                                @error('selectedInterests') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
+                            @else
+                                <!-- Display Selected Interests -->
+                                @if(count($this->userInterests) > 0)
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach($this->userInterests as $interest)
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                                {{ $interest->display_name }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div class="text-sm text-gray-500 mb-3">No interests selected yet.</div>
+                                    <button type="button" wire:click="toggleInterestEdit" 
+                                            class="text-xs sm:text-sm bg-orange-100 text-orange-700 px-3 py-2 rounded-lg hover:bg-orange-200 transition-colors duration-150">
+                                        Add Interests
+                                    </button>
+                                @endif
+                            @endif
                         </div>
 
                         <div class="mt-6">
@@ -443,16 +475,57 @@
 
         // Listen for Google OAuth events
         window.addEventListener('google-oauth-redirect', event => {
-            window.location.href = event.detail.url;
+            console.log('Google OAuth redirect event received:', event.detail);
+            
+            if (!event.detail || !event.detail.url) {
+                console.error('Google OAuth redirect event missing URL:', event.detail);
+                alert('Error: Missing Google OAuth URL. Please try again.');
+                return;
+            }
+            
+            try {
+                console.log('Redirecting to Google OAuth URL:', event.detail.url);
+                window.location.href = event.detail.url;
+            } catch (error) {
+                console.error('Error redirecting to Google OAuth:', error);
+                alert('Error redirecting to Google. Please try again.');
+            }
         });
 
         window.addEventListener('google-oauth-success', event => {
-            alert(event.detail.message);
-            location.reload();
+            console.log('Google OAuth success event received:', event.detail);
+            
+            const message = event.detail?.message || 'Google account connected successfully!';
+            alert(message);
+            
+            // Reload page to reflect changes
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
         });
 
         window.addEventListener('google-oauth-error', event => {
-            alert(event.detail.message);
+            console.error('Google OAuth error event received:', event.detail);
+            
+            const message = event.detail?.message || 'An error occurred with Google OAuth. Please try again.';
+            alert(message);
+            
+            // Reset any loading states
+            const connectButton = document.querySelector('[wire\\:click="connectGoogle"]');
+            if (connectButton) {
+                connectButton.disabled = false;
+            }
+        });
+
+        // Add error handling for Livewire errors
+        document.addEventListener('livewire:error', event => {
+            console.error('Livewire error:', event.detail);
+            alert('A system error occurred. Please check the console and try again.');
+        });
+
+        // Log when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Profile page loaded successfully');
         });
     </script>
 </div>

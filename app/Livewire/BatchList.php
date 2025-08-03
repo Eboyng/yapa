@@ -521,9 +521,22 @@ class BatchList extends Component
             }
 
             if (!empty($this->filters['interests'])) {
+                // User has manually selected interest filters
                 $query->whereHas('interests', function ($q) {
                     $q->whereIn('interests.id', $this->filters['interests']);
                 });
+            } elseif ($user && $user->interests()->exists()) {
+                // No manual filters, but user has selected interests - prioritize matching batches
+                $userInterestIds = $user->interests()->pluck('interests.id')->toArray();
+                
+                // Use a subquery to prioritize batches with matching interests
+                $query->leftJoin('batch_interests', 'batches.id', '=', 'batch_interests.batch_id')
+                      ->leftJoin('interests', 'batch_interests.interest_id', '=', 'interests.id')
+                      ->selectRaw('batches.*, 
+                          CASE WHEN interests.id IN (' . implode(',', $userInterestIds) . ') 
+                          THEN 1 ELSE 0 END as has_matching_interest')
+                      ->groupBy('batches.id')
+                      ->orderByDesc('has_matching_interest');
             }
 
             if ($this->filters['type'] !== 'all') {
