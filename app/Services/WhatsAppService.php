@@ -213,32 +213,6 @@ class WhatsAppService
     }
 
     /**
-     * Get account balance from Kudisms.
-     */
-    public function getBalance(): array
-    {
-        try {
-            // Note: Balance endpoint may be different, check Kudisms documentation
-            $balanceUrl = str_replace('/whatsapp', '/balance', $this->apiUrl);
-            
-            $response = Http::timeout(30)
-                ->asForm()
-                ->post($balanceUrl, [
-                    'token' => $this->apiKey,
-                ]);
-
-            if ($response->successful()) {
-                return $response->json();
-            }
-            
-            throw new \Exception('Failed to get balance: ' . $response->body());
-        } catch (\Exception $e) {
-            Log::error('Failed to get Kudisms balance', ['error' => $e->getMessage()]);
-            throw $e;
-        }
-    }
-
-    /**
      * Send WhatsApp message using template.
      */
     public function sendTemplate(string $phone, string $templateCode, array $parameters = [], NotificationLog $notificationLog = null, array $buttonParameters = [], array $headerParameters = []): void

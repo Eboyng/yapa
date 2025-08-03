@@ -104,7 +104,7 @@ class BatchResource extends Resource
                             ->preload()
                             ->default(Auth::id()),
                     ])
-                    ->visible(fn () => Auth::user()?->is_admin),
+                    ->visible(fn () => Auth::user()?->hasRole('admin')),
             ]);
     }
 

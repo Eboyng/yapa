@@ -319,7 +319,7 @@ class NotificationService
         );
 
         // Send to admin users
-        $adminUsers = \App\Models\User::where('is_admin', true)->get();
+        $adminUsers = \App\Models\User::role('admin')->get();
         foreach ($adminUsers as $admin) {
             $adminMessage = "New proof submission for advertisement booking on '{$booking->channel->name}'. Please review and approve/reject.";
             

@@ -445,7 +445,7 @@ class BatchList extends Component
                 'user_id' => $user->id,
                 'reference' => Transaction::generateReference(),
                 'type' => Transaction::TYPE_CREDIT,
-                'category' => 'contact_download',
+                'category' => Transaction::CATEGORY_CONTACT_DOWNLOAD,
                 'amount' => 0,
                 'balance_before' => $user->getCreditWallet()->balance,
                 'balance_after' => $user->getCreditWallet()->balance,

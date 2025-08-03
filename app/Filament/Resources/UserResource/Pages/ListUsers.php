@@ -26,8 +26,8 @@ class ListUsers extends ListRecords
             'all' => Tab::make('All Users')
                 ->badge(User::count()),
             'admins' => Tab::make('Admins')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_admin', true))
-                ->badge(User::where('is_admin', true)->count()),
+                ->modifyQueryUsing(fn (Builder $query) => $query->role('admin'))
+                ->badge(User::role('admin')->count()),
             'flagged' => Tab::make('Flagged')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('is_flagged_for_ads', true))
                 ->badge(User::where('is_flagged_for_ads', true)->count()),

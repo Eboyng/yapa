@@ -157,7 +157,7 @@ class ExpireAdCampaigns extends Command
     private function notifyAdmins(int $expiredCount, int $totalExpired): void
     {
         try {
-            $admins = User::where('is_admin', true)->get();
+            $admins = User::role('admin')->get();
             $message = "Ad campaign expiry check completed.\n\nExpired: {$expiredCount} campaigns\nTotal checked: {$totalExpired} campaigns\nTime: " . now()->format('Y-m-d H:i:s');
 
             foreach ($admins as $admin) {

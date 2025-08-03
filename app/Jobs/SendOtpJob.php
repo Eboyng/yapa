@@ -121,7 +121,7 @@ class SendOtpJob implements ShouldQueue
     private function notifyAdmins(\Throwable $exception): void
     {
         try {
-            $admins = User::where('is_admin', true)->get();
+            $admins = User::role('admin')->get();
             
             foreach ($admins as $admin) {
                 Mail::to($admin->email)->queue(

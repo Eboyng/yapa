@@ -133,7 +133,7 @@ class SendEmailJob implements ShouldQueue
     private function notifyAdmins(\Throwable $exception): void
     {
         try {
-            $admins = User::where('is_admin', true)->get();
+            $admins = User::role('admin')->get();
             
             foreach ($admins as $admin) {
                 // Use direct mail sending to avoid infinite loop

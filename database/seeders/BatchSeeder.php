@@ -293,6 +293,46 @@ class BatchSeeder extends Seeder
                 'admin_user_id' => $adminUser?->id,
                 'auto_close_at' => now()->addDays(18),
                 'interest_names' => ['Photography', 'Art & Creativity']
+            ],
+            
+            // Test batches with limit of 1
+            [
+                'name' => 'Test Batch 1 - Single Member',
+                'type' => Batch::TYPE_TRIAL,
+                'limit' => 2,
+                'location' => 'Lagos, Nigeria',
+                'cost_in_credits' => 0,
+                'status' => Batch::STATUS_OPEN,
+                'description' => 'Test batch with single member limit',
+                'created_by_admin' => true,
+                'admin_user_id' => $adminUser?->id,
+                'auto_close_at' => now()->addDays(3),
+                'interest_names' => ['Technology']
+            ],
+            [
+                'name' => 'Test Batch 2 - Single Member',
+                'type' => Batch::TYPE_REGULAR,
+                'limit' => 2,
+                'location' => 'Abuja, Nigeria',
+                'cost_in_credits' => 10,
+                'status' => Batch::STATUS_OPEN,
+                'description' => 'Test batch with single member limit',
+                'created_by_admin' => false,
+                'auto_close_at' => now()->addDays(5),
+                'interest_names' => ['Business & Entrepreneurship']
+            ],
+            [
+                'name' => 'Test Batch 3 - Single Member',
+                'type' => Batch::TYPE_REGULAR,
+                'limit' => 3,
+                'location' => 'Port Harcourt, Nigeria',
+                'cost_in_credits' => 15,
+                'status' => Batch::STATUS_OPEN,
+                'description' => 'Test batch with single member limit',
+                'created_by_admin' => true,
+                'admin_user_id' => $adminUser?->id,
+                'auto_close_at' => now()->addDays(7),
+                'interest_names' => ['Health & Wellness']
             ]
         ];
         
@@ -311,6 +351,6 @@ class BatchSeeder extends Seeder
             }
         }
         
-        $this->command->info('Created 20 batches with realistic data!');
+        $this->command->info('Created 23 batches with realistic data (including 3 test batches with limit of 1)!');
     }
 }

@@ -215,7 +215,7 @@ class BatchService
             'whatsapp_number' => $adminNumber,
             'location' => '',
             'interests' => '',
-            'is_admin' => true,
+            'is_admin' => true, // Keep for VCF generation logic
         ];
     }
 

@@ -235,7 +235,7 @@ class GenerateWeeklyEngagementReport extends Command
      */
     private function sendReportToAdmins(string $content): void
     {
-        $admins = User::where('is_admin', true)->get();
+        $admins = User::role('admin')->get();
         
         foreach ($admins as $admin) {
             $this->sendReportToEmail($admin->email, $content, $admin);

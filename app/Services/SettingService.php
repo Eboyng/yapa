@@ -74,7 +74,6 @@ class SettingService
         'kudisms_sms_template_code' => '',
         'kudisms_app_name_code' => '',
         'kudisms_sms_url' => 'https://my.kudisms.net/api/otp',
-        'kudisms_balance_url' => 'https://my.kudisms.net/api/balance',
         // Paystack Payment Settings
         'paystack_public_key' => '',
         'paystack_secret_key' => '',
@@ -441,7 +440,7 @@ class SettingService
             'kudisms_sms_template_code',
             'kudisms_app_name_code',
             'kudisms_sms_url',
-            'kudisms_balance_url',
+
         ]);
         
         // Fallback to config values if database values are empty
@@ -484,7 +483,7 @@ class SettingService
             'kudisms_sms_template_code',
             'kudisms_app_name_code',
             'kudisms_sms_url',
-            'kudisms_balance_url',
+
         ]);
         
         // Fallback to config values if database values are empty

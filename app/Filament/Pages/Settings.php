@@ -361,12 +361,6 @@ class Settings extends Page
                                             ->default('https://my.kudisms.net/api/otp')
                                             ->url()
                                             ->maxLength(255),
-                                        Forms\Components\TextInput::make('kudisms_balance_url')
-                                            ->label('Balance Check API URL')
-                                            ->helperText('Kudisms balance check API endpoint')
-                                            ->default('https://my.kudisms.net/api/balance')
-                                            ->url()
-                                            ->maxLength(255),
                                     ])
                                     ->columns(2),
                             ]),

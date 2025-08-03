@@ -571,57 +571,6 @@ class OtpService
     }
 
     /**
-     * Get Kudisms account balance.
-     */
-    public function getKudismsBalance(): array
-    {
-        try {
-            $smsSettings = $this->settingService->getSmsSettings();
-            
-            $response = Http::timeout(30)
-                ->asForm()
-                ->post($smsSettings['kudisms_balance_url'], [
-                    'token' => $smsSettings['kudisms_api_key'],
-                ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                
-                Log::info('Kudisms balance retrieved successfully', [
-                    'response' => $data,
-                ]);
-                
-                return [
-                    'success' => true,
-                    'balance' => $data,
-                    'message' => 'Balance retrieved successfully',
-                ];
-            }
-
-            Log::error('Kudisms balance API error', [
-                'status_code' => $response->status(),
-                'response' => $response->body(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'Balance API error: ' . $response->body(),
-                'status_code' => $response->status(),
-            ];
-
-        } catch (\Exception $e) {
-            Log::error('Kudisms balance request failed', [
-                'error' => $e->getMessage(),
-            ]);
-            
-            return [
-                'success' => false,
-                'message' => 'Balance request failed: ' . $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
      * Get default OTP message templates.
      */
     public static function getMessageTemplates(): array

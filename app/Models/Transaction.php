@@ -95,6 +95,7 @@ class Transaction extends Model
     const CATEGORY_CHANNEL_SALE_PAYMENT = 'channel_sale_payment';
     const CATEGORY_REFERRAL_REWARD = 'referral_reward';
     const CATEGORY_BATCH_SHARE_REWARD = 'batch_share_reward';
+    const CATEGORY_CONTACT_DOWNLOAD = 'contact_download';
 
     /**
      * Transaction statuses.

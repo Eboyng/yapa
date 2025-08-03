@@ -9,10 +9,10 @@ use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\BatchStatusChart;
 use App\Filament\Widgets\RecentTransactionsWidget;
 use App\Filament\Widgets\TopPerformingBatchesWidget;
-use App\Filament\Widgets\KudismsBalanceWidget;
+
 use App\Filament\Widgets\SystemHealthWidget;
 use App\Filament\Widgets\NotificationStatsWidget;
-use App\Filament\Widgets\ChannelAdStatsWidget;
+
 use App\Filament\Widgets\WithdrawalStatsWidget;
 use App\Filament\Widgets\CreditUsageStatsWidget;
 use App\Filament\Widgets\WalletOverviewWidget;
@@ -31,7 +31,7 @@ class Dashboard extends BaseDashboard
             StatsOverviewWidget::class,
             
             // Balance Widget (Full Width)
-            KudismsBalanceWidget::class,
+
             
             // Secondary Stats Row (2x2 Grid)
             WithdrawalStatsWidget::class,

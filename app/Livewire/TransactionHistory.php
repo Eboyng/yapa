@@ -155,6 +155,7 @@ class TransactionHistory extends Component
             Transaction::CATEGORY_REFUND => 'Refund',
             Transaction::CATEGORY_WHATSAPP_CHANGE_FEE => 'WhatsApp Change',
             Transaction::CATEGORY_MANUAL_ADJUSTMENT => 'Manual Adjustment',
+            Transaction::CATEGORY_CONTACT_DOWNLOAD => 'Contact Download',
         ];
     }
 

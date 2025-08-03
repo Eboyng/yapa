@@ -3,10 +3,8 @@
 namespace App\Providers;
 
 use App\Models\ChannelAd;
-use App\Models\ChannelAdApplication;
 use App\Models\ChannelPurchase;
 use App\Models\ChannelSale;
-use App\Policies\ChannelAdApplicationPolicy;
 use App\Policies\ChannelAdPolicy;
 use App\Policies\ChannelPurchasePolicy;
 use App\Policies\ChannelSalePolicy;
@@ -22,7 +20,7 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         ChannelAd::class => ChannelAdPolicy::class,
-        ChannelAdApplication::class => ChannelAdApplicationPolicy::class,
+
         ChannelSale::class => ChannelSalePolicy::class,
         ChannelPurchase::class => ChannelPurchasePolicy::class,
     ];

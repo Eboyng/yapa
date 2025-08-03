@@ -56,8 +56,12 @@ class ViewUser extends ViewRecord
 
                 Section::make('Status & Verification')
                     ->schema([
-                        IconEntry::make('is_admin')
-                            ->boolean(),
+                        TextEntry::make('roles.name')
+                            ->badge()
+                            ->color('info')
+                            ->label('Roles')
+                            ->limitList(3)
+                            ->expandableLimitedList(),
                         IconEntry::make('is_flagged_for_ads')
                             ->boolean(),
                         IconEntry::make('whatsapp_notifications_enabled')

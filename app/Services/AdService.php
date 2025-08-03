@@ -427,7 +427,7 @@ class AdService
     protected function notifyAdminsAboutAppeal(User $user): void
     {
         // Get admin emails from settings or admin users
-        $adminEmails = User::where('is_admin', true)->pluck('email')->filter();
+        $adminEmails = User::role('admin')->pluck('email')->filter();
 
         foreach ($adminEmails as $adminEmail) {
             try {

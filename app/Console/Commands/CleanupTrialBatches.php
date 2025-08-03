@@ -156,7 +156,7 @@ class CleanupTrialBatches extends Command
     private function notifyAdmins(int $closedCount, int $totalExpired): void
     {
         try {
-            $admins = User::where('is_admin', true)->get();
+            $admins = User::role('admin')->get();
             $message = "Trial batch cleanup completed.\n\nClosed: {$closedCount} batches\nTotal expired: {$totalExpired} batches\nTime: " . now()->format('Y-m-d H:i:s');
 
             foreach ($admins as $admin) {
