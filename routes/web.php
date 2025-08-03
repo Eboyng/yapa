@@ -24,9 +24,15 @@ Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
-Route::get('/profile', Profile::class)
-    ->middleware(['auth', 'verified.otp'])
-    ->name('profile');
+// Profile Routes - Consolidated single-page system
+Route::middleware(['auth', 'verified.otp'])->group(function () {
+    Route::get('/profile', \App\Livewire\Profile::class)->name('profile');
+    Route::get('/profile/edit', \App\Livewire\Profile::class)->name('profile.edit');
+    Route::get('/profile/security', \App\Livewire\Profile::class)->name('profile.security');
+    Route::get('/profile/whatsapp', \App\Livewire\Profile::class)->name('profile.whatsapp');
+    Route::get('/profile/integrations', \App\Livewire\Profile::class)->name('profile.integrations');
+    Route::get('/profile/support', \App\Livewire\Profile::class)->name('profile.support');
+});
 
 Route::get('/my-batches', MyBatches::class)
     ->middleware(['auth', 'verified.otp'])

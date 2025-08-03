@@ -519,6 +519,22 @@ class Profile extends Component
         return $this->user->getWallet('earnings')->balance ?? 0;
     }
 
+    /**
+     * Get the number of batches the user has participated in.
+     */
+    public function getBatchParticipationCountProperty()
+    {
+        return $this->user->batchMemberships()->count();
+    }
+
+    /**
+     * Get the number of AdTasks the user has completed.
+     */
+    public function getCompletedAdTasksCountProperty()
+    {
+        return $this->user->adTasks()->where('status', 'approved')->count();
+    }
+
     public function getAvatarUrlProperty()
     {
         $avatarService = app(AvatarService::class);

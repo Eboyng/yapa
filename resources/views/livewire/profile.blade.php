@@ -1,453 +1,458 @@
-<div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-50">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <x-profile.flash-messages />
+<div class="min-h-screen bg-white">
+    <div class="py-4 sm:py-8 lg:py-12">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-6 lg:space-y-8">
+            
+            <!-- Flash Messages -->
+            @if (session()->has('success'))
+                <div class="bg-green-50 border-l-4 border-green-400 text-green-800 px-3 py-2 sm:px-4 sm:py-3 rounded-r-lg mb-3 sm:mb-4 transition-all duration-300 hover:bg-green-100">
+                    <div class="flex items-center">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span class="text-sm sm:text-base">{{ session('success') }}</span>
+                    </div>
+                </div>
+            @endif
 
-        <!-- New Profile Layout: Avatar and Wallet on Same Line -->
-        <div class="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 border border-gray-100">
-            <!-- Top Section: Avatar and Wallet Cards -->
-            <div class="flex  lg:flex-row items-start gap-3 mb-6">
-                <!-- Avatar Section -->
-                <div class="flex-shrink-0">
-                    <div class="relative">
-                        <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-r from-orange-400 to-purple-500 flex items-center justify-center text-white text-xl sm:text-2xl font-bold shadow-lg">
-                            {{ strtoupper(substr($user->name, 0, 1)) }}{{ strtoupper(substr(explode(' ', $user->name)[1] ?? '', 0, 1)) }}
+            @if (session()->has('error'))
+                <div class="bg-red-50 border-l-4 border-red-400 text-red-800 px-3 py-2 sm:px-4 sm:py-3 rounded-r-lg mb-3 sm:mb-4 transition-all duration-300 hover:bg-red-100">
+                    <div class="flex items-center">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="text-sm sm:text-base">{{ session('error') }}</span>
+                    </div>
+                </div>
+            @endif
+
+            @if (session()->has('info'))
+                <div class="bg-blue-50 border-l-4 border-blue-400 text-blue-800 px-3 py-2 sm:px-4 sm:py-3 rounded-r-lg mb-3 sm:mb-4 transition-all duration-300 hover:bg-blue-100">
+                    <div class="flex items-center">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="text-sm sm:text-base">{{ session('info') }}</span>
+                    </div>
+                </div>
+            @endif
+
+            <!-- Profile Header -->
+            <div class="bg-gradient-to-r from-orange-50 to-purple-50 border border-orange-100 rounded-xl sm:rounded-2xl overflow-hidden">
+                <div class="p-4 sm:p-6 lg:p-8">
+                    <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
+                        <div class="flex-shrink-0 relative group">
+                            <div class="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full ring-4 ring-orange-200 transition-all duration-300 group-hover:ring-purple-300 overflow-hidden">
+                                <img class="w-full h-full object-cover" 
+                                     src="{{ $this->avatarUrl }}" 
+                                     alt="{{ $user->name }}">
+                            </div>
+                            <div class="absolute -bottom-1 -right-1 w-6 h-6 sm:w-8 sm:h-8 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                                <svg class="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
                         </div>
-                        <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        
+                        <div class="flex-1 text-center sm:text-left">
+                            <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1">{{ $user->name }}</h1>
+                            <p class="text-sm sm:text-base text-gray-600 mb-2">{{ $user->email }}</p>
+                            @if($user->location)
+                                <div class="flex items-center justify-center sm:justify-start text-xs sm:text-sm text-gray-500">
+                                    <svg class="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                    {{ $user->location }}
+                                </div>
+                            @endif
+                        </div>
+                        
+                        <div class="w-full sm:w-auto">
+                            <div class="grid grid-cols-3 gap-2 sm:gap-4">
+                                <div class="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-orange-100 hover:border-orange-200 transition-all duration-200">
+                                    <div class="text-lg sm:text-xl lg:text-2xl font-bold text-orange-600">{{ number_format($this->creditsBalance) }}</div>
+                                    <div class="text-xs text-gray-500">Credits</div>
+                                </div>
+                                <div class="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-purple-100 hover:border-purple-200 transition-all duration-200">
+                                    <div class="text-lg sm:text-xl lg:text-2xl font-bold text-purple-600">₦{{ number_format($this->nairaBalance, 2) }}</div>
+                                    <div class="text-xs text-gray-500">Naira</div>
+                                </div>
+                                <div class="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-orange-100 hover:border-orange-200 transition-all duration-200">
+                                    <div class="text-lg sm:text-xl lg:text-2xl font-bold text-orange-600">₦{{ number_format($this->earningsBalance, 2) }}</div>
+                                    <div class="text-xs text-gray-500">Earnings</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div class="bg-white border border-orange-100 rounded-xl sm:rounded-2xl overflow-hidden hover:border-orange-200 transition-all duration-300">
+                    <div class="p-4 sm:p-6">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-xl sm:text-2xl font-bold text-gray-900">{{ $this->batchParticipationCount }}</div>
+                                <div class="text-xs sm:text-sm text-gray-600">Batches Joined</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white border border-purple-100 rounded-xl sm:rounded-2xl overflow-hidden hover:border-purple-200 transition-all duration-300">
+                    <div class="p-4 sm:p-6">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-xl sm:text-2xl font-bold text-gray-900">{{ $this->completedAdTasksCount }}</div>
+                                <div class="text-xs sm:text-sm text-gray-600">Completed Tasks</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Information -->
+            <div class="bg-white border border-gray-100 rounded-xl sm:rounded-2xl overflow-hidden">
+                <div class="border-b border-gray-100 p-4 sm:p-6">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                            <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                             </svg>
                         </div>
+                        <h3 class="text-base sm:text-lg font-semibold text-gray-900">Profile Information</h3>
                     </div>
                 </div>
+                
+                <div class="p-4 sm:p-6">
+                    <form wire:submit.prevent="updateProfile">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                            <div class="space-y-2">
+                                <label for="name" class="block text-xs sm:text-sm font-medium text-gray-700">Full Name</label>
+                                <input type="text" id="name" wire:model="name" 
+                                       class="w-full px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base rounded-lg border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all duration-200">
+                                @error('name') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
+                            </div>
 
-                <!-- Compact Wallet Cards -->
-                <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <!-- Credits Card -->
-                    <div class="bg-gradient-to-br flex justify-between from-blue-500 to-blue-600 rounded-xl p-3 text-white transform transition-all duration-300 hover:scale-105">
+                            <div class="space-y-2">
+                                <label for="location" class="block text-xs sm:text-sm font-medium text-gray-700">Location</label>
+                                <select id="location" wire:model="location" 
+                                        class="w-full px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base rounded-lg border border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200">
+                                    <option value="">Select your state</option>
+                                    @foreach($nigerianStates as $state)
+                                        <option value="{{ $state }}">{{ $state }}</option>
+                                    @endforeach
+                                </select>
+                                @error('location') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-3">Interests (Max 5)</label>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                                @php
+                                    $availableInterests = [
+                                        'Technology', 'Sports', 'Music', 'Movies', 'Travel', 'Food', 'Fashion', 'Health',
+                                        'Business', 'Education', 'Gaming', 'Art', 'Photography', 'Books', 'Fitness',
+                                        'Politics', 'Science', 'Nature', 'Cars', 'Real Estate'
+                                    ];
+                                @endphp
+                                @foreach($availableInterests as $interest)
+                                    <label class="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                                        <input type="checkbox" value="{{ $interest }}" 
+                                               @if(in_array($interest, $selectedInterests)) checked @endif
+                                               class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 focus:ring-2"
+                                               onchange="updateInterests()">
+                                        <span class="ml-2 text-xs sm:text-sm text-gray-700">{{ $interest }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            @error('selectedInterests') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="mt-6">
+                            <button type="submit" 
+                                    class="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium py-2 px-6 sm:py-3 sm:px-8 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 text-sm sm:text-base"
+                                    wire:loading.attr="disabled">
+                                <span wire:loading.remove wire:target="updateProfile">Update Profile</span>
+                                <span wire:loading wire:target="updateProfile">Updating...</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Security Settings -->
+            <div class="bg-white border border-gray-100 rounded-xl sm:rounded-2xl overflow-hidden">
+                <div class="border-b border-gray-100 p-4 sm:p-6">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                            <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-base sm:text-lg font-semibold text-gray-900">Security Settings</h3>
+                    </div>
+                </div>
+                
+                <div class="p-4 sm:p-6">
+                    <!-- Change Password -->
+                    <div class="mb-6 sm:mb-8">
+                        <h4 class="text-sm sm:text-base font-medium text-gray-800 mb-3 sm:mb-4">Change Password</h4>
+                        <form wire:submit.prevent="updatePassword">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                <div class="space-y-2">
+                                    <label for="current_password" class="block text-xs sm:text-sm font-medium text-gray-700">Current Password</label>
+                                    <input type="password" id="current_password" wire:model="current_password" 
+                                           class="w-full px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base rounded-lg border border-gray-200 focus:border-red-400 focus:ring-2 focus:ring-red-100 transition-all duration-200">
+                                    @error('current_password') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label for="new_password" class="block text-xs sm:text-sm font-medium text-gray-700">New Password</label>
+                                    <input type="password" id="new_password" wire:model="new_password" 
+                                           class="w-full px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base rounded-lg border border-gray-200 focus:border-red-400 focus:ring-2 focus:ring-red-100 transition-all duration-200">
+                                    @error('new_password') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label for="confirm_password" class="block text-xs sm:text-sm font-medium text-gray-700">Confirm Password</label>
+                                    <input type="password" id="confirm_password" wire:model="confirm_password" 
+                                           class="w-full px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base rounded-lg border border-gray-200 focus:border-red-400 focus:ring-2 focus:ring-red-100 transition-all duration-200">
+                                    @error('confirm_password') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <button type="submit" 
+                                        class="w-full sm:w-auto bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium py-2 px-6 sm:py-3 sm:px-8 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 text-sm sm:text-base"
+                                        wire:loading.attr="disabled">
+                                    <span wire:loading.remove wire:target="updatePassword">Update Password</span>
+                                    <span wire:loading wire:target="updatePassword">Updating...</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Email Verification -->
+                    <div class="border-t border-gray-100 pt-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
+                            <div>
+                                <h4 class="text-sm sm:text-base font-medium text-gray-800">Email Verification</h4>
+                                <p class="text-xs sm:text-sm text-gray-600 mt-1">Enable email verification for enhanced security</p>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                @if($user->hasVerifiedEmail())
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Verified
+                                    </span>
+                                @else
+                                    <button wire:click="resendEmailVerification" 
+                                            class="text-orange-600 hover:text-orange-800 text-xs sm:text-sm font-medium hover:underline transition-colors duration-150">
+                                        Resend Verification
+                                    </button>
+                                @endif
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" wire:model="emailVerificationEnabled" wire:change="toggleEmailVerification" class="sr-only peer">
+                                    <div class="w-10 h-5 sm:w-11 sm:h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 sm:after:h-5 sm:after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WhatsApp Settings -->
+            <div class="bg-white border border-gray-100 rounded-xl sm:rounded-2xl overflow-hidden">
+                <div class="border-b border-gray-100 p-4 sm:p-6">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                            <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.465 3.63"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-base sm:text-lg font-semibold text-gray-900">WhatsApp Settings</h3>
+                    </div>
+                </div>
+                
+                <div class="p-4 sm:p-6">
+                    <!-- Current WhatsApp Number -->
+                    <div class="mb-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
+                            <div>
+                                <h4 class="text-sm sm:text-base font-medium text-gray-800">Current WhatsApp Number</h4>
+                                <p class="text-xs sm:text-sm text-gray-600 mt-1">{{ $user->whatsapp_number ?: 'Not set' }}</p>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" wire:model="notifyWhatsapp" wire:change="toggleNotifications" class="sr-only peer">
+                                    <div class="w-10 h-5 sm:w-11 sm:h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 sm:after:h-5 sm:after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                                    <span class="ml-3 text-xs sm:text-sm font-medium text-gray-700">Enable Notifications</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Change WhatsApp Number -->
+                    <div class="border-t border-gray-100 pt-6">
+                        <div class="flex items-center mb-3 sm:mb-4">
+                            <h4 class="text-sm sm:text-base font-medium text-gray-800">Change WhatsApp Number</h4>
+                            <span class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                100 Credits
+                            </span>
+                        </div>
                         
-                        <div class="text-xs sm:text-xl font-bold">{{ number_format($user->credits) }}</div>
-                        <div class="text-xs opacity-75">Credits</div>
-                    </div>
+                        @if(!$otpSent)
+                            <form wire:submit.prevent="initiateNumberChange">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div class="space-y-2">
+                                        <label for="newWhatsappNumber" class="block text-xs sm:text-sm font-medium text-gray-700">New WhatsApp Number</label>
+                                        <input type="text" id="newWhatsappNumber" wire:model="newWhatsappNumber" 
+                                               placeholder="+234XXXXXXXXXX"
+                                               class="w-full px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base rounded-lg border border-gray-200 focus:border-green-400 focus:ring-2 focus:ring-green-100 transition-all duration-200">
+                                        @error('newWhatsappNumber') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
+                                    </div>
 
-                    <!-- Naira Balance Card -->
-                    <div class="bg-gradient-to-br flex justify-between from-green-500 to-green-600 rounded-xl p-3 text-white transform transition-all duration-300 hover:scale-105">
+                                    <div class="space-y-2">
+                                        <label for="password" class="block text-xs sm:text-sm font-medium text-gray-700">Confirm Password</label>
+                                        <input type="password" id="password" wire:model="password" 
+                                               class="w-full px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base rounded-lg border border-gray-200 focus:border-green-400 focus:ring-2 focus:ring-green-100 transition-all duration-200">
+                                        @error('password') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
+                                    </div>
+                                </div>
 
-                        <div class="text-xs sm:text-xl font-bold">₦{{ number_format($user->getNairaWallet()->balance, 2) }}</div>
-                        <div class="text-xs opacity-75">Balance</div>
-                    </div>
+                                <div class="mt-4">
+                                    <button type="submit" 
+                                            class="w-full sm:w-auto bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-2 px-6 sm:py-3 sm:px-8 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 text-sm sm:text-base"
+                                            wire:loading.attr="disabled">
+                                        <span wire:loading.remove wire:target="initiateNumberChange">Send OTP</span>
+                                        <span wire:loading wire:target="initiateNumberChange">Sending...</span>
+                                    </button>
+                                </div>
+                            </form>
+                        @else
+                            <form wire:submit.prevent="verifyNumberChange">
+                                <div class="mb-4 space-y-2">
+                                    <label for="otp" class="block text-xs sm:text-sm font-medium text-gray-700">Enter OTP</label>
+                                    <input type="text" id="otp" wire:model="otp" 
+                                           placeholder="6-digit OTP"
+                                           class="w-full sm:w-1/3 px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base rounded-lg border border-gray-200 focus:border-green-400 focus:ring-2 focus:ring-green-100 transition-all duration-200">
+                                    @error('otp') <span class="text-red-500 text-xs sm:text-sm">{{ $message }}</span> @enderror
+                                </div>
 
-                    <!-- Earnings Card -->
-                    <div class="bg-gradient-to-br flex justify-between from-purple-500 to-purple-600 rounded-xl p-3 text-white transform transition-all duration-300 hover:scale-105">
-                
-                        <div class="text-xs sm:text-xl font-bold">₦{{ number_format($user->total_earnings, 2) }}</div>
-                        <div class="text-xs opacity-75">Earnings</div>
+                                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                                    <button type="submit" 
+                                            class="w-full sm:w-auto bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-2 px-6 sm:py-3 sm:px-8 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 text-sm sm:text-base"
+                                            wire:loading.attr="disabled">
+                                        <span wire:loading.remove wire:target="verifyNumberChange">Verify & Update</span>
+                                        <span wire:loading wire:target="verifyNumberChange">Verifying...</span>
+                                    </button>
+                                    
+                                    <button type="button" wire:click="resetNumberChangeForm" 
+                                            class="w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 sm:py-3 sm:px-8 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 text-sm sm:text-base">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        @endif
                     </div>
                 </div>
             </div>
 
-            <!-- Bottom Section: User Details -->
-            <div class="border-t border-gray-100 pt-4">
-                <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{{ $user->name }}</h1>
-                <p class="text-sm text-gray-600 mb-3">{{ $user->email }}</p>
-                
-                <div class="flex flex-wrap gap-4 text-sm text-gray-500">
-                    @if($user->location)
+            <!-- Google Integration -->
+            <div class="bg-white border border-gray-100 rounded-xl sm:rounded-2xl overflow-hidden">
+                <div class="border-b border-gray-100 p-4 sm:p-6">
                     <div class="flex items-center">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                        <span>{{ $user->location }}, Nigeria</span>
-                    </div>
-                    @endif
-                    <div class="flex items-center">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h6a2 2 0 012 2v4M5 9v10a2 2 0 002 2h10a2 2 0 002-2V9M5 9h14"></path>
-                        </svg>
-                        <span>Member since {{ $user->created_at->format('M Y') }}</span>
+                        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                            <svg class="w-4 h-4 text-blue-600" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-base sm:text-lg font-semibold text-gray-900">Google Integration</h3>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Settings Tabs -->
-        <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <x-profile.tab-navigation />
-
-            <!-- Edit Profile Tab -->
-            <div id="profileTab" class="p-4 sm:p-6 lg:p-8 tab-content">
-                <x-profile.tabs.edit-profile />
-            </div>
-
-            <!-- Security Tab -->
-            <div id="securityTab" class="p-4 sm:p-6 lg:p-8 tab-content hidden">
-                <x-profile.tabs.security :user="$user" :emailVerificationEnabled="$emailVerificationEnabled" />
-            </div>
-
-
-            <!-- WhatsApp Tab -->
-            <div id="whatsappTab" class="p-4 sm:p-6 lg:p-8 tab-content hidden">
-                <x-profile.tabs.whatsapp :user="$user" :notifyWhatsapp="$notifyWhatsapp" />
-            </div>
-
-
-
-            <!-- Integrations Tab -->
-            <div id="integrationsTab" class="p-4 sm:p-6 lg:p-8 tab-content hidden">
-                <x-profile.tabs.integrations :user="$user" />
+                
+                <div class="p-4 sm:p-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
+                        <div>
+                            <h4 class="text-sm sm:text-base font-medium text-gray-800">Google Account</h4>
+                            <p class="text-xs sm:text-sm text-gray-600 mt-1">
+                                @if($googleConnected)
+                                    Your Google account is connected
+                                @else
+                                    Connect your Google account for enhanced features
+                                @endif
+                            </p>
+                        </div>
+                        <div>
+                            @if($googleConnected)
+                                <button wire:click="disconnectGoogle" 
+                                        class="w-full sm:w-auto bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium py-2 px-6 sm:py-3 sm:px-8 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 text-sm sm:text-base"
+                                        wire:loading.attr="disabled">
+                                    <span wire:loading.remove wire:target="disconnectGoogle">Disconnect</span>
+                                    <span wire:loading wire:target="disconnectGoogle">Disconnecting...</span>
+                                </button>
+                            @else
+                                <button wire:click="connectGoogle" 
+                                        class="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium py-2 px-6 sm:py-3 sm:px-8 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 text-sm sm:text-base"
+                                        wire:loading.attr="disabled">
+                                    <span wire:loading.remove wire:target="connectGoogle">Connect Google</span>
+                                    <span wire:loading wire:target="connectGoogle">Connecting...</span>
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-<style>
-@keyframes fade-in {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.animate-fade-in {
-    animation: fade-in 0.3s ease-out;
-}
-
-/* Tab transition effects */
-.tab-content {
-    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-}
-
-.tab-content.hidden {
-    opacity: 0;
-    transform: translateY(10px);
-}
-
-.tab-content:not(.hidden) {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* Interest selection styles */
-.interest-option {
-    position: relative;
-    overflow: hidden;
-}
-
-.interest-option:has(.interest-checkbox:checked) {
-    border-color: #f97316;
-    background-color: #fff7ed;
-}
-
-.interest-option:has(.interest-checkbox:checked) .checkmark {
-    opacity: 1;
-    transform: scale(1);
-}
-
-.interest-option .checkmark {
-    opacity: 0;
-    transform: scale(0.8);
-    transition: all 0.2s ease-in-out;
-}
-
-.interest-option.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    pointer-events: none;
-}
-
-/* Custom toggle switch */
-.peer:checked + div {
-    background: linear-gradient(to right, #f97316, #a855f7);
-}
-
-/* Custom scrollbar */
-.overflow-x-auto::-webkit-scrollbar {
-    height: 4px;
-}
-
-.overflow-x-auto::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 4px;
-}
-
-.overflow-x-auto::-webkit-scrollbar-thumb {
-    background: linear-gradient(to right, #f97316, #a855f7);
-    border-radius: 4px;
-}
-
-.overflow-x-auto::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(to right, #ea580c, #9333ea);
-}
-
-/* Ripple animation */
-@keyframes ripple {
-    to {
-        transform: scale(4);
-        opacity: 0;
-    }
-}
-
-/* Pulse animation */
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.8;
-    }
-}
-
-/* Mobile-specific adjustments */
-@media (max-width: 640px) {
-    .grid-cols-2 {
-        gap: 0.5rem;
-    }
-    
-    .interest-option {
-        padding: 0.5rem;
-    }
-    
-    .interest-option span {
-        font-size: 0.75rem;
-    }
-}
-</style>
-
-<script>
-// Tab functionality
-let currentActiveTab = 'profile';
-
-function setActiveTab(tabName) {
-    // Hide all tab contents
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabContents.forEach(content => {
-        content.classList.add('hidden');
-    });
-    
-    // Remove active styles from all buttons
-    const tabButtons = document.querySelectorAll('[id$="TabBtn"]');
-    tabButtons.forEach(button => {
-        button.classList.remove('text-orange-600', 'border-orange-500', 'bg-orange-50');
-        button.classList.add('text-gray-500');
-    });
-    
-    // Show selected tab content
-    const selectedTab = document.getElementById(tabName + 'Tab');
-    if (selectedTab) {
-        selectedTab.classList.remove('hidden');
-    }
-    
-    // Add active styles to selected button
-    const selectedButton = document.getElementById(tabName + 'TabBtn');
-    if (selectedButton) {
-        selectedButton.classList.remove('text-gray-500');
-        selectedButton.classList.add('text-orange-600', 'border-orange-500', 'bg-orange-50');
-    }
-    
-    currentActiveTab = tabName;
-}
-
-// Interest management
-// Interest data and management moved to scripts.blade.php component
-// to prevent conflicts and ensure proper functionality
-
-// This function is handled by the scripts.blade.php component
-// Removed to prevent conflicts with the working implementation
-
-// Interest management is handled by scripts.blade.php component
-// Removed to prevent conflicts
-
-// toggleMoreInterests function is handled by scripts.blade.php component
-
-// Interest selection event handling is managed by scripts.blade.php component
-
-// Form submissions
-function updateProfile(event) {
-    event.preventDefault();
-    const successMsg = document.getElementById('success-message');
-    successMsg.classList.remove('hidden');
-    setTimeout(() => successMsg.classList.add('hidden'), 3000);
-}
-
-function updatePassword(event) {
-    event.preventDefault();
-    const successMsg = document.getElementById('success-message');
-    successMsg.querySelector('span').textContent = 'Password updated successfully!';
-    successMsg.classList.remove('hidden');
-    setTimeout(() => successMsg.classList.add('hidden'), 3000);
-}
-
-function initiateNumberChange(event) {
-    event.preventDefault();
-    const successMsg = document.getElementById('success-message');
-    successMsg.querySelector('span').textContent = 'OTP sent to your new WhatsApp number!';
-    successMsg.classList.remove('hidden');
-    setTimeout(() => successMsg.classList.add('hidden'), 3000);
-}
-
-function connectGoogle() {
-    const successMsg = document.getElementById('success-message');
-    successMsg.querySelector('span').textContent = 'Redirecting to Google authentication...';
-    successMsg.classList.remove('hidden');
-    setTimeout(() => successMsg.classList.add('hidden'), 3000);
-}
-
-// Referral and Batch Sharing Functions
-function copyReferralLink() {
-    const referralInput = document.querySelector('input[value*="/register?ref="]');
-    if (referralInput) {
-        copyToClipboard(referralInput.value);
-        showNotification('Referral link copied to clipboard!', 'success');
-    }
-}
-
-function copyToClipboard(text) {
-    if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text).then(() => {
-            showNotification('Link copied to clipboard!', 'success');
-        }).catch(() => {
-            fallbackCopyTextToClipboard(text);
-        });
-    } else {
-        fallbackCopyTextToClipboard(text);
-    }
-}
-
-function fallbackCopyTextToClipboard(text) {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.top = '0';
-    textArea.style.left = '0';
-    textArea.style.position = 'fixed';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    
-    try {
-        document.execCommand('copy');
-        showNotification('Link copied to clipboard!', 'success');
-    } catch (err) {
-        showNotification('Failed to copy link', 'error');
-    }
-    
-    document.body.removeChild(textArea);
-}
-
-function showNotification(message, type = 'success') {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full ${
-        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-    }`;
-    notification.innerHTML = `
-        <div class="flex items-center">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                ${type === 'success' 
-                    ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>'
-                    : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>'
+    <script>
+        function updateInterests() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            const interests = [];
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    interests.push(checkbox.value);
                 }
-            </svg>
-            <span>${message}</span>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Animate in
-    setTimeout(() => {
-        notification.classList.remove('translate-x-full');
-    }, 100);
-    
-    // Animate out and remove
-    setTimeout(() => {
-        notification.classList.add('translate-x-full');
-        setTimeout(() => {
-            document.body.removeChild(notification);
-        }, 300);
-    }, 3000);
-}
+            });
+            
+            @this.set('selectedInterests', interests);
+        }
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    setActiveTab('profile');
-    
-    // Add smooth scrolling behavior
-    document.documentElement.style.scrollBehavior = 'smooth';
-    
-    // Add intersection observer for scroll animations
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-    
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-            }
+        // Listen for Google OAuth events
+        window.addEventListener('google-oauth-redirect', event => {
+            window.location.href = event.detail.url;
         });
-    }, observerOptions);
-    
-    // Observe wallet cards for scroll animations
-    const walletCards = document.querySelectorAll('.grid.grid-cols-1.sm\\:grid-cols-3 > div');
-    walletCards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        card.style.transition = `opacity 0.6s ease-out ${index * 0.1}s, transform 0.6s ease-out ${index * 0.1}s`;
-        observer.observe(card);
-    });
-    
-    // Add click ripple effect for buttons
-    const buttons = document.querySelectorAll('button, a[class*="bg-gradient"]');
-    buttons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            if (this.disabled) return;
-            
-            const ripple = document.createElement('span');
-            const rect = this.getBoundingClientRect();
-            const size = Math.max(rect.width, rect.height);
-            const x = e.clientX - rect.left - size / 2;
-            const y = e.clientY - rect.top - size / 2;
-            
-            ripple.style.cssText = `
-                position: absolute;
-                width: ${size}px;
-                height: ${size}px;
-                left: ${x}px;
-                top: ${y}px;
-                background: rgba(255, 255, 255, 0.5);
-                border-radius: 50%;
-                transform: scale(0);
-                animation: ripple 0.6s linear;
-                pointer-events: none;
-            `;
-            
-            this.style.position = 'relative';
-            this.style.overflow = 'hidden';
-            this.appendChild(ripple);
-            
-            setTimeout(() => {
-                ripple.remove();
-            }, 600);
+
+        window.addEventListener('google-oauth-success', event => {
+            alert(event.detail.message);
+            location.reload();
         });
-    });
-    
-    // Add form field focus animations
-    const inputs = document.querySelectorAll('input, select, textarea');
-    inputs.forEach(input => {
-        input.addEventListener('focus', function() {
-            this.style.transform = 'scale(1.02)';
-            this.style.transition = 'transform 0.2s ease-out';
+
+        window.addEventListener('google-oauth-error', event => {
+            alert(event.detail.message);
         });
-        
-        input.addEventListener('blur', function() {
-            this.style.transform = 'scale(1)';
-        });
-    });
-});
-</script>
+    </script>
 </div>
