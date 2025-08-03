@@ -2,45 +2,7 @@
     <div class="container mx-auto px-4 py-6 max-w-2xl">
         @if ($adTask)
             <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-                <!-- Header -->
-                <div class="bg-gradient-to-r from-orange-500 to-purple-600 px-6 py-6">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-3">
-                            <div
-                                class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
-                                    </path>
-                                </svg>
-                            </div>
-                            <div>
-                                <h1 class="text-xl font-bold text-white">Active Task</h1>
-                                <p class="text-white/80 text-sm">Complete and earn rewards</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-sm text-white/80">Status</div>
-                            @php
-                                $statusConfig = [
-                                    'active' => ['bg' => 'bg-green-500', 'text' => 'Active'],
-                                    'pending_review' => ['bg' => 'bg-yellow-500', 'text' => 'Under Review'],
-                                    'completed' => ['bg' => 'bg-blue-500', 'text' => 'Completed'],
-                                    'rejected' => ['bg' => 'bg-red-500', 'text' => 'Rejected'],
-                                ];
-                                $config = $statusConfig[$adTask->status] ?? [
-                                    'bg' => 'bg-gray-500',
-                                    'text' => ucfirst(str_replace('_', ' ', $adTask->status)),
-                                ];
-                            @endphp
-                            <span
-                                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white {{ $config['bg'] }}">
-                                {{ $config['text'] }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
+               
                 <div class="p-6">
                     <!-- Ad Content -->
                     <div class="mb-8">
@@ -113,7 +75,7 @@
                     <div class="mb-8">
                         @if ($adTask->status === 'active')
                             <div
-                                class="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-6">
+                                class="bg-gradient-to-r mb-3 from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-6">
                                 <div class="flex items-start">
                                     <div
                                         class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
@@ -123,7 +85,7 @@
                                                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                         </svg>
                                     </div>
-                                    <div class="flex-1">
+                                    <div class="flex-1 mb-3">
                                         <h3 class="font-semibold text-blue-900 mb-3">Next Steps:</h3>
                                         <ol class="text-sm text-blue-800 space-y-2">
                                             <li class="flex items-start">
@@ -139,12 +101,7 @@
                                             <li class="flex items-start">
                                                 <span
                                                     class="inline-flex items-center justify-center w-6 h-6 bg-blue-500 text-white text-xs font-medium rounded-full mr-3 mt-0.5 flex-shrink-0">3</span>
-                                                <span>Wait 24 hours for views to accumulate</span>
-                                            </li>
-                                            <li class="flex items-start">
-                                                <span
-                                                    class="inline-flex items-center justify-center w-6 h-6 bg-blue-500 text-white text-xs font-medium rounded-full mr-3 mt-0.5 flex-shrink-0">4</span>
-                                                <span>Return here to submit your screenshot and view count</span>
+                                                <span>Submit your screenshot and view count for review</span>
                                             </li>
                                         </ol>
                                         <div class="mt-4 p-3 bg-blue-100 rounded-xl">
@@ -163,7 +120,7 @@
                             </div>
                         @endif
 
-                        @if ($canSubmit)
+                        @if ($adTask->status === 'active')
                             <!-- Submission Form -->
                             <div class="bg-white border border-gray-200 rounded-2xl p-6 space-y-6">
                                 <h3 class="text-lg font-semibold text-gray-900 flex items-center">
@@ -298,40 +255,6 @@
                                         Submitting...
                                     </span>
                                 </button>
-                            </div>
-                        @else
-                            <div
-                                class="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-2xl my-3 p-6">
-                                <div class="flex items-start">
-                                    <div
-                                        class="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
-                                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 class="font-semibold text-yellow-900 mb-2">Please Wait</h3>
-                                        <p class="text-sm text-yellow-800 mb-3">
-                                            You can submit your screenshot after 24 hours from when you started the
-                                            task.
-                                        </p>
-                                        <div class="bg-yellow-200 rounded-lg p-3">
-                                            <p class="text-xs text-yellow-800 flex items-center">
-                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor"
-                                                    viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        stroke-width="2"
-                                                        d="M8 7V3a2 2 0 012-2h6a2 2 0 012 2v4M5 9v10a2 2 0 002 2h10a2 2 0 002-2V9M5 9h14">
-                                                    </path>
-                                                </svg>
-                                                Available from:
-                                                {{ $adTask->created_at->addDay()->format('M j, Y g:i A') }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         @endif
                     </div>

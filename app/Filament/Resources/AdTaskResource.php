@@ -218,37 +218,8 @@ class AdTaskResource extends Resource
                     ->modalDescription('This will approve the task and calculate earnings for the user.')
                     ->action(function (AdTask $record) {
                         try {
-                            DB::transaction(function () use ($record) {
-                                // Calculate earnings
-                                $earnings = $record->calculateEarnings();
-                                
-                                // Get user's earnings wallet
-                                $wallet = $record->user->getEarningsWallet();
-                                
-                                // Add earnings to wallet
-                                $wallet->credit($earnings);
-                                
-                                // Create transaction record
-                                 Transaction::create([
-                                     'user_id' => $record->user_id,
-                                     'wallet_id' => $wallet->id,
-                                     'type' => Transaction::TYPE_EARNINGS,
-                                     'category' => Transaction::CATEGORY_AD_EARNING,
-                                     'amount' => $earnings,
-                                     'status' => Transaction::STATUS_COMPLETED,
-                                     'description' => "Earnings from ad task #{$record->id}",
-                                     'reference' => Transaction::generateReference(),
-                                     'metadata' => [
-                                         'ad_task_id' => $record->id,
-                                         'ad_id' => $record->ad_id,
-                                         'view_count' => $record->view_count,
-                                         'earnings_per_view' => $earnings / $record->view_count,
-                                     ],
-                                 ]);
-                                
-                                // Update task status
-                                $record->approve();
-                            });
+                            // Simply approve the task - the model observer will handle payment automatically
+                            $record->approve(auth()->user());
                             
                             // Send notification
                             app(NotificationService::class)->sendAdTaskApprovedNotification(

@@ -299,12 +299,11 @@ class AdTask extends Component
     }
 
     /**
-     * Check if user can submit task (24 hours have passed since task started).
+     * Check if user can submit task.
      */
     public function canSubmitTask(): bool
     {
-        return $this->adTask->status === \App\Models\AdTask::STATUS_ACTIVE && 
-               $this->adTask->created_at->addDay()->isPast();
+        return $this->adTask->status === \App\Models\AdTask::STATUS_ACTIVE;
     }
 
     public function render()
@@ -322,7 +321,6 @@ class AdTask extends Component
             'canUploadScreenshot' => $this->canUploadScreenshot,
             'timeRemaining' => $this->timeRemaining,
             'hoursRemaining' => $this->hoursRemaining,
-            'canSubmit' => $this->canSubmitTask(),
             'adSettings' => $adSettings,
         ]);
     }

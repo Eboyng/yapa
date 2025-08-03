@@ -200,7 +200,7 @@ class AdTask extends Model
      */
     public function canUploadScreenshot(): bool
     {
-        return $this->isActive() && !$this->hasScreenshot();
+        return $this->status === self::STATUS_ACTIVE && !$this->hasScreenshot();
     }
 
     /**
