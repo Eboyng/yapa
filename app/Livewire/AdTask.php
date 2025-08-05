@@ -94,10 +94,13 @@ class AdTask extends Component
 
     public function updateTaskStatus()
     {
-        // Check if task is expired
+        // Check if task is expired and still active
         if ($this->adTask->isExpired() && $this->adTask->status === \App\Models\AdTask::STATUS_ACTIVE) {
             $this->adTask->markAsExpired();
             $this->adTask->refresh();
+            
+            // Show expiry message
+            session()->flash('error', 'Task has expired! You did not submit your screenshot within 48 hours.');
         }
 
         // Update component state

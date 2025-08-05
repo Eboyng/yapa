@@ -71,9 +71,9 @@ class AdTask extends Model
     const APPEAL_STATUS_REJECTED = 'rejected';
 
     /**
-     * Task expiry hours (24 hours to upload screenshot).
+     * Task expiry hours (48 hours to upload screenshot).
      */
-    const TASK_EXPIRY_HOURS = 24;
+    const TASK_EXPIRY_HOURS = 48;
 
     /**
      * Boot the model.
@@ -251,11 +251,15 @@ class AdTask extends Model
     }
 
     /**
-     * Mark as expired.
+     * Mark as expired and automatically reject.
      */
     public function markAsExpired(): bool
     {
-        return $this->update(['status' => self::STATUS_EXPIRED]);
+        return $this->update([
+            'status' => self::STATUS_REJECTED,
+            'reviewed_at' => now(),
+            'rejection_reason' => 'Task expired - Screenshot not submitted within 48 hours'
+        ]);
     }
 
     /**

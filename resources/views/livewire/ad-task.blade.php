@@ -101,7 +101,7 @@
                                             <li class="flex items-start">
                                                 <span
                                                     class="inline-flex items-center justify-center w-6 h-6 bg-blue-500 text-white text-xs font-medium rounded-full mr-3 mt-0.5 flex-shrink-0">3</span>
-                                                <span>Submit your screenshot and view count for review</span>
+                                                <span>Submit your screenshot and view count within 48 hours</span>
                                             </li>
                                         </ol>
                                         <div class="mt-4 p-3 bg-blue-100 rounded-xl">
@@ -114,13 +114,87 @@
                                                 </svg>
                                                 Task started: {{ $adTask->created_at->format('M j, Y g:i A') }}
                                             </p>
+                                            @if($timeRemaining)
+                                                <p class="text-xs text-blue-700 flex items-center mt-1">
+                                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    Time remaining: {{ $hoursRemaining }} hours
+                                                </p>
+                                                <p class="text-xs text-blue-700 flex items-center mt-1">
+                                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                    </svg>
+                                                    Deadline: {{ $timeRemaining->format('M j, Y g:i A') }}
+                                                </p>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         @endif
 
-                        @if ($adTask->status === 'active')
+                        @if ($adTask->status === 'active' && $hoursRemaining <= 6 && $hoursRemaining > 0)
+                            <!-- Expiry Warning -->
+                            <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6 mb-6">
+                                <div class="flex items-start">
+                                    <div class="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-yellow-900 mb-2">⚠️ Task Expiring Soon!</h3>
+                                        <p class="text-sm text-yellow-800 mb-3">
+                                            You have only <strong>{{ $hoursRemaining }} hours</strong> left to submit your screenshot. Please complete your task soon to avoid automatic rejection.
+                                        </p>
+                                        <div class="bg-yellow-100 rounded-xl p-3">
+                                            <p class="text-xs text-yellow-700 flex items-center">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                Deadline: {{ $timeRemaining->format('M j, Y g:i A') }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($adTask->status === 'rejected' && str_contains($adTask->rejection_reason, 'expired'))
+                            <!-- Task Expired Message -->
+                            <div class="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-2xl p-6 mb-6">
+                                <div class="flex items-start">
+                                    <div class="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-red-900 mb-2">Task Expired</h3>
+                                        <p class="text-sm text-red-800 mb-3">
+                                            This task has expired because you did not submit your screenshot within 48 hours. The task has been automatically rejected.
+                                        </p>
+                                        <div class="bg-red-100 rounded-xl p-3">
+                                            <p class="text-xs text-red-700 flex items-center">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                Task started: {{ $adTask->created_at->format('M j, Y g:i A') }}
+                                            </p>
+                                            <p class="text-xs text-red-700 flex items-center mt-1">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                </svg>
+                                                Expired: {{ $adTask->created_at->addHours(48)->format('M j, Y g:i A') }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($adTask->status === 'active' && $canUploadScreenshot)
                             <!-- Submission Form -->
                             <div class="bg-white border border-gray-200 rounded-2xl p-6 space-y-6">
                                 <h3 class="text-lg font-semibold text-gray-900 flex items-center">

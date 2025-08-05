@@ -68,3 +68,68 @@ Schedule::call(function () {
     }
 })->hourly()
   ->description('Validate and fix user avatars');
+
+// Trial batch cleanup - Run daily at 2:00 AM
+Schedule::command('batches:cleanup-trials')
+    ->dailyAt('02:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->description('Close expired trial batches');
+
+// Ad campaign expiry - Run every hour
+Schedule::command('ads:expire-campaigns')
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->description('Close ad campaigns that have exceeded their duration');
+
+// Ad task expiry - Run every hour
+Schedule::command('ads:expire-tasks')
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->description('Automatically reject ad tasks that have expired (48 hours without screenshot submission)');
+
+// Weekly engagement report - Run every Sunday at midnight
+Schedule::command('reports:weekly-engagement')
+    ->weeklyOn(0, '00:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->description('Generate weekly engagement reports');
+
+// Queue worker health check - Run every 5 minutes
+Schedule::command('queue:work --stop-when-empty')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->description('Process queued jobs');
+
+// Clean failed jobs older than 7 days - Run daily at 3:00 AM
+Schedule::command('queue:prune-failed --hours=168')
+    ->dailyAt('03:00')
+    ->withoutOverlapping()
+    ->description('Clean failed jobs older than 7 days');
+
+// Clean old notification logs - Run weekly on Monday at 1:00 AM
+Schedule::call(function () {
+    \App\Models\NotificationLog::where('created_at', '<', now()->subDays(30))->delete();
+})->weeklyOn(1, '01:00')
+  ->description('Clean old notification logs');
+
+// Application cache clear - Run daily at 4:00 AM
+Schedule::command('cache:clear')
+    ->dailyAt('04:00')
+    ->description('Clear application cache');
+
+// Log cleanup - Run weekly on Sunday at 3:00 AM
+Schedule::call(function () {
+    $logPath = storage_path('logs');
+    $files = glob($logPath . '/laravel-*.log');
+    
+    foreach ($files as $file) {
+        if (filemtime($file) < strtotime('-30 days')) {
+            unlink($file);
+        }
+    }
+})->weeklyOn(0, '03:00')
+  ->description('Cleanup old log files');
