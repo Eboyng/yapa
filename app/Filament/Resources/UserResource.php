@@ -452,7 +452,9 @@ class UserResource extends Resource
                             ->helperText('Select roles to assign to this user'),
                     ])
                     ->action(function (User $record, array $data) {
-                        $record->syncRoles($data['roles'] ?? []);
+                        // Convert role IDs to role names for syncRoles
+                        $roleNames = Role::whereIn('id', $data['roles'] ?? [])->pluck('name')->toArray();
+                        $record->syncRoles($roleNames);
                         
                         AuditLog::create([
                             'admin_user_id' => Auth::id(),
@@ -460,7 +462,7 @@ class UserResource extends Resource
                             'action' => 'roles_assigned',
                             'description' => "Roles assigned to {$record->name}",
                             'metadata' => [
-                                'roles' => Role::whereIn('id', $data['roles'] ?? [])->pluck('name')->toArray(),
+                                'roles' => $roleNames,
                             ],
                         ]);
                         

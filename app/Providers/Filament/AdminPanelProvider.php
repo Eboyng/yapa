@@ -17,6 +17,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Saade\FilamentLaravelLog\FilamentLaravelLogPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -39,6 +40,17 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
             
             ])
+            ->plugin(
+                FilamentLaravelLogPlugin::make()
+                    ->navigationGroup('System Tools')
+                    ->navigationLabel('Logs')
+                    ->navigationIcon('heroicon-o-bug-ant')
+                    ->navigationSort(1)
+                    ->slug('logs')
+                    ->authorize(
+                        fn () => auth()->user()?->hasRole('admin')
+                    )
+            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
