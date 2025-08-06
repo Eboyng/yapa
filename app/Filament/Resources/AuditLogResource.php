@@ -27,6 +27,16 @@ class AuditLogResource extends Resource
     protected static ?int $navigationSort = 10;
 
     protected static ?string $navigationLabel = 'Audit Logs';
+    
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->hasRole('admin') ?? false;
+    }
+    
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
 
     public static function form(Form $form): Form
     {

@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
         if (!User::where('email', 'admin@yapa.ng')->exists()) {
             User::create([
                 'name' => 'Admin User',
-                'email' => 'admin@yapa.ng',
+                'email' => 'admin@yapa.com',
                 'password' => bcrypt('password'),
                 'whatsapp_number' => '+2348012345678',
                 'location' => 'Lagos, Nigeria',

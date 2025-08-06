@@ -58,7 +58,7 @@ class RolePermissionSeeder extends Seeder
 
         // Create admin user if it doesn't exist
         $adminUser = User::firstOrCreate(
-            ['email' => 'admin@yapa.com'],
+            ['email' => 'admin@yapa.ng'],
             [
                 'name' => 'Admin User',
                 'password' => Hash::make('password'),
