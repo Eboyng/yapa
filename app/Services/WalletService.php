@@ -106,7 +106,7 @@ class WalletService
             $balanceAfter = $balanceBefore - $amount;
             
             // Update user balance using wallet system
-            $wallet->withdraw($amount);
+            $wallet->debit($amount);
             
             // Create wallet transaction
             $transaction = WalletTransaction::create([

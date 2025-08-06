@@ -33,10 +33,13 @@ class Otp extends Model
      */
     public static function generate(string $identifier, string $context, ?int $userId = null, int $expiryMinutes = 5): array
     {
-        // Delete any existing OTP for this identifier and context
+        // Force cleanup of any existing OTP for this identifier and context (including verified ones)
         self::where('identifier', $identifier)
             ->where('context', $context)
-            ->delete();
+            ->forceDelete();
+            
+        // Also cleanup any expired OTPs to keep the table clean
+        self::cleanupExpired();
 
         $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         
@@ -136,6 +139,16 @@ class Otp extends Model
         }
 
         return $lastOtp->created_at->addMinutes($cooldownMinutes)->isPast();
+    }
+
+    /**
+     * Force cleanup all OTP records for a specific identifier and context.
+     */
+    public static function forceCleanup(string $identifier, string $context): int
+    {
+        return self::where('identifier', $identifier)
+            ->where('context', $context)
+            ->forceDelete();
     }
 
     /**

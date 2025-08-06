@@ -702,12 +702,13 @@ class Profile extends Component
                 'new_number' => $this->newWhatsappNumber,
             ]);
 
-            // Send OTP via text message
+            // Send OTP via text message with whatsapp_change context
             $result = $otpService->sendOtp(
                 $this->newWhatsappNumber,
                 $message,
                 $this->user->email,
-                false // Not registration
+                false, // Not registration
+                'whatsapp_change' // Context for WhatsApp number change
             );
 
             if ($result['success']) {

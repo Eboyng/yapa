@@ -37,28 +37,45 @@ class OtpService
         string $whatsappNumber,
         string $message,
         ?string $email = null,
-        bool $isRegistration = false
+        bool $isRegistration = false,
+        string $context = 'login'
     ): array {
         $otp = $this->generateOtp();
         $formattedMessage = str_replace('{otp}', $otp, $message);
         
-        // Store OTP in database for verification
-        $user = User::where('whatsapp_number', $whatsappNumber)->first();
-        if ($user) {
-            $user->update([
-                'otp_code' => Hash::make($otp),
-                'otp_attempts' => 0,
-                'otp_expires_at' => now()->addMinutes(5),
+        // For WhatsApp number change, only use cache (new number doesn't exist in DB yet)
+        if ($context === 'whatsapp_change') {
+            $cacheKey = $this->getOtpCacheKey($whatsappNumber, $context);
+            Cache::put($cacheKey, [
+                'otp' => Hash::make($otp),
+                'attempts' => 0,
+                'created_at' => now(),
+            ], 300); // 5 minutes
+            
+            Log::info('OTP stored in cache for WhatsApp change', [
+                'whatsapp_number' => $whatsappNumber,
+                'cache_key' => $cacheKey,
+                'context' => $context,
             ]);
+        } else {
+            // Store OTP in database for existing users
+            $user = User::where('whatsapp_number', $whatsappNumber)->first();
+            if ($user) {
+                $user->update([
+                    'otp_code' => Hash::make($otp),
+                    'otp_attempts' => 0,
+                    'otp_expires_at' => now()->addMinutes(5),
+                ]);
+            }
+            
+            // Also store in cache for backward compatibility
+            $cacheKey = $this->getOtpCacheKey($whatsappNumber, $isRegistration ? 'registration' : 'login');
+            Cache::put($cacheKey, [
+                'otp' => Hash::make($otp),
+                'attempts' => 0,
+                'created_at' => now(),
+            ], 300); // 5 minutes
         }
-        
-        // Also store in cache for backward compatibility
-        $cacheKey = $this->getOtpCacheKey($whatsappNumber, $isRegistration ? 'registration' : 'login');
-        Cache::put($cacheKey, [
-            'otp' => Hash::make($otp),
-            'attempts' => 0,
-            'created_at' => now(),
-        ], 300); // 5 minutes
 
         $result = [
             'success' => false,
@@ -546,7 +563,21 @@ class OtpService
         $cacheKey = $this->getOtpCacheKey($whatsappNumber, $context);
         $cachedOtp = Cache::get($cacheKey);
         
+        Log::info('Verifying OTP from cache', [
+            'whatsapp_number' => $whatsappNumber,
+            'context' => $context,
+            'cache_key' => $cacheKey,
+            'cached_otp_exists' => !is_null($cachedOtp),
+            'provided_otp' => $otpCode,
+        ]);
+        
         if (!$cachedOtp) {
+            Log::warning('OTP not found in cache', [
+                'whatsapp_number' => $whatsappNumber,
+                'context' => $context,
+                'cache_key' => $cacheKey,
+            ]);
+            
             return [
                 'success' => false,
                 'message' => 'OTP has expired or not found',
@@ -555,7 +586,7 @@ class OtpService
         }
         
         // Check if OTP has expired (5 minutes)
-        if (isset($cachedOtp['created_at']) && $cachedOtp['created_at']->addMinutes(5)->isPast()) {
+        if (isset($cachedOtp['created_at']) && now()->diffInMinutes($cachedOtp['created_at']) > 5) {
             Cache::forget($cacheKey);
             return [
                 'success' => false,
