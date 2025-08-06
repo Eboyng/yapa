@@ -331,7 +331,7 @@ new #[Layout('layouts.guest')] class extends Component {
                 </div>
 
                 <!-- Password -->
-                <div>
+                <div x-data="{ showPassword: false }">
                     <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
                         <svg class="w-4 h-4 inline mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
@@ -342,19 +342,26 @@ new #[Layout('layouts.guest')] class extends Component {
                         <input 
                             wire:model="password" 
                             id="password" 
-                            type="password" 
+                            :type="showPassword ? 'text' : 'password'" 
                             name="password" 
                             required 
                             autocomplete="new-password"
                             class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white pr-10"
                             placeholder="Create a secure password"
                         />
-                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button 
+                            type="button" 
+                            @click="showPassword = !showPassword"
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 focus:outline-none"
+                        >
+                            <svg x-show="!showPassword" class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                             </svg>
-                        </div>
+                            <svg x-show="showPassword" class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
+                            </svg>
+                        </button>
                     </div>
                     @error('password') 
                         <p class="mt-2 text-sm text-red-600 flex items-center">
@@ -367,7 +374,7 @@ new #[Layout('layouts.guest')] class extends Component {
                 </div>
 
                 <!-- Confirm Password -->
-                <div>
+                <div x-data="{ showConfirmPassword: false }">
                     <label for="password_confirmation" class="block text-sm font-semibold text-gray-700 mb-2">
                         <svg class="w-4 h-4 inline mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -378,19 +385,26 @@ new #[Layout('layouts.guest')] class extends Component {
                         <input 
                             wire:model="password_confirmation" 
                             id="password_confirmation" 
-                            type="password" 
+                            :type="showConfirmPassword ? 'text' : 'password'" 
                             name="password_confirmation" 
                             required 
                             autocomplete="new-password"
                             class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white pr-10"
                             placeholder="Confirm your password"
                         />
-                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button 
+                            type="button" 
+                            @click="showConfirmPassword = !showConfirmPassword"
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 focus:outline-none"
+                        >
+                            <svg x-show="!showConfirmPassword" class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                             </svg>
-                        </div>
+                            <svg x-show="showConfirmPassword" class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
+                            </svg>
+                        </button>
                     </div>
                     @error('password_confirmation') 
                         <p class="mt-2 text-sm text-red-600 flex items-center">
@@ -428,25 +442,6 @@ new #[Layout('layouts.guest')] class extends Component {
                         </p> 
                     @enderror
                 </div>
-
-                <!-- Email Verification Toggle -->
-                <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4">
-                    <div class="flex items-start">
-                        <div class="flex-1">
-                            <h4 class="text-sm font-medium text-gray-900 mb-1">Email Verification (Optional)</h4>
-                            <p class="text-xs text-gray-600 mb-3">Enable email verification for sensitive actions like withdrawals and WhatsApp number changes.</p>
-                            <label class="inline-flex items-center">
-                                <input 
-                                    wire:model="email_verification_enabled" 
-                                    type="checkbox" 
-                                    class="rounded border-gray-300 text-orange-600 shadow-sm focus:ring-orange-500"
-                                >
-                                <span class="ml-2 text-sm text-gray-700">Enable email verification for my account</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
                
 
                 <!-- Submit Button -->

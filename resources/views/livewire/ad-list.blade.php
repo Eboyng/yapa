@@ -84,42 +84,7 @@
                 </div>
             </div>
 
-            <div
-                class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
-                <div class="flex items-center">
-                    <div
-                        class="w-10 h-10 bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl flex items-center justify-center">
-                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z">
-                            </path>
-                        </svg>
-                    </div>
-                    <div class="ml-3 min-w-0 flex-1">
-                        <p class="text-xs text-gray-600 truncate">Active Users</p>
-                        <p class="text-sm font-bold text-purple-600">{{ $ads->sum('participants_count') }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <div
-                class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
-                <div class="flex items-center">
-                    <div
-                        class="w-10 h-10 bg-gradient-to-r from-orange-100 to-orange-200 rounded-xl flex items-center justify-center">
-                        <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-3 min-w-0 flex-1">
-                        <p class="text-xs text-gray-600 truncate">Status</p>
-                        <p class="text-sm font-bold text-green-600">
-                            Ready
-                        </p>
-                    </div>
-                </div>
-            </div>
+           
         </div>
 
         <!-- Ad Cards -->
