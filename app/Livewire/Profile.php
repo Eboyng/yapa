@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Otp;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -237,16 +238,22 @@ class Profile extends Component
                 throw new \Exception('Insufficient credits. You need 100 credits to change your WhatsApp number.');
             }
 
-            // Send OTP to new number
-            $otpService = app(OtpService::class);
-            $message = 'Your YAPA WhatsApp number change verification code is: {otp}. This code expires in 5 minutes.';
+            // Generate and store OTP using the new OTP model
+            $otpData = Otp::generate($this->newWhatsappNumber, 'whatsapp_change', $this->user->id, 5);
+            $otp = $otpData['otp'];
             
-            $result = $otpService->sendOtp(
-                $this->newWhatsappNumber,
-                $message,
-                $this->user->email,
-                false
-            );
+            $message = 'Your YAPA WhatsApp number change verification code is: {otp}. This code expires in 5 minutes.';
+            $formattedMessage = str_replace('{otp}', $otp, $message);
+            
+            // Send via WhatsApp service directly
+            $whatsAppService = app(WhatsAppService::class);
+            try {
+                $notificationLog = new \App\Models\NotificationLog();
+                $whatsAppService->send($this->newWhatsappNumber, $formattedMessage, $notificationLog);
+                $result = ['success' => true, 'message' => 'OTP sent successfully'];
+            } catch (\Exception $e) {
+                $result = ['success' => false, 'message' => $e->getMessage()];
+            }
 
             if ($result['success']) {
                 $this->otpSent = true;
@@ -276,13 +283,12 @@ class Profile extends Component
                 throw new \Exception('Maximum OTP attempts exceeded. Please try again later.');
             }
 
-            // Verify OTP
-            $otpService = app(OtpService::class);
-            $isValid = $otpService->verifyOtp($this->newWhatsappNumber, $this->otp, false);
+            // Verify OTP using the new OTP model
+            $result = Otp::verify($this->newWhatsappNumber, $this->otp, 'whatsapp_change');
 
-            if (!$isValid) {
+            if (!$result['success']) {
                 $this->otpAttempts++;
-                throw new \Exception('Invalid OTP. Please try again.');
+                throw new \Exception($result['message'] ?? 'Invalid OTP. Please try again.');
             }
 
             DB::transaction(function () {

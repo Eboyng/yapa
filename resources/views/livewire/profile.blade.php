@@ -67,22 +67,7 @@
                             @endif
                         </div>
                         
-                        <div class="w-full sm:w-auto">
-                            <div class="grid grid-cols-3 gap-2 sm:gap-4">
-                                <div class="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-orange-100 hover:border-orange-200 transition-all duration-200">
-                                    <div class="text-lg sm:text-xl lg:text-2xl font-bold text-orange-600">{{ number_format($this->creditsBalance) }}</div>
-                                    <div class="text-xs text-gray-500">Credits</div>
-                                </div>
-                                <div class="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-purple-100 hover:border-purple-200 transition-all duration-200">
-                                    <div class="text-lg sm:text-xl lg:text-2xl font-bold text-purple-600">₦{{ number_format($this->nairaBalance, 2) }}</div>
-                                    <div class="text-xs text-gray-500">Naira</div>
-                                </div>
-                                <div class="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-orange-100 hover:border-orange-200 transition-all duration-200">
-                                    <div class="text-lg sm:text-xl lg:text-2xl font-bold text-orange-600">₦{{ number_format($this->earningsBalance, 2) }}</div>
-                                    <div class="text-xs text-gray-500">Earnings</div>
-                                </div>
-                            </div>
-                        </div>
+
                     </div>
                 </div>
             </div>

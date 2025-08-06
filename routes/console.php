@@ -18,6 +18,11 @@ Schedule::command('avatars:generate')
     ->at('02:00')
     ->description('Generate avatars for users without avatars');
 
+// Schedule OTP cleanup every hour
+Schedule::command('otp:cleanup')
+    ->hourly()
+    ->description('Clean up expired OTP records');
+
 // Schedule avatar regeneration weekly with different providers
 Schedule::command('avatars:generate --provider=dicebear --style=avataaars')
     ->weekly()
