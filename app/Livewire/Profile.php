@@ -79,6 +79,12 @@ class Profile extends Component
     // Edit mode for interests
     public $editingInterests = false;
     
+    // Collapsible section toggles
+    public $showProfileInfo = true;
+    public $showSecuritySettings = false;
+    public $showWhatsAppSettings = false;
+    public $showGoogleIntegration = false;
+    
     // Nigerian states for location dropdown
     public $nigerianStates = [
         'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue',
