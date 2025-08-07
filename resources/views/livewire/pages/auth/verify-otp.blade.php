@@ -298,7 +298,7 @@ new #[Layout('layouts.guest')] class extends Component
 
     <div class="relative w-full max-w-md">
         <!-- Main card -->
-        <div class="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 md:p-10 transform transition-all duration-500 hover:scale-[1.01]">
+        <div class="bg-white/90 backdrop-blur-xl rounded-3xl shadow-sm p-8 md:p-10 transform transition-all duration-500 hover:scale-[1.01]">
             
             <!-- WhatsApp Icon and Title -->
             <div class="text-center mb-8">
