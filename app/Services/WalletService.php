@@ -36,7 +36,7 @@ class WalletService
             $balanceAfter = $balanceBefore + $amount;
             
             // Update user balance using wallet system
-            $wallet->deposit($amount);
+            $wallet->credit($amount);
             
             // Create wallet transaction
             $transaction = WalletTransaction::create([
@@ -187,7 +187,7 @@ class WalletService
             $balanceAfter = $balanceBefore + $amount;
             
             // Update user balance using wallet system
-            $wallet->deposit($amount);
+            $wallet->credit($amount);
             
             // Create transaction record
             $transaction = \App\Models\Transaction::create([

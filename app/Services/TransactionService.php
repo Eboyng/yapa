@@ -21,13 +21,8 @@ class TransactionService
      */
     private function mapWalletTypeToTransactionType(string $walletType, string $operation): string
     {
-        $mapping = [
-            Wallet::TYPE_CREDITS => $operation === 'credit' ? Transaction::TYPE_CREDIT : Transaction::TYPE_DEBIT,
-            Wallet::TYPE_NAIRA => Transaction::TYPE_NAIRA,
-            Wallet::TYPE_EARNINGS => Transaction::TYPE_EARNINGS,
-        ];
-
-        return $mapping[$walletType] ?? $walletType;
+        // All operations should be either 'credit' or 'debit' regardless of wallet type
+        return $operation === 'credit' ? Transaction::TYPE_CREDIT : Transaction::TYPE_DEBIT;
     }
 
     /**

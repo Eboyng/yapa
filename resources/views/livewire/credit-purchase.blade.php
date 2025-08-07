@@ -187,49 +187,157 @@
                 </div>
 
                 <div class="p-4 sm:p-6">
-                    <!-- Amount Field -->
+                    <!-- Payment Method Selection -->
                     <div class="mb-6">
-                        <label class="block text-sm font-semibold text-gray-700 mb-3">Amount (₦)</label>
-                        <div class="relative">
-                            <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-semibold text-sm sm:text-base">₦</span>
-                            <input type="number" wire:model.live="fundAmount" class="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border-2 border-gray-200 rounded-xl font-semibold text-base sm:text-lg focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200" placeholder="Enter amount" min="{{ $pricingConfig['minimum_amount'] ?? 100 }}">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">Payment Method</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button wire:click="$set('paymentMethod', 'paystack')" class="flex items-center justify-center p-3 sm:p-4 border-2 rounded-xl font-semibold text-xs sm:text-sm transition-all duration-200 {{ $paymentMethod === 'paystack' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-600 hover:border-gray-300' }}">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                                </svg>
+                                Paystack
+                            </button>
+                            <button wire:click="$set('paymentMethod', 'voucher')" class="flex items-center justify-center p-3 sm:p-4 border-2 rounded-xl font-semibold text-xs sm:text-sm transition-all duration-200 {{ $paymentMethod === 'voucher' ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-gray-300' }}">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                                </svg>
+                                Voucher
+                            </button>
                         </div>
-                        @error('fundAmount')
-                            <span class="text-red-500 text-sm font-medium mt-2 block">{{ $message }}</span>
-                        @enderror
-                        <div class="text-xs font-medium mt-2 bg-gray-50 p-3 rounded-lg text-gray-600">Minimum: ₦{{ number_format($pricingConfig['minimum_amount'] ?? 100) }}</div>
                     </div>
 
-                    <!-- Payment Info -->
-                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-                        <div class="flex items-start">
-                            <div class="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 mt-1 mr-3 flex-shrink-0">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
+                    @if($paymentMethod === 'paystack')
+                        <!-- Amount Field for Paystack -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">Amount (₦)</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-semibold text-sm sm:text-base">₦</span>
+                                <input type="number" wire:model.live="fundAmount" class="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border-2 border-gray-200 rounded-xl font-semibold text-base sm:text-lg focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200" placeholder="Enter amount" min="{{ $pricingConfig['minimum_amount'] ?? 100 }}">
                             </div>
-                            <div class="text-sm">
-                                <p class="font-semibold text-blue-800 mb-1">Payment via Paystack</p>
-                                <p class="text-blue-600 text-xs">Secure payment processing</p>
+                            @error('fundAmount')
+                                <span class="text-red-500 text-sm font-medium mt-2 block">{{ $message }}</span>
+                            @enderror
+                            <div class="text-xs font-medium mt-2 bg-gray-50 p-3 rounded-lg text-gray-600">Minimum: ₦{{ number_format($pricingConfig['minimum_amount'] ?? 100) }}</div>
+                        </div>
+
+                        <!-- Payment Info -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                            <div class="flex items-start">
+                                <div class="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 mt-1 mr-3 flex-shrink-0">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <div class="text-sm">
+                                    <p class="font-semibold text-blue-800 mb-1">Payment via Paystack</p>
+                                    <p class="text-blue-600 text-xs">Secure payment processing</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    @endif
+
+                    @if($paymentMethod === 'voucher')
+                        <!-- Voucher Payment Section -->
+                        <div class="mb-6">
+                            <!-- Account Number and WhatsApp -->
+                            <div class="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4">
+                                <div class="text-sm">
+                                    <p class="font-semibold text-orange-800 mb-2">Purchase Voucher</p>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-orange-600">Account Number:</span>
+                                            <span class="font-mono font-semibold text-orange-800">{{ $voucherAccountNumber }}</span>
+                                        </div>
+                                        <a href="{{ $this->getAdminWhatsAppLink() }}" target="_blank" class="inline-flex items-center text-green-600 hover:text-green-700 font-medium">
+                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/>
+                                            </svg>
+                                            Contact Admin on WhatsApp
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Voucher Code Input -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-3">Voucher Code</label>
+                                <input type="text" wire:model.live="voucherCode" class="w-full px-4 py-3 sm:py-4 border-2 border-gray-200 rounded-xl font-semibold text-base sm:text-lg focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 transition-all duration-200 uppercase" placeholder="Enter voucher code" maxlength="20">
+                                @error('voucherCode')
+                                    <span class="text-red-500 text-sm font-medium mt-2 block">{{ $message }}</span>
+                                @enderror
+                            </div>
+
+                            <!-- Voucher Details -->
+                            @if($showVoucherDetails && $voucherDetails)
+                                <div class="mt-4 bg-green-50 border border-green-200 rounded-xl p-4">
+                                    <div class="flex items-start">
+                                        <div class="w-5 h-5 sm:w-6 sm:h-6 text-green-600 mt-1 mr-3 flex-shrink-0">
+                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                        </div>
+                                        <div class="text-sm flex-1">
+                                            <p class="font-semibold text-green-800 mb-2">Voucher Details</p>
+                                            <div class="space-y-1">
+                                                <div class="flex justify-between">
+                                                    <span class="text-green-600">Code:</span>
+                                                    <span class="font-mono font-semibold text-green-800">{{ $voucherDetails['code'] }}</span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span class="text-green-600">Amount:</span>
+                                                    <span class="font-semibold text-green-800">₦{{ number_format($voucherDetails['amount'], 2) }}</span>
+                                                </div>
+                                                @if($voucherDetails['expires_at'])
+                                                    <div class="flex justify-between">
+                                                        <span class="text-green-600">Expires:</span>
+                                                        <span class="text-green-800">{{ $voucherDetails['expires_at'] }}</span>
+                                                    </div>
+                                                @endif
+                                                @if($voucherDetails['description'])
+                                                    <div class="mt-2">
+                                                        <span class="text-green-600">Description:</span>
+                                                        <p class="text-green-800 text-xs mt-1">{{ $voucherDetails['description'] }}</p>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
 
                     <!-- Submit Buttons -->
                     <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
                         <button wire:click="closeFundModal" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 sm:py-4 px-4 rounded-xl transition-all duration-200 text-sm sm:text-base">
                             Cancel
                         </button>
-                        <button wire:click="fundWallet" wire:loading.attr="disabled" class="flex-1 bg-gradient-to-r from-purple-600 to-orange-600 hover:from-purple-700 hover:to-orange-700 text-white font-semibold py-3 sm:py-4 px-4 rounded-xl disabled:opacity-50 transition-all duration-200 text-sm sm:text-base">
-                            <span wire:loading.remove wire:target="fundWallet">Proceed</span>
-                            <span wire:loading wire:target="fundWallet" class="flex items-center justify-center">
-                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 sm:h-5 sm:w-5 text-white" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Processing...
-                            </span>
-                        </button>
+                        
+                        @if($paymentMethod === 'paystack')
+                            <button wire:click="fundWallet" wire:loading.attr="disabled" class="flex-1 bg-gradient-to-r from-purple-600 to-orange-600 hover:from-purple-700 hover:to-orange-700 text-white font-semibold py-3 sm:py-4 px-4 rounded-xl disabled:opacity-50 transition-all duration-200 text-sm sm:text-base">
+                                <span wire:loading.remove wire:target="fundWallet">Proceed with Paystack</span>
+                                <span wire:loading wire:target="fundWallet" class="flex items-center justify-center">
+                                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 sm:h-5 sm:w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Processing...
+                                </span>
+                            </button>
+                        @endif
+                        
+                        @if($paymentMethod === 'voucher')
+                            <button wire:click="redeemVoucher" wire:loading.attr="disabled" class="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3 sm:py-4 px-4 rounded-xl disabled:opacity-50 transition-all duration-200 text-sm sm:text-base {{ !$showVoucherDetails ? 'opacity-50 cursor-not-allowed' : '' }}" {{ !$showVoucherDetails ? 'disabled' : '' }}>
+                                <span wire:loading.remove wire:target="redeemVoucher">Redeem Voucher</span>
+                                <span wire:loading wire:target="redeemVoucher" class="flex items-center justify-center">
+                                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 sm:h-5 sm:w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Redeeming...
+                                </span>
+                            </button>
+                        @endif
                     </div>
                 </div>
             </div>

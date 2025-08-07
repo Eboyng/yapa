@@ -6,9 +6,11 @@ use App\Services\PaystackService;
 use App\Services\TransactionService;
 use App\Services\AirtimeService;
 use App\Services\DataService;
+use App\Services\VoucherService;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
+use App\Models\Voucher;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -32,6 +34,12 @@ class CreditPurchase extends Component
 
     // Fund Wallet Properties
     public float $fundAmount = 0;
+    public string $paymentMethod = 'paystack'; // 'paystack' or 'voucher'
+    public string $voucherCode = '';
+    public ?array $voucherDetails = null;
+    public bool $showVoucherDetails = false;
+    public string $adminWhatsApp = '+2348123456789'; // Admin WhatsApp number
+    public string $voucherAccountNumber = '1234567890'; // Account number for voucher payments
 
     // Credit package properties
     public $selectedCreditPackage = null;
@@ -122,6 +130,7 @@ class CreditPurchase extends Component
         'airtimeAmount' => 'required|numeric|min:50|max:5000',
         'dataPhoneNumber' => 'required|string|size:10',
         'selectedDataPlan' => 'required|string',
+        'voucherCode' => 'required_if:paymentMethod,voucher|string|min:3',
     ];
 
     protected $messages = [
@@ -135,6 +144,8 @@ class CreditPurchase extends Component
         'airtimeAmount.max' => 'Maximum airtime amount is ₦5,000',
         'dataPhoneNumber.size' => 'Phone number must be exactly 10 digits',
         'selectedDataPlan.required' => 'Please select a data plan',
+        'voucherCode.required_if' => 'Please enter a voucher code',
+        'voucherCode.min' => 'Voucher code must be at least 3 characters',
     ];
 
     public function mount(?int $retry = null): void
@@ -176,6 +187,10 @@ class CreditPurchase extends Component
     {
         $this->showFundModal = true;
         $this->fundAmount = 0;
+        $this->paymentMethod = 'paystack';
+        $this->voucherCode = '';
+        $this->voucherDetails = null;
+        $this->showVoucherDetails = false;
         $this->resetValidation();
     }
 
@@ -183,6 +198,10 @@ class CreditPurchase extends Component
     {
         $this->showFundModal = false;
         $this->fundAmount = 0;
+        $this->paymentMethod = 'paystack';
+        $this->voucherCode = '';
+        $this->voucherDetails = null;
+        $this->showVoucherDetails = false;
         $this->resetValidation();
     }
 
@@ -689,6 +708,16 @@ class CreditPurchase extends Component
     }
 
     // ==============================================
+    // VOUCHER METHODS
+    // ==============================================
+
+    public function getAdminWhatsAppLink(): string
+    {
+        $message = urlencode("Hello, I would like to purchase a voucher for wallet funding. Account Number: {$this->voucherAccountNumber}");
+        return "https://wa.me/{$this->adminWhatsApp}?text={$message}";
+    }
+
+    // ==============================================
     // CREDIT PURCHASE METHODS
     // ==============================================
 
@@ -696,6 +725,145 @@ class CreditPurchase extends Component
     {
         if ($value && $value < ($this->pricingConfig['minimum_amount'] ?? 300)) {
             $this->addError('fundAmount', 'Minimum funding amount is ₦' . number_format($this->pricingConfig['minimum_amount'] ?? 300));
+        }
+    }
+
+    /**
+     * Validate voucher code and show details
+     */
+    public function validateVoucher(): void
+    {
+        try {
+            $this->validate(['voucherCode' => 'required|string|min:3']);
+
+            $voucherService = app(VoucherService::class);
+            $result = $voucherService->validateVoucher($this->voucherCode);
+
+            if ($result['valid']) {
+                $voucher = $result['voucher'];
+                $this->voucherDetails = [
+                    'code' => $voucher->code,
+                    'amount' => $voucher->amount,
+                    'currency' => $voucher->currency,
+                    'formatted_amount' => $voucher->formattedAmount,
+                    'expires_at' => $voucher->expires_at?->format('M d, Y'),
+                    'description' => $voucher->description,
+                ];
+                $this->showVoucherDetails = true;
+                $this->fundAmount = $voucher->amount;
+                $this->resetErrorBag(['voucherCode']);
+            } else {
+                $this->voucherDetails = null;
+                $this->showVoucherDetails = false;
+                $this->addError('voucherCode', $result['message']);
+            }
+        } catch (\Exception $e) {
+            $this->voucherDetails = null;
+            $this->showVoucherDetails = false;
+            $this->addError('voucherCode', $e->getMessage());
+            
+            Log::error('Voucher validation error', [
+                'user_id' => Auth::id(),
+                'voucher_code' => $this->voucherCode,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Redeem voucher and fund wallet
+     */
+    public function redeemVoucher(): void
+    {
+        if ($this->isProcessing) {
+            return;
+        }
+
+        $this->isProcessing = true;
+
+        try {
+            $this->validate(['voucherCode' => 'required|string|min:3']);
+
+            if (!$this->voucherDetails) {
+                throw new \Exception('Please validate the voucher first.');
+            }
+
+            $user = Auth::user();
+            $voucherService = app(VoucherService::class);
+            $transactionService = app(TransactionService::class);
+
+            DB::beginTransaction();
+
+            try {
+                // Redeem the voucher
+                $result = $voucherService->redeemVoucher($this->voucherCode, $user);
+                
+                if (!$result['success']) {
+                    throw new \Exception($result['message']);
+                }
+                
+                $voucher = $result['voucher'];
+
+                // Credit user's Naira wallet
+                $transaction = $transactionService->credit(
+                    $user->id,
+                    $voucher->amount,
+                    Wallet::TYPE_NAIRA,
+                    Transaction::CATEGORY_VOUCHER_REDEMPTION,
+                    "Voucher redemption: {$voucher->code}",
+                    $voucher->id,
+                    'voucher',
+                    [
+                        'voucher_code' => $voucher->code,
+                        'voucher_id' => $voucher->id,
+                        'original_amount' => $voucher->amount,
+                        'currency' => $voucher->currency,
+                    ]
+                );
+
+                DB::commit();
+
+                session()->flash('success', "Voucher redeemed successfully! ₦{$voucher->formattedAmount} has been added to your wallet.");
+                $this->closeFundModal();
+                $this->dispatch('wallet-updated'); // Refresh wallet balance
+
+                Log::info('Voucher redeemed successfully', [
+                    'user_id' => $user->id,
+                    'voucher_id' => $voucher->id,
+                    'voucher_code' => $voucher->code,
+                    'amount' => $voucher->amount,
+                    'transaction_id' => $transaction->id,
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        } catch (ValidationException $e) {
+            $this->setErrorBag($e->validator->errors());
+        } catch (\Exception $e) {
+            Log::error('Voucher redemption error', [
+                'user_id' => Auth::id(),
+                'voucher_code' => $this->voucherCode,
+                'error' => $e->getMessage(),
+            ]);
+
+            $this->addError('voucherCode', 'Voucher redemption failed: ' . $e->getMessage());
+        } finally {
+            $this->isProcessing = false;
+        }
+    }
+
+    /**
+     * Clear voucher details when code changes
+     */
+    public function updatedVoucherCode($value): void
+    {
+        if (empty($value)) {
+            $this->voucherDetails = null;
+            $this->showVoucherDetails = false;
+        } elseif (strlen($value) >= 3) {
+            $this->validateVoucher();
         }
     }
 

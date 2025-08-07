@@ -587,4 +587,172 @@ class NotificationService
         
         return true;
     }
+
+    /**
+     * Send voucher via WhatsApp
+     */
+    public function sendVoucherWhatsApp($voucher, string $phone, ?string $customMessage = null): bool
+    {
+        try {
+            $message = $this->buildVoucherMessage($voucher, $customMessage, 'whatsapp');
+            
+            // Format phone number
+            $formattedPhone = $this->formatPhoneNumber($phone);
+            
+            // Create notification log
+            $notificationLog = NotificationLog::create([
+                'type' => 'voucher_whatsapp',
+                'channel' => NotificationLog::CHANNEL_WHATSAPP,
+                'recipient' => $formattedPhone,
+                'subject' => 'Voucher Code',
+                'message' => $message,
+                'status' => NotificationLog::STATUS_PENDING,
+                'metadata' => [
+                    'voucher_id' => $voucher->id,
+                    'voucher_code' => $voucher->code,
+                    'custom_message' => $customMessage,
+                ],
+            ]);
+            
+            // Send via WhatsApp service
+            $this->whatsAppService->send($formattedPhone, $message, $notificationLog);
+            
+            \Log::info('Voucher sent via WhatsApp', [
+                'voucher_id' => $voucher->id,
+                'phone' => $formattedPhone,
+                'notification_id' => $notificationLog->id,
+            ]);
+            
+            return true;
+        } catch (\Exception $e) {
+            \Log::error('Failed to send voucher via WhatsApp', [
+                'voucher_id' => $voucher->id,
+                'phone' => $phone,
+                'error' => $e->getMessage(),
+            ]);
+            
+            throw $e;
+        }
+    }
+    
+    /**
+     * Send voucher via SMS
+     */
+    public function sendVoucherSMS($voucher, string $phone, ?string $customMessage = null): bool
+    {
+        try {
+            $message = $this->buildVoucherMessage($voucher, $customMessage, 'sms');
+            
+            // Format phone number
+            $formattedPhone = $this->formatPhoneNumber($phone);
+            
+            // Create notification log
+            $notificationLog = NotificationLog::create([
+                'type' => 'voucher_sms',
+                'channel' => 'sms',
+                'recipient' => $formattedPhone,
+                'subject' => 'Voucher Code',
+                'message' => $message,
+                'status' => NotificationLog::STATUS_PENDING,
+                'metadata' => [
+                    'voucher_id' => $voucher->id,
+                    'voucher_code' => $voucher->code,
+                    'custom_message' => $customMessage,
+                ],
+            ]);
+            
+            // Send via SMS (you'll need to implement SMS sending in WhatsAppService or create SMSService)
+            $this->whatsAppService->sendSMS($formattedPhone, $message, $notificationLog);
+            
+            \Log::info('Voucher sent via SMS', [
+                'voucher_id' => $voucher->id,
+                'phone' => $formattedPhone,
+                'notification_id' => $notificationLog->id,
+            ]);
+            
+            return true;
+        } catch (\Exception $e) {
+            \Log::error('Failed to send voucher via SMS', [
+                'voucher_id' => $voucher->id,
+                'phone' => $phone,
+                'error' => $e->getMessage(),
+            ]);
+            
+            throw $e;
+        }
+    }
+    
+    /**
+     * Build voucher message for different channels
+     */
+    private function buildVoucherMessage($voucher, ?string $customMessage, string $channel): string
+    {
+        $appName = config('app.name', 'YAPA');
+        $amount = $voucher->currency === 'NGN' 
+            ? '₦' . number_format($voucher->amount, 2)
+            : number_format($voucher->amount) . ' ' . $voucher->currency;
+        
+        $message = "🎉 {$appName} Voucher\n\n";
+        
+        if ($customMessage) {
+            $message .= "{$customMessage}\n\n";
+        }
+        
+        $message .= "💰 Amount: {$amount}\n";
+        $message .= "🔑 Code: {$voucher->code}\n";
+        
+        if ($voucher->expires_at) {
+            $expiryDate = $voucher->expires_at->format('M j, Y');
+            $message .= "⏰ Expires: {$expiryDate}\n";
+        }
+        
+        if ($voucher->description) {
+            $message .= "📝 {$voucher->description}\n";
+        }
+        
+        $message .= "\n✨ Redeem this voucher in your {$appName} wallet to add funds instantly!";
+        
+        // Keep SMS shorter due to character limits
+        if ($channel === 'sms') {
+            $message = "{$appName} Voucher: {$amount} | Code: {$voucher->code}";
+            if ($voucher->expires_at) {
+                $message .= " | Expires: {$voucher->expires_at->format('M j')}";
+            }
+            $message .= " | Redeem in your wallet now!";
+        }
+        
+        return $message;
+    }
+    
+    /**
+     * Format phone number for international use
+     */
+    private function formatPhoneNumber(string $phone): string
+    {
+        // Remove all non-numeric characters
+        $phone = preg_replace('/[^0-9+]/', '', $phone);
+        
+        // If it starts with +, keep it
+        if (str_starts_with($phone, '+')) {
+            return $phone;
+        }
+        
+        // If it starts with 234 (Nigeria country code), add +
+        if (str_starts_with($phone, '234')) {
+            return '+' . $phone;
+        }
+        
+        // If it starts with 0, replace with +234
+        if (str_starts_with($phone, '0')) {
+            return '+234' . substr($phone, 1);
+        }
+        
+        // If it's a Nigerian number without country code, add +234
+        if (strlen($phone) === 10) {
+            return '+234' . $phone;
+        }
+        
+        // Default: assume it needs +234
+        return '+234' . $phone;
+    }
 }

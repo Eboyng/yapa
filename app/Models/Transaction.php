@@ -96,6 +96,7 @@ class Transaction extends Model
     const CATEGORY_REFERRAL_REWARD = 'referral_reward';
     const CATEGORY_BATCH_SHARE_REWARD = 'batch_share_reward';
     const CATEGORY_CONTACT_DOWNLOAD = 'contact_download';
+    const CATEGORY_VOUCHER_REDEMPTION = 'voucher_redemption';
 
     /**
      * Transaction statuses.

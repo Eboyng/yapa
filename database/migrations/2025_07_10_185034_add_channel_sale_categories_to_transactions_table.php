@@ -20,6 +20,7 @@ return new class extends Migration
             // Add the category column back with all required values
             $table->enum('category', [
                 'credit_purchase',
+                'naira_funding',
                 'whatsapp_message',
                 'sms_message',
                 'refund',
@@ -36,7 +37,8 @@ return new class extends Migration
                 'channel_sale_escrow',
                 'channel_sale_payment',
                 'referral_reward',
-                'batch_share_reward'
+                'batch_share_reward',
+                'voucher_redemption'
             ])->after('type');
         });
     }
