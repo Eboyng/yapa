@@ -47,7 +47,7 @@
 
         <!-- Channel Listings -->
         @if ($channelSales->count() > 0)
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div id="channel-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 @foreach ($channelSales as $channel)
                     <div
                         class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-xl hover:border-orange-200 transition-all duration-300 transform hover:-translate-y-1 flex flex-col h-full">
@@ -126,10 +126,25 @@
                 @endforeach
             </div>
 
-            <!-- Pagination -->
-            <div class="mt-8 flex justify-center">
-                {{ $channelSales->links() }}
-            </div>
+            <!-- Load More Button / Loading Indicator -->
+            @if ($hasMoreItems)
+                <div class="mt-8 flex justify-center">
+                    @if ($loading)
+                        <div class="flex items-center justify-center py-4">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                            <span class="ml-2 text-gray-600">Loading more channels...</span>
+                        </div>
+                    @else
+                        <button wire:click="loadMore" id="load-more-btn"
+                            class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-500 to-purple-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-purple-600 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                            </svg>
+                            Load More Channels
+                        </button>
+                    @endif
+                </div>
+            @endif
         @else
             <!-- Empty State -->
             <div class="text-center py-16">
@@ -380,6 +395,39 @@
             if (event.key === 'Escape' && !document.getElementById('filterModal').classList.contains('hidden')) {
                 closeFilterModal();
             }
+        });
+
+        // Auto-scroll infinite loading
+        let isLoading = false;
+        
+        function checkScroll() {
+            if (isLoading) return;
+            
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const windowHeight = window.innerHeight;
+            const documentHeight = document.documentElement.scrollHeight;
+            
+            // Trigger load more when user is 200px from bottom
+            if (scrollTop + windowHeight >= documentHeight - 200) {
+                const loadMoreBtn = document.getElementById('load-more-btn');
+                if (loadMoreBtn && !isLoading) {
+                    isLoading = true;
+                    loadMoreBtn.click();
+                    
+                    // Reset loading flag after a delay
+                    setTimeout(() => {
+                        isLoading = false;
+                    }, 1000);
+                }
+            }
+        }
+        
+        // Add scroll event listener
+        window.addEventListener('scroll', checkScroll);
+        
+        // Listen for Livewire updates to reset loading state
+        document.addEventListener('livewire:updated', () => {
+            isLoading = false;
         });
     </script>
 </div>

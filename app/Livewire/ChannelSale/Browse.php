@@ -4,12 +4,9 @@ namespace App\Livewire\ChannelSale;
 
 use App\Models\ChannelSale;
 use Livewire\Component;
-use Livewire\WithPagination;
 
 class Browse extends Component
 {
-    use WithPagination;
-
     public $search = '';
     public $category = '';
     public $minPrice = '';
@@ -19,6 +16,9 @@ class Browse extends Component
     public $sortBy = 'created_at';
     public $sortDirection = 'desc';
     public $perPage = 12;
+    public $loadedItems = 12;
+    public $hasMoreItems = true;
+    public $loading = false;
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -33,32 +33,38 @@ class Browse extends Component
 
     public function updatingSearch()
     {
-        $this->resetPage();
+        $this->resetItems();
     }
 
     public function updatingCategory()
     {
-        $this->resetPage();
+        $this->resetItems();
     }
 
     public function updatingMinPrice()
     {
-        $this->resetPage();
+        $this->resetItems();
     }
 
     public function updatingMaxPrice()
     {
-        $this->resetPage();
+        $this->resetItems();
     }
 
     public function updatingMinAudienceSize()
     {
-        $this->resetPage();
+        $this->resetItems();
     }
 
     public function updatingMaxAudienceSize()
     {
-        $this->resetPage();
+        $this->resetItems();
+    }
+
+    public function resetItems()
+    {
+        $this->loadedItems = $this->perPage;
+        $this->hasMoreItems = true;
     }
 
     public function sortBy($field)
@@ -69,7 +75,7 @@ class Browse extends Component
             $this->sortBy = $field;
             $this->sortDirection = 'asc';
         }
-        $this->resetPage();
+        $this->resetItems();
     }
 
     public function clearFilters()
@@ -82,7 +88,18 @@ class Browse extends Component
         $this->maxAudienceSize = '';
         $this->sortBy = 'created_at';
         $this->sortDirection = 'desc';
-        $this->resetPage();
+        $this->resetItems();
+    }
+
+    public function loadMore()
+    {
+        if ($this->loading || !$this->hasMoreItems) {
+            return;
+        }
+
+        $this->loading = true;
+        $this->loadedItems += $this->perPage;
+        $this->loading = false;
     }
 
     public function buyNow($channelSaleId)
@@ -123,7 +140,12 @@ class Browse extends Component
         // Sorting
         $query->orderBy($this->sortBy, $this->sortDirection);
 
-        $channelSales = $query->paginate($this->perPage);
+        // Get total count for hasMoreItems check
+        $totalCount = $query->count();
+        $this->hasMoreItems = $totalCount > $this->loadedItems;
+
+        // Get limited results
+        $channelSales = $query->take($this->loadedItems)->get();
 
         return view('livewire.channel-sale.browse', [
             'channelSales' => $channelSales,
