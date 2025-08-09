@@ -6,10 +6,14 @@ use App\Services\ReferralService;
 use App\Services\TransactionService;
 use App\Models\PendingUser;
 use App\Models\User;
+use App\Models\Otp;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 use Livewire\Attributes\Validate;
@@ -140,8 +144,6 @@ new #[Layout('layouts.guest')] class extends Component
         $this->isVerifying = true;
         
         try {
-            $otpService = app(OtpService::class);
-            
             // Check if WhatsApp number is available
             if (!$this->whatsappNumber) {
                 $this->addError('otp', 'WhatsApp number not available. Please try again.');
@@ -159,18 +161,60 @@ new #[Layout('layouts.guest')] class extends Component
                 'user_type' => $this->userType
             ]);
             
-            $result = $otpService->verifyOtp(
-                $this->whatsappNumber,
-                $this->otp,
-                $context
-            );
-            
-            Log::info('OTP verification result', [
-                'result' => $result,
-                'whatsapp_number' => $this->whatsappNumber
-            ]);
-            
-            if ($result['success']) {
+            // Perform verification directly using database queries
+            DB::transaction(function () use ($context) {
+                // Find the OTP record
+                $otpRecord = Otp::where('identifier', $this->whatsappNumber)
+                    ->where('context', $context)
+                    ->where('verified', false)
+                    ->latest('id')
+                    ->lockForUpdate()
+                    ->first();
+                
+                if (!$otpRecord) {
+                    throw ValidationException::withMessages([
+                        'otp' => 'Invalid OTP.',
+                    ]);
+                }
+                
+                // Check if OTP has expired
+                if ($otpRecord->expires_at && Carbon::parse($otpRecord->expires_at)->isPast()) {
+                    $otpRecord->delete();
+                    throw ValidationException::withMessages([
+                        'otp' => 'OTP expired. Please request a new one.',
+                    ]);
+                }
+                
+                // Check maximum attempts
+                if ($otpRecord->attempts >= 3) {
+                    $otpRecord->delete();
+                    throw ValidationException::withMessages([
+                        'otp' => 'Maximum OTP attempts exceeded.',
+                    ]);
+                }
+                
+                // Increment attempts
+                $otpRecord->increment('attempts');
+                
+                // Verify OTP
+                if (!Hash::check($this->otp, $otpRecord->otp_code)) {
+                    throw ValidationException::withMessages([
+                        'otp' => 'Invalid OTP.',
+                    ]);
+                }
+                
+                // Mark OTP as verified
+                $otpRecord->update([
+                    'verified' => true,
+                    'verified_at' => now(),
+                ]);
+                
+                Log::info('OTP verified successfully', [
+                    'whatsapp_number' => $this->whatsappNumber,
+                    'context' => $context,
+                    'otp_id' => $otpRecord->id,
+                ]);
+                
                 if ($this->userType === 'pending') {
                     // Complete pending user registration
                     $this->completePendingRegistration();
@@ -184,24 +228,17 @@ new #[Layout('layouts.guest')] class extends Component
                     Session::flash('status', 'otp-verified');
                     $this->redirect(route('home'), navigate: true);
                 }
-                return;
-            }
+            });
             
-            // Handle verification failure
-            if (!$result['can_retry']) {
-                if ($this->userType === 'pending' && $this->pendingUser) {
-                    // Mark pending user as failed if max attempts reached
-                    $this->pendingUser->update([
-                        'failure_reason' => $result['message']
-                    ]);
-                }
-                Session::flash('error', $result['message']);
-                $this->otp = '';
-            } else {
-                $this->addError('otp', $result['message']);
-            }
-            
+        } catch (ValidationException $e) {
+            // Re-throw validation exceptions to show proper error messages
+            throw $e;
         } catch (\Exception $e) {
+            Log::error('OTP verification exception', [
+                'whatsapp_number' => $this->whatsappNumber,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             $this->addError('otp', 'Verification failed. Please try again.');
         } finally {
             $this->isVerifying = false;

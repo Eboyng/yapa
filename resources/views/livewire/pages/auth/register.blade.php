@@ -121,7 +121,8 @@ new #[Layout('layouts.guest')] class extends Component {
                 $validated['whatsapp_number'],
                 $templates['registration'],
                 $validated['email'],
-                true
+                true,
+                'registration'
             );
 
             if ($result['success']) {
