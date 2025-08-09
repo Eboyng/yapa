@@ -102,6 +102,20 @@ Schedule::command('reports:weekly-engagement')
     ->runInBackground()
     ->description('Generate weekly engagement reports');
 
+// Weekly user growth report - Run every Monday at 8:00 AM
+Schedule::command('reports:user-growth weekly')
+    ->weeklyOn(1, '08:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->description('Generate and send weekly user growth reports to admins');
+
+// Monthly user growth report - Run on the 1st of every month at 9:00 AM
+Schedule::command('reports:user-growth monthly')
+    ->monthlyOn(1, '09:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->description('Generate and send monthly user growth reports to admins');
+
 // Queue worker health check - Run every 5 minutes
 Schedule::command('queue:work --stop-when-empty')
     ->everyFiveMinutes()

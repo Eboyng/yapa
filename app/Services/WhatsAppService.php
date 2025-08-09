@@ -54,11 +54,12 @@ class WhatsAppService
             $formData = [
                 'token' => $this->apiKey,
                 'recipient' => $phone,
+                'template_code' => $templateCode ?: $this->templateCode, // Always include template_code
             ];
             
-            // Add template code if provided
-            if (!empty($templateCode)) {
-                $formData['template_code'] = $templateCode;
+            // Validate that template_code is provided
+            if (empty($formData['template_code'])) {
+                throw new \Exception('WhatsApp template code is required but not configured in settings');
             }
             
             // Add parameters
@@ -77,6 +78,7 @@ class WhatsAppService
             }
             
             $response = Http::timeout(30)
+                ->withoutVerifying() // Disable SSL verification for local development
                 ->asForm()
                 ->post($this->apiUrl, $formData);
 

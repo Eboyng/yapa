@@ -127,7 +127,7 @@ class Otp extends Model
     /**
      * Check if can resend OTP (rate limiting).
      */
-    public static function canResend(string $identifier, string $context, int $cooldownMinutes = 1): bool
+    public static function canResend(string $identifier, string $context, int $cooldownMinutes = 1): array
     {
         $lastOtp = self::where('identifier', $identifier)
             ->where('context', $context)
@@ -135,10 +135,29 @@ class Otp extends Model
             ->first();
 
         if (!$lastOtp) {
-            return true;
+            return [
+                'can_resend' => true,
+                'wait_time' => 0,
+                'message' => 'OTP can be sent',
+            ];
         }
 
-        return $lastOtp->created_at->addMinutes($cooldownMinutes)->isPast();
+        $nextAllowedTime = $lastOtp->created_at->addMinutes($cooldownMinutes);
+        $waitTime = max(0, $nextAllowedTime->diffInSeconds(Carbon::now()));
+        
+        if ($waitTime <= 0) {
+            return [
+                'can_resend' => true,
+                'wait_time' => 0,
+                'message' => 'OTP can be resent',
+            ];
+        }
+
+        return [
+            'can_resend' => false,
+            'wait_time' => $waitTime,
+            'message' => "Please wait {$waitTime} seconds before requesting a new OTP",
+        ];
     }
 
     /**

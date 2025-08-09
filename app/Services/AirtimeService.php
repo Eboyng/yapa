@@ -136,7 +136,8 @@ class AirtimeService
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
                 'Authorization' => 'Token ' . $this->apiToken
-            ])->timeout(30)->post($this->apiUrl . '/airtime/', [
+            ])->withoutVerifying() // Disable SSL verification for local development
+            ->timeout(30)->post($this->apiUrl . '/airtime/', [
                 'network_id' => $networkId,
                 'amount' => $amount,
                 'airtime_type' => 'VTU',

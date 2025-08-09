@@ -64,7 +64,7 @@ class SettingService
         'twitter_creator' => '@yapa',
         // Kudisms API Settings
         'kudisms_api_key' => '',
-        'kudisms_whatsapp_template_code' => '',
+        'kudisms_whatsapp_template_code' => 'default_template',
         'kudisms_sender_id' => 'Yapa',
         'kudisms_whatsapp_url' => 'https://my.kudisms.net/api/whatsapp',
         // OTP Delivery Settings

@@ -100,7 +100,13 @@ new #[Layout('layouts.guest')] class extends Component
             $templates = OtpService::getMessageTemplates();
             $template = $this->userType === 'pending' ? $templates['registration'] : $templates['login'];
             
-            $result = $otpService->sendOtp($this->whatsappNumber, $template);
+            $result = $otpService->sendOtp(
+                $this->whatsappNumber, 
+                $template, 
+                null, // email
+                $this->userType === 'pending', // isRegistration
+                $context // context
+            );
             
             if ($result['success']) {
                 $otpService->trackResend($this->whatsappNumber, $context);
@@ -145,11 +151,24 @@ new #[Layout('layouts.guest')] class extends Component
             // Determine the context based on user type
             $context = $this->userType === 'pending' ? 'registration' : 'login';
             
+            // Add debug logging
+            Log::info('Attempting OTP verification', [
+                'whatsapp_number' => $this->whatsappNumber,
+                'otp_code' => $this->otp,
+                'context' => $context,
+                'user_type' => $this->userType
+            ]);
+            
             $result = $otpService->verifyOtp(
                 $this->whatsappNumber,
                 $this->otp,
                 $context
             );
+            
+            Log::info('OTP verification result', [
+                'result' => $result,
+                'whatsapp_number' => $this->whatsappNumber
+            ]);
             
             if ($result['success']) {
                 if ($this->userType === 'pending') {

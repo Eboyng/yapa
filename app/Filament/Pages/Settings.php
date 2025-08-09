@@ -10,6 +10,7 @@ use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Support\Exceptions\Halt;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\HtmlString;
 
@@ -104,7 +105,6 @@ class Settings extends Page
                             ->schema([
                                 Forms\Components\TextInput::make('app_name')
                                     ->label('Application Name')
-                                    ->required()
                                     ->maxLength(255)
                                     ->autocomplete(false)
                                     ->placeholder('My Application'),
@@ -169,6 +169,16 @@ class Settings extends Page
                             ->collapsible(),
                     ])
                     ->columns(1),
+                    
+                // Tab-specific save button
+                Forms\Components\Actions::make([
+                    Forms\Components\Actions\Action::make('save_general')
+                        ->label('Save General Settings')
+                        ->icon('heroicon-m-check')
+                        ->color('primary')
+                        ->action('saveGeneralSettings')
+                        ->keyBindings(['mod+shift+g']),
+                ])->fullWidth(),
             ]);
     }
     
@@ -185,7 +195,6 @@ class Settings extends Page
                             ->schema([
                                 Forms\Components\TextInput::make('site_name')
                                     ->label('Site Name')
-                                    ->required()
                                     ->maxLength(255)
                                     ->placeholder('My Site')
                                     ->helperText('Displayed in browser title and throughout the site')
@@ -239,6 +248,16 @@ class Settings extends Page
                             ->helperText('Accent color for highlights and secondary elements'),
                     ])
                     ->collapsible(),
+                    
+                // Tab-specific save button
+                Forms\Components\Actions::make([
+                    Forms\Components\Actions\Action::make('save_branding')
+                        ->label('Save Branding Settings')
+                        ->icon('heroicon-m-check')
+                        ->color('primary')
+                        ->action('saveBrandingSettings')
+                        ->keyBindings(['mod+shift+b']),
+                ])->fullWidth(),
             ]);
     }
     
@@ -298,6 +317,16 @@ class Settings extends Page
                             ->visible(fn (Forms\Get $get) => $get('maintenance_mode')),
                     ])
                     ->collapsible(),
+                    
+                // Tab-specific save button
+                Forms\Components\Actions::make([
+                    Forms\Components\Actions\Action::make('save_maintenance')
+                        ->label('Save Maintenance Settings')
+                        ->icon('heroicon-m-check')
+                        ->color('primary')
+                        ->action('saveMaintenanceSettings')
+                        ->keyBindings(['mod+shift+m']),
+                ])->fullWidth(),
             ]);
     }
     
@@ -325,22 +354,20 @@ class Settings extends Page
                                 'array' => 'Array (Testing)',
                             ])
                             ->default('smtp')
-                            ->live()
-                            ->required(),
+                            ->live(),
                         
                         Forms\Components\Grid::make()
                             ->schema([
                                 Forms\Components\TextInput::make('mail_host')
                                     ->label('SMTP Host')
                                     ->placeholder('smtp.gmail.com')
-                                    ->required(),
+                                    ->default('smtp.gmail.com'),
                                     
                                 Forms\Components\TextInput::make('mail_port')
                                     ->label('SMTP Port')
                                     ->numeric()
                                     ->placeholder('587')
-                                    ->default(587)
-                                    ->required(),
+                                    ->default(587),
                                     
                                 Forms\Components\Select::make('mail_encryption')
                                     ->label('Encryption')
@@ -359,13 +386,13 @@ class Settings extends Page
                                 Forms\Components\TextInput::make('mail_username')
                                     ->label('SMTP Username')
                                     ->placeholder('your-email@gmail.com')
-                                    ->required(),
+                                    ->default('noreply@example.com'),
                                     
                                 Forms\Components\TextInput::make('mail_password')
                                     ->label('SMTP Password')
                                     ->password()
                                     ->revealable()
-                                    ->required(),
+                                    ->default('password123'),
                             ])
                             ->columns(2)
                             ->visible(fn (Forms\Get $get) => $get('mail_mailer') === 'smtp'),
@@ -375,12 +402,12 @@ class Settings extends Page
                                 Forms\Components\TextInput::make('mail_from_address')
                                     ->label('From Email Address')
                                     ->email()
-                                    ->required()
+                                    ->default('noreply@yoursite.com')
                                     ->placeholder('noreply@yoursite.com'),
                                     
                                 Forms\Components\TextInput::make('mail_from_name')
                                     ->label('From Name')
-                                    ->required()
+                                    ->default('Your Site Name')
                                     ->placeholder('Your Site Name'),
                             ])
                             ->columns(2),
@@ -436,8 +463,7 @@ class Settings extends Page
                                         'whatsapp' => 'WhatsApp Priority',
                                         'sms' => 'SMS Only',
                                     ])
-                                    ->default('whatsapp')
-                                    ->required(),
+                                    ->default('whatsapp'),
                                     
                                 Forms\Components\Toggle::make('otp_sms_fallback_enabled')
                                     ->label('SMS Fallback')
@@ -454,14 +480,13 @@ class Settings extends Page
                                     ->label('API Key')
                                     ->password()
                                     ->revealable()
-                                    ->required()
+                                    ->default('Fyzr0q46cDXo7KhlefY1uHIC8SMiRnQZpdPbBmE2O5WJsjLawANtV9vkUTgG3x')
                                     ->maxLength(255)
                                     ->columnSpan(2),
                                     
                                 Forms\Components\TextInput::make('kudisms_sender_id')
                                     ->label('Sender ID')
                                     ->default('Yapa')
-                                    ->required()
                                     ->maxLength(50),
                             ])
                             ->columns(3),
@@ -471,14 +496,13 @@ class Settings extends Page
                             ->schema([
                                 Forms\Components\TextInput::make('kudisms_whatsapp_template_code')
                                     ->label('Template Code')
-                                    ->required()
+                                    ->default('default_template')
                                     ->maxLength(255),
                                     
                                 Forms\Components\TextInput::make('kudisms_whatsapp_url')
                                     ->label('API Endpoint')
                                     ->url()
                                     ->default('https://my.kudisms.net/api/whatsapp')
-                                    ->required()
                                     ->maxLength(255),
                             ])
                             ->columns(2),
@@ -503,6 +527,16 @@ class Settings extends Page
                             ->columns(3),
                     ])
                     ->collapsible(),
+                    
+                // Tab-specific save button
+                Forms\Components\Actions::make([
+                    Forms\Components\Actions\Action::make('save_communication')
+                        ->label('Save Communication Settings')
+                        ->icon('heroicon-m-check')
+                        ->color('primary')
+                        ->action('saveCommunicationSettings')
+                        ->keyBindings(['mod+shift+c']),
+                ])->fullWidth(),
             ]);
     }
     
@@ -532,13 +566,11 @@ class Settings extends Page
                                         'test' => 'Test/Sandbox',
                                         'live' => 'Live/Production',
                                     ])
-                                    ->default('test')
-                                    ->required(),
+                                    ->default('test'),
                                     
                                 Forms\Components\TextInput::make('paystack_public_key')
                                     ->label('Public Key')
                                     ->placeholder('pk_test_...')
-                                    ->required()
                                     ->maxLength(255),
                                     
                                 Forms\Components\TextInput::make('paystack_secret_key')
@@ -546,7 +578,6 @@ class Settings extends Page
                                     ->placeholder('sk_test_...')
                                     ->password()
                                     ->revealable()
-                                    ->required()
                                     ->maxLength(255),
                                     
                                 Forms\Components\TextInput::make('paystack_webhook_secret')
@@ -574,24 +605,21 @@ class Settings extends Page
                                     ->minValue(0.01)
                                     ->step(0.01)
                                     ->default(3.00)
-                                    ->prefix('₦')
-                                    ->required(),
+                                    ->prefix('₦'),
                                     
                                 Forms\Components\TextInput::make('minimum_credits_purchase')
                                     ->label('Min Credits')
                                     ->numeric()
                                     ->minValue(1)
                                     ->default(100)
-                                    ->suffix('credits')
-                                    ->required(),
+                                    ->suffix('credits'),
                                     
                                 Forms\Components\TextInput::make('minimum_amount_naira')
                                     ->label('Min Amount')
                                     ->numeric()
                                     ->minValue(1)
                                     ->default(300)
-                                    ->prefix('₦')
-                                    ->required(),
+                                    ->prefix('₦'),
                             ])
                             ->columns(3),
                     ])
@@ -613,14 +641,12 @@ class Settings extends Page
                                     ->label('API Token')
                                     ->password()
                                     ->revealable()
-                                    ->required()
                                     ->maxLength(255),
                                     
                                 Forms\Components\TextInput::make('airtime_api_url')
                                     ->label('API Base URL')
                                     ->url()
                                     ->default('https://wazobianet.com/api')
-                                    ->required()
                                     ->maxLength(255),
                             ])
                             ->columns(2)
@@ -633,16 +659,14 @@ class Settings extends Page
                                     ->numeric()
                                     ->default(100)
                                     ->minValue(50)
-                                    ->suffix('NGN')
-                                    ->required(),
+                                    ->suffix('NGN'),
                                     
                                 Forms\Components\TextInput::make('airtime_maximum_amount')
                                     ->label('Maximum Amount')
                                     ->numeric()
                                     ->default(10000)
                                     ->minValue(1000)
-                                    ->suffix('NGN')
-                                    ->required(),
+                                    ->suffix('NGN'),
                             ])
                             ->columns(2)
                             ->visible(fn (Forms\Get $get) => $get('airtime_api_enabled')),
@@ -653,13 +677,11 @@ class Settings extends Page
                             ->schema([
                                 Forms\Components\TextInput::make('name')
                                     ->label('Network')
-                                    ->required()
                                     ->maxLength(50),
                                     
                                 Forms\Components\TextInput::make('network_id')
                                     ->label('ID')
-                                    ->numeric()
-                                    ->required(),
+                                    ->numeric(),
                                     
                                 Forms\Components\TextInput::make('prefix')
                                     ->label('Prefix')
@@ -678,6 +700,16 @@ class Settings extends Page
                             ->visible(fn (Forms\Get $get) => $get('airtime_api_enabled')),
                     ])
                     ->collapsible(),
+                    
+                // Tab-specific save button
+                Forms\Components\Actions::make([
+                    Forms\Components\Actions\Action::make('save_payment')
+                        ->label('Save Payment Settings')
+                        ->icon('heroicon-m-check')
+                        ->color('primary')
+                        ->action('savePaymentSettings')
+                        ->keyBindings(['mod+shift+p']),
+                ])->fullWidth(),
             ]);
     }
     
@@ -698,24 +730,21 @@ class Settings extends Page
                                     ->numeric()
                                     ->minValue(1)
                                     ->maxValue(365)
-                                    ->suffix('days')
-                                    ->required(),
+                                    ->suffix('days'),
                                     
                                 Forms\Components\TextInput::make('trial_batch_limit')
                                     ->label('Trial Batch Size')
                                     ->numeric()
                                     ->minValue(1)
                                     ->maxValue(1000)
-                                    ->suffix('members')
-                                    ->required(),
+                                    ->suffix('members'),
                                     
                                 Forms\Components\TextInput::make('regular_batch_limit')
                                     ->label('Regular Batch Size')
                                     ->numeric()
                                     ->minValue(1)
                                     ->maxValue(1000)
-                                    ->suffix('members')
-                                    ->required(),
+                                    ->suffix('members'),
                             ])
                             ->columns(3),
                         
@@ -726,16 +755,14 @@ class Settings extends Page
                                     ->numeric()
                                     ->minValue(0)
                                     ->maxValue(100)
-                                    ->suffix('%')
-                                    ->required(),
+                                    ->suffix('%'),
                                     
                                 Forms\Components\TextInput::make('interests_weight')
                                     ->label('Interests Weight')
                                     ->numeric()
                                     ->minValue(0)
                                     ->maxValue(100)
-                                    ->suffix('%')
-                                    ->required(),
+                                    ->suffix('%'),
                             ])
                             ->columns(2),
                     ])
@@ -759,32 +786,28 @@ class Settings extends Page
                                     ->numeric()
                                     ->minValue(0)
                                     ->step(0.01)
-                                    ->prefix('₦')
-                                    ->required(),
+                                    ->prefix('₦'),
                                     
                                 Forms\Components\TextInput::make('ad_screenshot_wait_hours')
                                     ->label('Screenshot Wait Time')
                                     ->numeric()
                                     ->minValue(1)
                                     ->maxValue(168)
-                                    ->suffix('hours')
-                                    ->required(),
+                                    ->suffix('hours'),
                                     
                                 Forms\Components\TextInput::make('max_ad_rejection_count')
                                     ->label('Max Rejections')
                                     ->numeric()
                                     ->minValue(1)
                                     ->maxValue(10)
-                                    ->helperText('Before suspension')
-                                    ->required(),
+                                    ->helperText('Before suspension'),
                                     
                                 Forms\Components\TextInput::make('appeal_cooldown_days')
                                     ->label('Appeal Cooldown')
                                     ->numeric()
                                     ->minValue(1)
                                     ->maxValue(30)
-                                    ->suffix('days')
-                                    ->required(),
+                                    ->suffix('days'),
                             ])
                             ->columns(4)
                             ->visible(fn (Forms\Get $get) => $get('ads_feature_enabled')),
@@ -803,14 +826,12 @@ class Settings extends Page
                                     ->numeric()
                                     ->minValue(1)
                                     ->maxValue(100)
-                                    ->suffix('MB')
-                                    ->required(),
+                                    ->suffix('MB'),
                                     
                                 Forms\Components\TextInput::make('supported_image_formats')
                                     ->label('Image Formats')
                                     ->placeholder('jpg,jpeg,png,gif,webp')
-                                    ->helperText('Comma-separated')
-                                    ->required(),
+                                    ->helperText('Comma-separated'),
                                     
                                 Forms\Components\Toggle::make('vcf_export_enabled')
                                     ->label('VCF Export')
@@ -820,6 +841,16 @@ class Settings extends Page
                             ->columns(3),
                     ])
                     ->collapsible(),
+                    
+                // Tab-specific save button
+                Forms\Components\Actions::make([
+                    Forms\Components\Actions\Action::make('save_features')
+                        ->label('Save Feature Settings')
+                        ->icon('heroicon-m-check')
+                        ->color('primary')
+                        ->action('saveFeatureSettings')
+                        ->keyBindings(['mod+shift+f']),
+                ])->fullWidth(),
             ]);
     }
     
@@ -933,8 +964,7 @@ class Settings extends Page
                                 Forms\Components\Tabs\Tab::make('Guest Banner')
                                     ->schema([
                                         Forms\Components\TextInput::make('banner_guest_title')
-                                            ->label('Title')
-                                            ->required(),
+                                            ->label('Title'),
                                         Forms\Components\Textarea::make('banner_guest_description')
                                             ->label('Description')
                                             ->rows(2),
@@ -951,8 +981,7 @@ class Settings extends Page
                                 Forms\Components\Tabs\Tab::make('User Banner')
                                     ->schema([
                                         Forms\Components\TextInput::make('banner_auth_title')
-                                            ->label('Title')
-                                            ->required(),
+                                            ->label('Title'),
                                         Forms\Components\Textarea::make('banner_auth_description')
                                             ->label('Description')
                                             ->rows(2),
@@ -972,6 +1001,16 @@ class Settings extends Page
                     ])
                     ->collapsible()
                     ->collapsed(),
+                    
+                // Tab-specific save button
+                Forms\Components\Actions::make([
+                    Forms\Components\Actions\Action::make('save_marketing')
+                        ->label('Save Marketing Settings')
+                        ->icon('heroicon-m-check')
+                        ->color('primary')
+                        ->action('saveMarketingSettings')
+                        ->keyBindings(['mod+shift+k']),
+                ])->fullWidth(),
             ]);
     }
     
@@ -995,20 +1034,17 @@ class Settings extends Page
                             ->schema([
                                 Forms\Components\TextInput::make('google_client_id')
                                     ->label('Client ID')
-                                    ->required()
                                     ->maxLength(255),
                                     
                                 Forms\Components\TextInput::make('google_client_secret')
                                     ->label('Client Secret')
                                     ->password()
                                     ->revealable()
-                                    ->required()
                                     ->maxLength(255),
                                     
                                 Forms\Components\TextInput::make('google_redirect_uri')
                                     ->label('Redirect URI')
                                     ->url()
-                                    ->required()
                                     ->disabled()
                                     ->default(fn () => url('/auth/google/callback')),
                                     
@@ -1131,6 +1167,16 @@ class Settings extends Page
                             ]),
                     ])
                     ->collapsible(),
+                    
+                // Tab-specific save button
+                Forms\Components\Actions::make([
+                    Forms\Components\Actions\Action::make('save_system')
+                        ->label('Save System Settings')
+                        ->icon('heroicon-m-check')
+                        ->color('primary')
+                        ->action('saveSystemSettings')
+                        ->keyBindings(['mod+shift+s']),
+                ])->fullWidth(),
             ]);
     }
 
@@ -1145,16 +1191,19 @@ class Settings extends Page
                 ->label('Save All Settings')
                 ->icon('heroicon-m-check')
                 ->action('save')
-                ->keyBindings(['mod+s']),
+                ->keyBindings(['mod+s'])
+                ->color('warning')
+                ->outlined(),
                 
             Action::make('saveAndClearCache')
-                ->label('Save & Clear Cache')
+                ->label('Save All & Clear Cache')
                 ->icon('heroicon-m-arrow-path')
                 ->color('success')
                 ->action(function () {
                     $this->save();
                     $this->clearCache();
-                }),
+                })
+                ->outlined(),
                 
             Action::make('reset')
                 ->label('Reset to Defaults')
@@ -1164,7 +1213,8 @@ class Settings extends Page
                 ->modalHeading('Reset All Settings?')
                 ->modalDescription('This will reset all settings to their default values. This action cannot be undone.')
                 ->modalSubmitActionLabel('Yes, Reset Everything')
-                ->action('resetToDefaults'),
+                ->action('resetToDefaults')
+                ->outlined(),
         ];
     }
 
@@ -1237,6 +1287,126 @@ class Settings extends Page
                 ->title('Reset Failed')
                 ->body($e->getMessage())
                 ->danger()
+                ->send();
+        }
+    }
+
+    // =============================
+    // Individual Tab Save Methods
+    // =============================
+    
+    public function saveGeneralSettings(): void
+    {
+        $this->saveTabSettings('General', [
+            'app_name', 'app_version', 'registration_enabled', 'email_verification_required',
+            'registration_bonus_credits', 'admin_contact_name', 'admin_contact_number', 'admin_contact_email'
+        ]);
+    }
+    
+    public function saveBrandingSettings(): void
+    {
+        $this->saveTabSettings('Branding', [
+            'site_name', 'site_logo_name', 'site_logo', 'site_favicon',
+            'brand_primary_color', 'brand_secondary_color'
+        ]);
+    }
+    
+    public function saveMaintenanceSettings(): void
+    {
+        $this->saveTabSettings('Maintenance', [
+            'maintenance_mode', 'maintenance_message', 'maintenance_end_time', 'maintenance_allowed_ips'
+        ]);
+    }
+    
+    public function saveCommunicationSettings(): void
+    {
+        $this->saveTabSettings('Communication', [
+            'mail_mailer', 'mail_host', 'mail_port', 'mail_encryption', 'mail_username',
+            'mail_password', 'mail_from_address', 'mail_from_name', 'kudisms_api_token',
+            'kudisms_whatsapp_template_code', 'kudisms_whatsapp_url', 'kudisms_sms_template_code',
+            'kudisms_app_name_code', 'kudisms_sms_url'
+        ]);
+    }
+    
+    public function savePaymentSettings(): void
+    {
+        $this->saveTabSettings('Payment', [
+            'paystack_enabled', 'paystack_environment', 'paystack_public_key', 'paystack_secret_key',
+            'paystack_webhook_secret', 'credit_price_per_unit', 'minimum_credit_purchase',
+            'maximum_credit_purchase', 'airtime_api_enabled', 'airtime_api_token', 'airtime_api_url',
+            'airtime_minimum_amount', 'airtime_maximum_amount', 'airtime_networks'
+        ]);
+    }
+    
+    public function saveFeatureSettings(): void
+    {
+        $this->saveTabSettings('Features', [
+            'batch_auto_close_days', 'trial_batch_limit', 'regular_batch_limit', 'location_weight',
+            'interests_weight', 'ads_feature_enabled', 'ad_earnings_per_view', 'ad_minimum_views',
+            'ad_maximum_duration_days', 'max_file_upload_size', 'supported_image_formats', 'vcf_export_enabled'
+        ]);
+    }
+    
+    public function saveMarketingSettings(): void
+    {
+        $this->saveTabSettings('Marketing', [
+            'seo_title', 'seo_description', 'seo_keywords', 'og_title', 'og_description',
+            'og_type', 'og_image', 'twitter_card', 'twitter_site', 'twitter_creator',
+            'analytics_enabled', 'google_analytics_id', 'facebook_pixel_id', 'banner_enabled',
+            'banner_guest_title', 'banner_guest_description', 'banner_guest_button_text',
+            'banner_guest_button_url', 'banner_auth_title', 'banner_auth_description',
+            'banner_auth_button_text', 'banner_auth_button_url'
+        ]);
+    }
+    
+    public function saveSystemSettings(): void
+    {
+        $this->saveTabSettings('System', [
+            'google_oauth_enabled', 'google_client_id', 'google_client_secret',
+            'google_redirect_uri', 'google_scopes'
+        ]);
+    }
+    
+    private function saveTabSettings(string $tabName, array $fields): void
+    {
+        try {
+            $this->form->validate();
+            
+            if (!$this->settingService) {
+                $this->settingService = app(SettingService::class);
+            }
+            
+            $data = $this->form->getState();
+            $savedCount = 0;
+            
+            DB::beginTransaction();
+            
+            foreach ($fields as $field) {
+                if (array_key_exists($field, $data) && $data[$field] !== null) {
+                    $type = $this->getSettingType($field, $data[$field]);
+                    if ($this->settingService->set($field, $data[$field], $type)) {
+                        $savedCount++;
+                    }
+                }
+            }
+            
+            DB::commit();
+            
+            Notification::make()
+                ->title($tabName . ' Settings Saved')
+                ->body("Successfully saved {$savedCount} {$tabName} settings")
+                ->success()
+                ->duration(3000)
+                ->send();
+                
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            Notification::make()
+                ->title($tabName . ' Save Failed')
+                ->body($e->getMessage())
+                ->danger()
+                ->persistent()
                 ->send();
         }
     }

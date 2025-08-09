@@ -133,7 +133,9 @@ class AvatarService
     public function downloadAndStoreAvatar(User $user, string $avatarUrl): ?string
     {
         try {
-            $response = Http::timeout(30)->get($avatarUrl);
+            $response = Http::timeout(30)
+                ->withoutVerifying() // Disable SSL verification for local development
+                ->get($avatarUrl);
             
             if ($response->successful()) {
                 $extension = pathinfo(parse_url($avatarUrl, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'png';
